@@ -5,7 +5,7 @@
 #pragma once
 class Clock;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 #ifndef WIN32
 #include <sys/time.h>

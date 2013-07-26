@@ -6,11 +6,10 @@
 class Font;
 class FontID;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 #include <string>
-#include <GLEW/glew.h>
-#include <OpenGL/gl.h>
+#include "RaptorGL.h"
 #include <SDL/SDL.h>
 #include <SDL_ttf/SDL_ttf.h>
 #include "Clock.h"

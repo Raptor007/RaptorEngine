@@ -116,13 +116,6 @@ int SoundOut::Play( Mix_Chunk *sound, int16_t angle, uint8_t dist )
 	int channel = Play( sound );
 	if( channel >= 0 )
 	{
-		/*
-		#if defined(_ppc_) || defined(_ppc64_)
-			// Disable panning for PowerPC, because left pans sounds like right pans.
-			angle = 0;
-		#endif
-		*/
-		
 		if( ! Mix_SetPosition( channel, angle, dist ) )
 			fprintf( stderr, "Mix_SetPosition: %s\n", Mix_GetError() );
 	}
@@ -165,13 +158,6 @@ int SoundOut::Pan2D( int channel, int16_t angle, uint8_t dist )
 		Mix_HaltChannel( channel );
 		return -1;
 	}
-	
-	/*
-	#if defined(_ppc_) || defined(_ppc64_)
-		// Disable panning for PowerPC, because left pans sounds like right pans.
-		angle = 0;
-	#endif
-	*/
 	
 	if( ! Mix_SetPosition( channel, angle, dist ) )
 		fprintf( stderr, "Mix_SetPosition: %s\n", Mix_GetError() );

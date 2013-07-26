@@ -233,6 +233,62 @@ Pos3D *Pos3D::Nearest( const std::list<Pos3D*> *others )
 }
 
 
+Pos3D *Pos3D::Nearest( const std::vector<Pos3D*> *others, const std::set<Pos3D*> *except )
+{
+	if( ! others )
+		return NULL;
+	
+	if( ! except )
+		return Nearest( others );
+	
+	Pos3D *nearest = NULL;
+	double nearest_dist = 0.;
+	
+	for( std::vector<Pos3D*>::const_iterator pos_iter = others->begin(); pos_iter != others->end(); pos_iter ++ )
+	{
+		if( except->find( *pos_iter ) != except->end() )
+			continue;
+		
+		double dist = Dist(*pos_iter);
+		if( (dist < nearest_dist) || (! nearest) )
+		{
+			nearest = *pos_iter;
+			nearest_dist = dist;
+		}
+	}
+	
+	return nearest;
+}
+
+
+Pos3D *Pos3D::Nearest( const std::list<Pos3D*> *others, const std::set<Pos3D*> *except )
+{
+	if( ! others )
+		return NULL;
+	
+	if( ! except )
+		return Nearest( others );
+	
+	Pos3D *nearest = NULL;
+	double nearest_dist = 0.;
+	
+	for( std::list<Pos3D*>::const_iterator pos_iter = others->begin(); pos_iter != others->end(); pos_iter ++ )
+	{
+		if( except->find( *pos_iter ) != except->end() )
+			continue;
+		
+		double dist = Dist(*pos_iter);
+		if( (dist < nearest_dist) || (! nearest) )
+		{
+			nearest = *pos_iter;
+			nearest_dist = dist;
+		}
+	}
+	
+	return nearest;
+}
+
+
 Pos3D &Pos3D::operator +=( const Vec3D &vec )
 {
 	X += vec.X;

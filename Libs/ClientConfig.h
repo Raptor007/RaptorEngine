@@ -5,7 +5,7 @@
 #pragma once
 class ClientConfig;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 #include <map>
 #include <string>

@@ -5,13 +5,12 @@
 #pragma once
 class ResourceManager;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 #include <map>
 #include <string>
+#include "RaptorGL.h"
 #include <SDL/SDL.h>
-#include <GLEW/glew.h>
-#include <OpenGL/gl.h>
 #include <SDL/SDL_thread.h>
 #include <SDL_image/SDL_image.h>
 #include <SDL_mixer/SDL_mixer.h>

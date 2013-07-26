@@ -6,7 +6,6 @@
 
 #include <cmath>
 #include <cfloat>
-#include <OpenGL/glu.h>
 #include <SDL/SDL.h>
 #include "Endian.h"
 #include "Num.h"
@@ -101,6 +100,11 @@ void Graphics::SetMode( int x, int y, bool fullscreen, int fsaa, int af, std::st
 		SDL_GL_SetAttribute( SDL_GL_MULTISAMPLEBUFFERS, 1 );
 		SDL_GL_SetAttribute( SDL_GL_MULTISAMPLESAMPLES, FSAA );
 	}
+	else
+	{
+		SDL_GL_SetAttribute( SDL_GL_MULTISAMPLEBUFFERS, 0 );
+		SDL_GL_SetAttribute( SDL_GL_MULTISAMPLESAMPLES, 1 );
+	}
 	
 	// Make sure we're getting hardware-accelerated OpenGL.
 	SDL_GL_SetAttribute( SDL_GL_ACCELERATED_VISUAL, 1 );
@@ -112,6 +116,16 @@ void Graphics::SetMode( int x, int y, bool fullscreen, int fsaa, int af, std::st
 	// Free the current screen.
 	if( Screen )
 		SDL_FreeSurface( Screen );
+	
+	#ifndef __APPLE__
+		// Set the titlebar icon.
+		SDL_Surface *icon = SDL_LoadBMP("icon.bmp");
+		if( icon )
+		{
+			SDL_WM_SetIcon( icon, NULL );
+			SDL_FreeSurface( icon );
+		}
+	#endif
 	
 	// Create a new screen.
 	Screen = SDL_SetVideoMode( x, y, 32, SDL_OPENGL | SDL_ANYFORMAT | (Fullscreen ? SDL_FULLSCREEN : SDL_RESIZABLE) );
@@ -154,8 +168,10 @@ void Graphics::SetMode( int x, int y, bool fullscreen, int fsaa, int af, std::st
 	glHint( GL_POINT_SMOOTH_HINT, GL_NICEST );
 	glHint( GL_FOG_HINT, GL_NICEST );
 	
-	// Allow fixed-function point sizes.
-	glDisable( GL_PROGRAM_POINT_SIZE );
+	#ifdef GL_PROGRAM_POINT_SIZE
+		// Allow fixed-function point sizes.
+		glDisable( GL_PROGRAM_POINT_SIZE );
+	#endif
 	
 	// Tell the ResourceManager to reload any previously-loaded textures.
 	Raptor::Game->Res.ReloadGraphics();
@@ -735,7 +751,7 @@ GLuint Graphics::SDL_GL_LoadTexture( SDL_Surface *surface, GLfloat *texcoord, GL
 	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, image->pixels );
 	if( mipmap )
 	{
-		#if !( defined(_ppc_) || defined(__ppc__) )
+		#ifndef LEGACY_MIPMAP
 			glGenerateMipmap( GL_TEXTURE_2D );
 		#else
 			gluBuild2DMipmaps( GL_TEXTURE_2D, GL_RGBA, w, h, GL_RGBA, GL_UNSIGNED_BYTE, image->pixels );

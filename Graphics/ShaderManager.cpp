@@ -27,14 +27,22 @@ ShaderManager::~ShaderManager()
 	if( ProgramHandle )
 		glDeleteProgram( ProgramHandle );
 	ProgramHandle = 0;
+	
+	Defs.clear();
 }
 
 
 bool ShaderManager::Initialize( void )
 {
-	GLenum result = glewInit();
-	if( result == GLEW_OK )
+	#ifndef NO_GLEW
+	{
+		GLenum result = glewInit();
+		if( result == GLEW_OK )
+			Initialized = true;
+	}
+	#else
 		Initialized = true;
+	#endif
 	
 	if( Initialized )
 		ProgramHandle = glCreateProgram();
@@ -50,7 +58,7 @@ void ShaderManager::LoadShaders( std::string shader_name )
 	
 	/*
 	for( std::map<std::string,Shader*>::iterator shader_iter = LoadedShaders.begin(); shader_iter != LoadedShaders.end(); shader_iter ++ )
-		shader_iter->second->Reload();
+		shader_iter->second->Reload( Defs );
 	*/
 	
 	// Load model shaders.
@@ -78,7 +86,7 @@ Shader *ShaderManager::LoadShader( ShaderType type, const char *filename )
 	if( ! Initialized )
 		return NULL;
 	
-	Shader *shader = new Shader( type, filename );
+	Shader *shader = new Shader( type, filename, Defs );
 	if( shader )
 	{
 		std::map<std::string,Shader*>::iterator old_shader = LoadedShaders.find( shader->FileName );
@@ -139,6 +147,8 @@ bool ShaderManager::UseShaders( std::list<Shader*> shaders )
 	else
 		glUseProgram( 0 );
 	
+	Vars.clear();
+	
 	return is_program_active;
 }
 
@@ -156,6 +166,8 @@ void ShaderManager::DeleteShaders( void )
 	for( std::map<std::string,Shader*>::iterator shader_iter = LoadedShaders.begin(); shader_iter != LoadedShaders.end(); shader_iter ++ )
 		delete shader_iter->second;
 	LoadedShaders.clear();
+	
+	Vars.clear();
 }
 
 
@@ -203,10 +215,22 @@ bool ShaderManager::Set3f( const char *name, double x, double y, double z )
 {
 	if( ProgramHandle )
 	{
-		GLuint loc = glGetUniformLocation( ProgramHandle, name );
-		if( loc >= 0 )
+		// See if we already know the variable's loc.  If not, look it up in the shader.
+		ShaderVar *var = &(Vars[ std::string(name) ]);
+		if( var->Loc < 0 )
+			var->Loc = glGetUniformLocation( ProgramHandle, name );
+		
+		// Only operate on a valid shader variable.
+		if( var->Loc >= 0 )
 		{
-			glUniform3f( loc, x, y, z );
+			// Only tell the shader to change its values if the numbers are different.
+			if( (x != var->Float1) || (y != var->Float2) || (z != var->Float3) )
+			{
+				glUniform3f( var->Loc, x, y, z );
+				var->Float1 = x;
+				var->Float2 = y;
+				var->Float3 = z;
+			}
 			return true;
 		}
 	}
@@ -219,13 +243,41 @@ bool ShaderManager::Set1i( const char *name, int value )
 {
 	if( ProgramHandle )
 	{
-		GLuint loc = glGetUniformLocation( ProgramHandle, name );
-		if( loc >= 0 )
+		// See if we already know the variable's loc.  If not, look it up in the shader.
+		ShaderVar *var = &(Vars[ std::string(name) ]);
+		if( var->Loc < 0 )
+			var->Loc = glGetUniformLocation( ProgramHandle, name );
+		
+		// Only operate on a valid shader variable.
+		if( var->Loc >= 0 )
 		{
-			glUniform1i( loc, value );
+			// Only tell the shader to change its value if the number is different.
+			if( value != var->Int1 )
+			{
+				glUniform1i( var->Loc, value );
+				var->Int1 = value;
+			}
 			return true;
 		}
 	}
 	
 	return false;
+}
+
+
+// -----------------------------------------------------------------------------
+
+
+ShaderVar::ShaderVar( void )
+{
+	Loc = -1;
+
+	Float1 = 0.;
+	Float2 = 0.;
+	Float3 = 0.;
+	Float4 = 0.;
+	Int1 = 0;
+	Int2 = 0;
+	Int3 = 0;
+	Int4 = 0;
 }

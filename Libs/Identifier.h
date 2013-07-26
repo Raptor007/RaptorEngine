@@ -6,7 +6,7 @@
 template <typename T> class Identifier;
 class IdentifierError;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 #include <set>
 #include <exception>

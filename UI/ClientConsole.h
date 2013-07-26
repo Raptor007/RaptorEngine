@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 class ClientConsole;
 
 #include "TextConsole.h"

@@ -296,6 +296,14 @@ std::string ListBox::SelectedValue( void )
 }
 
 
+std::string ListBox::SelectedText( void )
+{
+	if( Selected )
+		return Selected->Text;
+	return "";
+}
+
+
 void ListBox::Select( std::string value )
 {
 	for( std::vector<ListBoxItem>::iterator iter = Items.begin(); iter != Items.end(); iter ++ )

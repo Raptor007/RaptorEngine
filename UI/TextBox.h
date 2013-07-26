@@ -5,7 +5,7 @@
 #pragma once
 class TextBox;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 #include "Layer.h"
 #include <string>

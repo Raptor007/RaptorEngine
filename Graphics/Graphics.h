@@ -5,11 +5,10 @@
 #pragma once
 class Graphics;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 #include <SDL/SDL.h>
-#include <GLEW/glew.h>
-#include <OpenGL/gl.h>
+#include "RaptorGL.h"
 #include <SDL_ttf/SDL_ttf.h>
 #include <string>
 #include "Camera.h"

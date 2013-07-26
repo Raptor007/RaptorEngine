@@ -5,7 +5,7 @@
 #pragma once
 class Window;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 #include <stdexcept>
 #include <SDL/SDL.h>

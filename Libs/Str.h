@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 #include <string>
 #include <vector>
 #include <list>
@@ -21,6 +21,12 @@ namespace CStr
 	bool AsBool( const char *str );
 	
 	int FindInsensitive( const char *str, const char *search_for );
+	
+	class Less
+	{
+	public:
+		bool operator()( const char *a, const char *b ) const;
+	};
 	
 	std::string Escape( const char *str, const char *original, const char *escaped );
 	std::string Unescape( const char *str, const char *original, const char *escaped );

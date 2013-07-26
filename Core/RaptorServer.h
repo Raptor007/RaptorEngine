@@ -5,7 +5,7 @@
 #pragma once
 class RaptorServer;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 #include <string>
 #include <SDL/SDL.h>
@@ -51,7 +51,7 @@ public:
 	
 	virtual void Started( void );
 	virtual void Stopped( void );
-	virtual bool ProcessPacket( Packet *packet );
+	virtual bool ProcessPacket( Packet *packet, ConnectedClient *from_client );
 	virtual bool ValidateLogin( std::string name, std::string password );
 	virtual void AcceptedClient( ConnectedClient *client );
 	virtual void DroppedClient( ConnectedClient *client );

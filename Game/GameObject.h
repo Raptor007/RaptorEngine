@@ -5,7 +5,7 @@
 #pragma once
 class GameObject;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 #include <stdint.h>
 #include "Pos.h"

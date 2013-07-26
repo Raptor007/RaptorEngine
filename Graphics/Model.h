@@ -9,14 +9,12 @@ class ModelArrays;
 class ModelObject;
 class ModelMaterial;
 
-
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 #include <vector>
 #include <string>
 #include <map>
-#include <GLEW/glew.h>
-#include <OpenGL/gl.h>
+#include "RaptorGL.h"
 #include "Vec.h"
 #include "Pos.h"
 #include "Animation.h"

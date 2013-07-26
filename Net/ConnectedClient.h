@@ -5,7 +5,7 @@
 #pragma once
 class ConnectedClient;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 #include <queue>
 #include <map>

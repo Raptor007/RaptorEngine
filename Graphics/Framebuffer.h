@@ -5,10 +5,9 @@
 #pragma once
 class Framebuffer;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
-#include <GLEW/glew.h>
-#include <OpenGL/gl.h>
+#include "RaptorGL.h"
 #include "Camera.h"
 #include "Clock.h"
 
@@ -22,9 +21,10 @@ public:
 	GLuint FramebufferHandle;
 	GLuint Texture;
 	GLuint Depthbuffer;
-	int W, H;
+	int W, H, AllocW, AllocH;
 	GLint TextureFilter;
 	float AspectRatio;
+	bool ForcePowerOfTwo;
 	Clock LoadedTime;
 	
 	Framebuffer( int x = FRAMEBUFFER_DEFAULT_RES, int y = 0, GLint texture_filter = GL_LINEAR );

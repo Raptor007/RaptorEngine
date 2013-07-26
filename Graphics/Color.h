@@ -5,7 +5,7 @@
 #pragma once
 class Color;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 
 class Color

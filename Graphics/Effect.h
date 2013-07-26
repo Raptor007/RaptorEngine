@@ -5,7 +5,7 @@
 #pragma once
 class Effect;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 #include "Pos.h"
 #include "Animation.h"

@@ -89,6 +89,17 @@ int CStr::FindInsensitive( const char *str, const char *search_for )
 }
 
 
+bool CStr::Less::operator()( const char *a, const char *b ) const
+{
+	if( ! b )
+		return false;
+	if( ! a )
+		return true;
+	
+	return (strcmp( a, b ) < 0);
+}
+
+
 std::string CStr::Escape( const char *str, const char *original, const char *escaped )
 {
 	std::string return_str;

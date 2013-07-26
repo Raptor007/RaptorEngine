@@ -5,7 +5,7 @@
 #pragma once
 class JoystickState;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 #include <string>
 #include <map>

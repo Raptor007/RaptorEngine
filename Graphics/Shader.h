@@ -6,11 +6,11 @@
 class Shader;
 typedef unsigned int ShaderType;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 #include <string>
-#include <GLEW/glew.h>
-#include <OpenGL/gl.h>
+#include <map>
+#include "RaptorGL.h"
 
 
 class Shader
@@ -21,10 +21,10 @@ public:
 	std::string SourceCode, Log, FileName;
 	
 	Shader( void );
-	Shader( ShaderType type, const char *filename );
+	Shader( ShaderType type, const char *filename, std::map<std::string,std::string> defs );
 	~Shader();
 	
-	void Reload( void );
+	void Reload( std::map<std::string,std::string> defs );
 	
 	bool Ready( void );
 	

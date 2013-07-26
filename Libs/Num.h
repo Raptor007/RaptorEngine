@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 #include <SDL/SDL.h>
 #include <string>
@@ -16,6 +16,7 @@ namespace Num
 {
 	std::string ToString( int num );
 	std::string ToString( double num );
+	std::string ToHexString( int num );
 	
 	int8_t Sign( double num );
 	int8_t Sign( int num );

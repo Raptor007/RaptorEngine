@@ -7,7 +7,7 @@ class ListBox;
 class ListBoxItem;
 class ListBoxButton;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 #include "Layer.h"
 #include <string>
@@ -54,6 +54,7 @@ public:
 	virtual void Changed( void );
 	
 	std::string SelectedValue( void );
+	std::string SelectedText( void );
 	void Select( std::string value );
 	void Select( int index );
 	

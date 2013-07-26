@@ -138,7 +138,7 @@ void RaptorServer::Update( double dt )
 }
 
 
-bool RaptorServer::ProcessPacket( Packet *packet )
+bool RaptorServer::ProcessPacket( Packet *packet, ConnectedClient *from_client )
 {
 	PacketType type = packet->Type();
 	
@@ -200,7 +200,6 @@ bool RaptorServer::ProcessPacket( Packet *packet )
 			
 			if( player )
 			{
-				// FIXME: Make sure the client is authorized to update this player?
 				if( property_name == "name" )
 					player->Name = property_value;
 				else
@@ -269,6 +268,9 @@ bool RaptorServer::ValidateLogin( std::string name, std::string password )
 
 void RaptorServer::AcceptedClient( ConnectedClient *client )
 {
+	if( ! client )
+		return;
+	
 	Player *player = Data.GetPlayer( client->PlayerID );
 	
 	// Send list of server properties to the new client.

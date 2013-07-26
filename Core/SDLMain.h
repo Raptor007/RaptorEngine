@@ -8,6 +8,7 @@
 #ifndef _SDLMain_h_
 #define _SDLMain_h_
 
+#define SIGDIGLEN 36
 #import <Cocoa/Cocoa.h>
 
 @interface SDLMain : NSObject

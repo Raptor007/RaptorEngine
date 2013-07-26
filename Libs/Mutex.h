@@ -5,7 +5,7 @@
 #pragma once
 class Mutex;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 #include <SDL/SDL_thread.h>
 

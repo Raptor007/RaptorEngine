@@ -209,7 +209,6 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "g_fullscreen" ] = "true";
 	Settings[ "g_fsaa" ] = "4";
 	Settings[ "g_af" ] = "16";
-	
 	Settings[ "g_shader_enable" ] = "true";
 	Settings[ "g_shader_file" ] = "model";
 	
@@ -229,6 +228,11 @@ void ClientConfig::SetDefaults( void )
 	
 	Settings[ "netrate" ] = "30";
 	Settings[ "maxfps" ] = "120";
+	
+	#ifdef APPLE_POWERPC
+		Settings[ "g_fsaa" ] = "2";
+		Settings[ "g_af" ] = "2";
+	#endif
 	
 	
 	// Default server settings.

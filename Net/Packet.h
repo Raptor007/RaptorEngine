@@ -5,7 +5,7 @@
 #pragma once
 class Packet;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 #include <list>
 #include <exception>

@@ -513,7 +513,7 @@ void Model::ScaleBy( double fwd_scale, double up_scale, double right_scale )
 	{
 		for( std::map<std::string,ModelArrays>::iterator array_iter = obj_iter->second.Arrays.begin(); array_iter != obj_iter->second.Arrays.end(); array_iter ++ )
 		{
-			#pragma omp parallel for
+			// FIXME: Vectorize and/or parallelize?
 			for( int i = 0; i < array_iter->second.VertexCount; i ++ )
 			{
 				array_iter->second.VertexArray[ i*3     ] *= fwd_scale;
@@ -968,12 +968,12 @@ void ModelArrays::AddFaces( std::vector<ModelFace> &faces )
 		
 		
 		// Fill the new parts of the arrays.
+		// FIXME: Vectorize and/or parallelize?
 		
 		int vertices_size = vertices.size();
 		int tex_coords_size = tex_coords.size();
 		int normals_size = normals.size();
 		
-		#pragma omp parallel for
 		for( int i = 0; i < vertices_size; i ++ )
 		{
 			VertexArray[ old_vertex_count*3 + i*3     ] = vertices[ i ].X;
@@ -981,14 +981,12 @@ void ModelArrays::AddFaces( std::vector<ModelFace> &faces )
 			VertexArray[ old_vertex_count*3 + i*3 + 2 ] = vertices[ i ].Z;
 		}
 		
-		#pragma omp parallel for
 		for( int i = 0; i < tex_coords_size; i ++ )
 		{
 			TexCoordArray[ old_vertex_count*2 + i*2     ] = tex_coords[ i ].X;
 			TexCoordArray[ old_vertex_count*2 + i*2 + 1 ] = tex_coords[ i ].Y;
 		}
 		
-		#pragma omp parallel for
 		for( int i = 0; i < normals_size; i ++ )
 		{
 			NormalArray[ old_vertex_count*3 + i*3     ] = normals[ i ].X;
@@ -1046,7 +1044,7 @@ void ModelArrays::MakeWorldSpace( const Pos3D *pos, double scale, double fwd_sca
 		}
 		
 		// Translate from modelspace to worldspace.
-		#pragma omp parallel for
+		// FIXME: Vectorize and/or parallelize?
 		for( int i = 0; i < VertexCount; i ++ )
 		{
 			Vec3D vertex( VertexArray[ i*3 ], VertexArray[ i*3 + 1 ], VertexArray[ i*3 + 2 ] );
@@ -1122,7 +1120,8 @@ void ModelObject::AddFaces( std::string mtl, std::vector<ModelFace> &faces )
 
 void ModelObject::Recalc( void )
 {
-	// FIXME: Use a better algorithm than this!
+	// FIXME: Use a better algorithm than this?
+	// FIXME: Vectorize and/or parallelize?
 	
 	CenterPoint.Set( 0., 0., 0. );
 	int vertex_count = 0;

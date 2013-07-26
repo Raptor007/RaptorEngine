@@ -126,13 +126,9 @@ void RaptorGame::Initialize( int argc, char **argv )
 	
 	Console.Initialize();
 	
-	#if !( defined(_ppc_) || defined(__ppc__) )
-	{
-		ShaderMgr.Initialize();
-		std::string shader_file = Cfg.SettingAsString("g_shader_file");
-		ShaderMgr.LoadShaders( shader_file.empty() ? "model" : shader_file );
-	}
-	#endif
+	ShaderMgr.Initialize();
+	std::string shader_file = Cfg.SettingAsString("g_shader_file");
+	ShaderMgr.LoadShaders( shader_file.empty() ? "model" : shader_file );
 	
 	Snd.Initialize( Cfg.SettingAsInt("s_channels",2), Cfg.SettingAsInt("s_rate",44100), Cfg.SettingAsInt("s_depth",16), Cfg.SettingAsInt("s_buffer",4096), Cfg.SettingAsInt("s_mix_channels",64) );
 	Snd.MasterVolume = Cfg.SettingAsDouble( "s_volume", 0.5 );

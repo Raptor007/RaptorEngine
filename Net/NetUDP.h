@@ -6,7 +6,7 @@
 class NetUDP;
 class NetUDPPacket;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 #include <SDL_net/SDL_net.h>
 #include "Packet.h"

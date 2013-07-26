@@ -23,6 +23,14 @@ std::string Num::ToString( double num )
 }
 
 
+std::string Num::ToHexString( int num )
+{
+	char cstr[ 1024 ] = "";
+	snprintf( cstr, 1024, "%X", num );
+	return std::string(cstr);
+}
+
+
 int8_t Num::Sign( double num )
 {
 	if( num > 0.0 )

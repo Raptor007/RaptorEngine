@@ -5,6 +5,8 @@
 #include "Framebuffer.h"
 #include <cmath>
 #include <cfloat>
+#include <string>
+#include "Num.h"
 #include "RaptorGame.h"
 
 
@@ -14,6 +16,8 @@ Framebuffer::Framebuffer( int x, int y, GLint texture_filter )
 	FramebufferHandle = 0;
 	Texture = 0;
 	Depthbuffer = 0;
+	AllocW = 0;
+	AllocH = 0;
 	
 	W = FRAMEBUFFER_DEFAULT_RES;
 	if( x )
@@ -25,6 +29,12 @@ Framebuffer::Framebuffer( int x, int y, GLint texture_filter )
 	TextureFilter = texture_filter;
 	
 	AspectRatio = ((float)( W )) / ((float)( H ));
+
+	#if GL_ARB_texture_non_power_of_two
+		ForcePowerOfTwo = false;
+	#else
+		ForcePowerOfTwo = true;
+	#endif
 	
 	Initialize();
 }
@@ -60,6 +70,24 @@ void Framebuffer::Initialize( void )
 	if( FramebufferHandle || Texture || Depthbuffer )
 		return;
 	
+	// Some systems require power-of-two dimensions.
+	if( ForcePowerOfTwo )
+	{
+		AllocW = Num::NextPowerOfTwo(W);
+		AllocH = Num::NextPowerOfTwo(H);
+		
+		// If this system doesn't support non-power-of-two, scale down instead of up.
+		if( (AllocW != W) && (AllocW > 2) )
+			AllocW /= 2;
+		if( (AllocH != H) && (AllocH > 2) )
+			AllocH /= 2;
+	}
+	else
+	{
+		AllocW = W;
+		AllocH = H;
+	}
+	
 	// Framebuffer
 	glGenFramebuffers( 1, &FramebufferHandle );
 	glBindFramebuffer( GL_FRAMEBUFFER, FramebufferHandle );
@@ -70,7 +98,7 @@ void Framebuffer::Initialize( void )
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, TextureFilter );
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
 	glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, Raptor::Game->Gfx.AF );
-	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, W, H, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL );
+	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, AllocW, AllocH, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL );
 	glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Texture, 0 );
 	GLenum draw_buffers[ 1 ] = { GL_COLOR_ATTACHMENT0 };
 	glDrawBuffers( 1, draw_buffers );
@@ -78,11 +106,12 @@ void Framebuffer::Initialize( void )
 	// Depthbuffer
 	glGenRenderbuffers( 1, &Depthbuffer );
 	glBindRenderbuffer( GL_RENDERBUFFER, Depthbuffer );
-	glRenderbufferStorage( GL_RENDERBUFFER, GL_DEPTH_COMPONENT, W, H );
+	glRenderbufferStorage( GL_RENDERBUFFER, GL_DEPTH_COMPONENT, AllocW, AllocH );
 	glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, Depthbuffer );
 	
 	// Make sure everything worked.
-	if( glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE )
+	GLenum framebuffer_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+	if( framebuffer_status == GL_FRAMEBUFFER_COMPLETE )
 	{
 		Initialized = true;
 		
@@ -90,6 +119,56 @@ void Framebuffer::Initialize( void )
 		// NOTE: This may not clear the entire thing if the framebuffer is larger than the currently selected viewport.
 		glClearColor( 0.f, 0.f, 0.f, 0.f );
 		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+	}
+#ifdef GL_FRAMEBUFFER_UNSUPPORTED
+	else if( (framebuffer_status == GL_FRAMEBUFFER_UNSUPPORTED) && ! ForcePowerOfTwo )
+	{
+		ForcePowerOfTwo = true;
+		Clear();
+		Reload();
+	}
+#endif
+	else
+	{
+		std::string status_string = "UNKNOWN ERROR";
+		if( framebuffer_status == GL_INVALID_ENUM )
+			status_string = "GL_INVALID_ENUM";
+#ifdef GL_FRAMEBUFFER_UNDEFINED
+		else if( framebuffer_status == GL_FRAMEBUFFER_UNDEFINED )
+			status_string = "GL_FRAMEBUFFER_UNDEFINED";
+#endif
+#ifdef GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT
+		else if( framebuffer_status == GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT )
+			status_string = "GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT";
+#endif
+#ifdef GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT
+		else if( framebuffer_status == GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT )
+			status_string = "GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT";
+#endif
+#ifdef GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER
+		else if( framebuffer_status == GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER )
+			status_string = "GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER";
+#endif
+#ifdef GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER
+		else if( framebuffer_status == GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER )
+			status_string = "GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER";
+#endif
+#ifdef GL_FRAMEBUFFER_UNSUPPORTED
+		else if( framebuffer_status == GL_FRAMEBUFFER_UNSUPPORTED )
+			status_string = "GL_FRAMEBUFFER_UNSUPPORTED";
+#endif
+#ifdef GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE
+		else if( framebuffer_status == GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE )
+			status_string = "GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE";
+#endif
+#ifdef GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS
+		else if( framebuffer_status == GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS )
+			status_string = "GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS";
+#endif
+		else
+			status_string = std::string("0x") + Num::ToHexString( framebuffer_status );
+		
+		Raptor::Game->Console.Print( std::string("Framebuffer::Initialize: OpenGL Error ") + status_string, TextConsole::MSG_ERROR );
 	}
 	
 	// Unbind things so we don't accidentally use them when we don't mean to.
@@ -119,7 +198,7 @@ bool Framebuffer::Select( void )
 	if( Initialized )
 	{
 		glBindFramebuffer( GL_FRAMEBUFFER, FramebufferHandle );
-		glViewport( 0, 0, W, H );
+		glViewport( 0, 0, AllocW, AllocH );
 		return true;
 	}
 	

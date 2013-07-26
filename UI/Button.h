@@ -5,7 +5,7 @@
 #pragma once
 class Button;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 #include "Layer.h"
 #include "Animation.h"

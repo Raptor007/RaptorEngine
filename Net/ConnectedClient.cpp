@@ -184,7 +184,7 @@ bool ConnectedClient::ProcessPacket( Packet *packet )
 	packet->Rewind();
 	PacketType type = packet->Type();
 	
-	if( Raptor::Server->ProcessPacket( packet ) )
+	if( Raptor::Server->ProcessPacket( packet, this ) )
 		return true;
 	
 	else if( type == Raptor::Packet::PING )

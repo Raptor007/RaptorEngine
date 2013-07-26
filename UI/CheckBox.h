@@ -5,7 +5,7 @@
 #pragma once
 class CheckBox;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 #include "LabelledButton.h"
 #include "Font.h"

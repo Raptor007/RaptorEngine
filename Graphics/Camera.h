@@ -5,7 +5,7 @@
 #pragma once
 class Camera;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 #include "Pos.h"
 #include "Graphics.h"

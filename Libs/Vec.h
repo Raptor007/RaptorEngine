@@ -7,7 +7,7 @@ class Vec;
 class Vec2D;
 class Vec3D;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 
 class Vec

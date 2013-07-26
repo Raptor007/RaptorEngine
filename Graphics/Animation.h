@@ -5,13 +5,11 @@
 #pragma once
 class Animation;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 #include <string>
 #include <vector>
-#include <GLEW/glew.h>
-#include <OpenGL/gl.h>
-
+#include "RaptorGL.h"
 #include "Clock.h"
 
 

@@ -4,7 +4,6 @@
 
 #include "ResourceManager.h"
 
-#include <OpenGL/glu.h>
 #include "Str.h"
 #include "RaptorGame.h"
 #include "Endian.h"
@@ -352,7 +351,7 @@ GLuint ResourceManager::LoadTexture( std::string name )
 		glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, surface->pixels );
 		
 		// Generate mipmaps.
-		#if !( defined(_ppc_) || defined(__ppc__) )
+		#ifndef LEGACY_MIPMAP
 			glGenerateMipmap( GL_TEXTURE_2D );
 		#else
 			gluBuild2DMipmaps( GL_TEXTURE_2D, GL_RGBA, surface->w, surface->h, GL_RGBA, GL_UNSIGNED_BYTE, surface->pixels );

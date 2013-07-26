@@ -5,7 +5,7 @@
 #pragma once
 class Layer;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 #include <vector>
 #include <SDL/SDL.h>

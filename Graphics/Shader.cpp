@@ -18,7 +18,7 @@ Shader::Shader( void )
 }
 
 
-Shader::Shader( ShaderType type, const char *filename )
+Shader::Shader( ShaderType type, const char *filename, std::map<std::string,std::string> defs )
 {
 	Type = type;
 	ShaderHandle = 0;
@@ -27,7 +27,7 @@ Shader::Shader( ShaderType type, const char *filename )
 	if( filename )
 	{
 		FileName = std::string(filename);
-		Reload();
+		Reload( defs );
 	}
 }
 
@@ -39,7 +39,7 @@ Shader::~Shader()
 }
 
 
-void Shader::Reload( void )
+void Shader::Reload( std::map<std::string,std::string> defs )
 {
 	ShaderHandle = 0;
 	Compiled = false;
@@ -49,8 +49,16 @@ void Shader::Reload( void )
 		ShaderHandle = glCreateShader( Type );
 		if( ShaderHandle )
 		{
+			// First add definitions.
+			SourceCode = "#version 110\n";
+			for( std::map<std::string,std::string>::iterator def_iter = defs.begin(); def_iter != defs.end(); def_iter ++ )
+			{
+				if( ! def_iter->second.empty() )
+					SourceCode += std::string("#define ") + def_iter->first + std::string(" ") + def_iter->second + std::string("\n");
+			}
+			
 			// Load the source code from a file.
-			SourceCode = File::AsString( FileName.c_str() );
+			SourceCode += File::AsString( FileName.c_str() );
 			const GLchar *source_code_cstr = SourceCode.c_str();
 			glShaderSource( ShaderHandle, 1, (const GLchar **) &(source_code_cstr), NULL );
 			

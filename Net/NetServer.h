@@ -5,7 +5,7 @@
 #pragma once
 class NetServer;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 #include <list>
 #include <queue>

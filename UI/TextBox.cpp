@@ -186,15 +186,11 @@ bool TextBox::KeyDown( SDLKey key )
 	{
 		if( (key == SDLK_RETURN) || (key == SDLK_KP_ENTER) )
 		{
-			if( ReturnDeselects )
-				Container->Selected = NULL;
 			if( PassReturn )
 				return false;
 		}
 		else if( key == SDLK_ESCAPE )
 		{
-			if( EscDeselects )
-				Container->Selected = NULL;
 			if( PassEsc )
 				return false;
 		}
@@ -295,7 +291,21 @@ bool TextBox::KeyUp( SDLKey key )
 {
 	if( IsSelected() )
 	{
-		if( (key == SDLK_LSHIFT) || (key == SDLK_RSHIFT) )
+		if( (key == SDLK_RETURN) || (key == SDLK_KP_ENTER) )
+		{
+			if( ReturnDeselects )
+				Container->Selected = NULL;
+			if( PassReturn )
+				return false;
+		}
+		else if( key == SDLK_ESCAPE )
+		{
+			if( EscDeselects )
+				Container->Selected = NULL;
+			if( PassEsc )
+				return false;
+		}
+		else if( (key == SDLK_LSHIFT) || (key == SDLK_RSHIFT) )
 			ShiftIsDown = false;
 		
 		return true;

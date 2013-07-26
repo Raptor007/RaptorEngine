@@ -5,7 +5,7 @@
 #pragma once
 class LayerManager;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 #include <vector>
 #include "Layer.h"

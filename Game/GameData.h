@@ -5,7 +5,7 @@
 #pragma once
 class GameData;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 #include <stdint.h>
 #include <map>

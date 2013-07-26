@@ -5,15 +5,14 @@
 #pragma once
 class RaptorGame;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 #include <time.h>
 #include <signal.h>
 #include <map>
 #include <list>
 #include <signal.h>
-#include <GLEW/glew.h>
-#include <OpenGL/gl.h>
+#include "RaptorGL.h"
 #include <SDL/SDL.h>
 
 #include "RaptorDefs.h"

@@ -5,7 +5,7 @@
 #pragma once
 class Player;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 #include <stdint.h>
 #include <string>

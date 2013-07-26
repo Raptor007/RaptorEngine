@@ -5,7 +5,7 @@
 #pragma once
 class Screensaver;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 #include "Layer.h"
 

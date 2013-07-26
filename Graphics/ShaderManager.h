@@ -4,12 +4,14 @@
 
 #pragma once
 class ShaderManager;
+class ShaderVar;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 #include <list>
 #include <map>
 #include "Shader.h"
+#include "Str.h"
 
 
 class ShaderManager
@@ -17,6 +19,9 @@ class ShaderManager
 public:
 	bool Initialized;
 	GLuint ProgramHandle;
+	//std::map<const char *,ShaderVar,CStr::Less> Vars;
+	std::map<std::string,ShaderVar> Vars;
+	std::map<std::string,std::string> Defs;
 	
 	ShaderManager( void );
 	~ShaderManager();
@@ -38,4 +43,15 @@ public:
 	
 private:
 	std::map<std::string,Shader*> LoadedShaders;
+};
+
+
+class ShaderVar
+{
+public:
+	GLint Loc;
+	double Float1, Float2, Float3, Float4;
+	int Int1, Int2, Int3, Int4;
+	
+	ShaderVar( void );
 };

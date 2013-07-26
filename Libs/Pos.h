@@ -5,10 +5,11 @@
 #pragma once
 class Pos;
 
-#include "platforms.h"
+#include "PlatformSpecific.h"
 
 #include <vector>
 #include <list>
+#include <set>
 #include "Vec.h"
 
 
@@ -56,6 +57,8 @@ public:
 	
 	Pos3D *Nearest( const std::vector<Pos3D*> *others );
 	Pos3D *Nearest( const std::list<Pos3D*> *others );
+	Pos3D *Nearest( const std::vector<Pos3D*> *others, const std::set<Pos3D*> *except );
+	Pos3D *Nearest( const std::list<Pos3D*> *others, const std::set<Pos3D*> *except );
 	
 	virtual Pos3D &operator +=( const Vec3D &vec );
 	virtual Pos3D &operator -=( const Vec3D &vec );
