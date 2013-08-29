@@ -81,7 +81,7 @@ void Effect::Draw( void )
 	// Calculate corners.
 	Vec3D tl( Raptor::Game->Cam.Up.X - Raptor::Game->Cam.Right.X, Raptor::Game->Cam.Up.Y - Raptor::Game->Cam.Right.Y, Raptor::Game->Cam.Up.Z - Raptor::Game->Cam.Right.Z );
 	tl.ScaleTo( Size * sqrt(0.5) );
-	tl.RotateAround( &(Raptor::Game->Cam.Fwd), Rotation + RotationSpeed * Lifetime.ElapsedSeconds() );
+	tl.RotateAround( &(Raptor::Game->Cam.Fwd), Rotation );
 	Vec3D tr = tl;
 	tr.RotateAround( &(Raptor::Game->Cam.Fwd), 90. );
 	Vec3D br = tl;

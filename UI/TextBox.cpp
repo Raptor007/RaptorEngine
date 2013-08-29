@@ -4,8 +4,10 @@
 
 #include "TextBox.h"
 
+#include <cstddef>
 
-TextBox::TextBox( Layer *container, SDL_Rect *rect, Font *font, uint8_t align ) : Layer( container, rect )
+
+TextBox::TextBox( SDL_Rect *rect, Font *font, uint8_t align ) : Layer( rect )
 {
 	Text = "";
 	Cursor = 0;
@@ -44,7 +46,7 @@ TextBox::TextBox( Layer *container, SDL_Rect *rect, Font *font, uint8_t align ) 
 }
 
 
-TextBox::TextBox( Layer *container, SDL_Rect *rect, Font *font, uint8_t align, std::string text ) : Layer( container, rect )
+TextBox::TextBox( SDL_Rect *rect, Font *font, uint8_t align, std::string text ) : Layer( rect )
 {
 	Text = text;
 	Cursor = Text.length();
@@ -121,24 +123,56 @@ void TextBox::Draw( void )
 			if( show_cursor )
 			{
 				UpdateCursor();
-
+				
 				SDL_Rect size;
 				TextFont->TextSize( Text.substr( 0, Cursor ), &size );
 				int x = size.w, y = 0;
 				
-				if( (Align == Font::ALIGN_TOP_LEFT) || (Align == Font::ALIGN_TOP_CENTER) || (Align == Font::ALIGN_TOP_RIGHT) )
-					y = 0;
-				else if( (Align == Font::ALIGN_BOTTOM_LEFT) || (Align == Font::ALIGN_BOTTOM_CENTER) || (Align == Font::ALIGN_BOTTOM_RIGHT) )
-					y = Rect.h;
-				else
-					y = Rect.h / 2;
+				switch( Align )
+				{
+					case Font::ALIGN_TOP_LEFT:
+					case Font::ALIGN_TOP_CENTER:
+					case Font::ALIGN_TOP_RIGHT:
+						y = 0;
+						break;
+					case Font::ALIGN_MIDDLE_LEFT:
+					case Font::ALIGN_MIDDLE_CENTER:
+					case Font::ALIGN_MIDDLE_RIGHT:
+						y = Rect.h / 2;
+						break;
+					case Font::ALIGN_BASELINE_LEFT:
+					case Font::ALIGN_BASELINE_CENTER:
+					case Font::ALIGN_BASELINE_RIGHT:
+						y = TextFont->GetAscent();
+						break;
+					case Font::ALIGN_BOTTOM_LEFT:
+					case Font::ALIGN_BOTTOM_CENTER:
+					case Font::ALIGN_BOTTOM_RIGHT:
+						y = Rect.h;
+						break;
+				}
 				
-				if( (Align == Font::ALIGN_TOP_LEFT) || (Align == Font::ALIGN_MIDDLE_LEFT) || (Align == Font::ALIGN_BOTTOM_LEFT) )
-					x = size.w;
-				else if( (Align == Font::ALIGN_TOP_RIGHT) || (Align == Font::ALIGN_MIDDLE_RIGHT) || (Align == Font::ALIGN_BOTTOM_RIGHT) )
-					x = Rect.w;
-				else
-					x = (size.w + Rect.w) / 2;
+				switch( Align )
+				{
+					case Font::ALIGN_TOP_LEFT:
+					case Font::ALIGN_MIDDLE_LEFT:
+					case Font::ALIGN_BASELINE_LEFT:
+					case Font::ALIGN_BOTTOM_LEFT:
+						x = size.w;
+						break;
+					case Font::ALIGN_TOP_CENTER:
+					case Font::ALIGN_MIDDLE_CENTER:
+					case Font::ALIGN_BASELINE_CENTER:
+					case Font::ALIGN_BOTTOM_CENTER:
+						x = (size.w + Rect.w) / 2;
+						break;
+					case Font::ALIGN_TOP_RIGHT:
+					case Font::ALIGN_MIDDLE_RIGHT:
+					case Font::ALIGN_BASELINE_RIGHT:
+					case Font::ALIGN_BOTTOM_RIGHT:
+						x = Rect.w;
+						break;
+				}
 				
 				if( CenterCursor )
 					x -= TextFont->LineWidth( CursorAppearance ) / 2;

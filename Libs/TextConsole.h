@@ -47,4 +47,5 @@ public:
 	Clock TimeStamp;
 	
 	TextConsoleMessage( std::string text, uint32_t type );
+	virtual ~TextConsoleMessage();
 };

@@ -19,9 +19,9 @@ public:
 	Animation *ImageMouseDown;
 	Animation *ImageMouseOver;
 	
-	Button( Layer *container, SDL_Rect *rect, Animation *normal );
-	Button( Layer *container, SDL_Rect *rect, Animation *normal, Animation *mouse_down );
-	Button( Layer *container, SDL_Rect *rect, Animation *normal, Animation *mouse_down, Animation *mouse_over );
+	Button( SDL_Rect *rect, Animation *normal );
+	Button( SDL_Rect *rect, Animation *normal, Animation *mouse_down );
+	Button( SDL_Rect *rect, Animation *normal, Animation *mouse_down, Animation *mouse_over );
 	virtual ~Button();
 	
 	virtual void Draw( void );

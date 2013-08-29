@@ -8,7 +8,7 @@
 #include "RaptorGame.h"
 
 
-MessageOverlay::MessageOverlay( Layer *container, Font *message_font ) : Layer( container )
+MessageOverlay::MessageOverlay( Font *message_font ) : Layer()
 {
 	Red = 0.f;
 	Green = 0.f;

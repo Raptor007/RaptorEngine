@@ -18,7 +18,7 @@ public:
 	double MessageLifetime;
 	int MaxMessages;
 	
-	MessageOverlay( Layer *container, Font *message_font );
+	MessageOverlay( Font *message_font );
 	virtual ~MessageOverlay();
 	
 	void Initialize( void );

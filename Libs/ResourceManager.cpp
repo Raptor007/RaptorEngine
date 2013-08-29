@@ -4,6 +4,7 @@
 
 #include "ResourceManager.h"
 
+#include <cstddef>
 #include "Str.h"
 #include "RaptorGame.h"
 #include "Endian.h"

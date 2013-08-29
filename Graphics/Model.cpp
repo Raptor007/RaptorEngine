@@ -4,6 +4,7 @@
 
 #include "Model.h"
 
+#include <cstddef>
 #include <cmath>
 #include <fstream>
 #include <set>

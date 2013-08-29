@@ -28,8 +28,8 @@ public:
 	std::string CursorAppearance;
 	bool CenterCursor;
 	
-	TextBox( Layer *container, SDL_Rect *rect, Font *font, uint8_t align );
-	TextBox( Layer *container, SDL_Rect *rect, Font *font, uint8_t align, std::string text );
+	TextBox( SDL_Rect *rect, Font *font, uint8_t align );
+	TextBox( SDL_Rect *rect, Font *font, uint8_t align, std::string text );
 	virtual ~TextBox();
 	
 	void Draw( void );

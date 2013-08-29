@@ -6,7 +6,7 @@
 class SoundOut;
 
 #include "PlatformSpecific.h"
-
+#include <cstddef>
 #include <string>
 #include <map>
 #include <queue>
@@ -32,12 +32,14 @@ public:
 	int AttenuateFor;
 	
 	bool PlayMusic;
+	bool ShuffleMusic;
+	std::list<Mix_Music*> MusicStream;
+	std::string MusicSubdir;
 	std::vector<Mix_Music*> MusicList;
 	int CurrentMusic;
-	bool ShuffleMusic;
 	
 	SoundOut( void );
-	~SoundOut();
+	virtual ~SoundOut();
 	
 	void Initialize( void );
 	void Initialize( int channels, int rate, int depth, int buffer, int mix_channels );
@@ -63,9 +65,12 @@ public:
 	void PlayMusicOnce( Mix_Music *music );
 	void PlayMusicLooped( Mix_Music *music );
 	void QueueMusic( Mix_Music *music );
+	void StreamMusic( Mix_Music *music );
+	void StreamMusicUnique( Mix_Music *music );
 	void StopMusic( void );
 	
 	void PlayMusicSubdir( std::string dir );
+	void PlayMusicSubdirNext( std::string dir );
 	void QueueMusicSubdir( std::string dir );
 	
 private:

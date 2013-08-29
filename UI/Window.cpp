@@ -17,7 +17,7 @@ Window::Window( void )
 	Red = 0.0f;
 	Green = 0.0f;
 	Blue = 0.0f;
-	Alpha = 0.5f;
+	Alpha = 0.75f;
 }
 
 

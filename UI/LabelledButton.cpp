@@ -5,7 +5,7 @@
 #include "LabelledButton.h"
 
 
-LabelledButton::LabelledButton( Layer *container, SDL_Rect *rect, Font *label_font, std::string text, uint8_t align, Animation *normal, Animation *mouse_down, Animation *mouse_over ) : Button( container, rect, normal, mouse_down, mouse_over )
+LabelledButton::LabelledButton( SDL_Rect *rect, Font *label_font, std::string text, uint8_t align, Animation *normal, Animation *mouse_down, Animation *mouse_over ) : Button( rect, normal, mouse_down, mouse_over )
 {
 	LabelText = text;
 	LabelAlign = align;
@@ -44,11 +44,11 @@ void LabelledButton::Draw( void )
 		if( MouseIsWithin )
 		{
 			if( MouseIsDown )
-				LabelFont->DrawText( LabelText, &Rect, LabelAlign, RedDown, GreenDown, BlueDown, AlphaDown );
+				LabelFont->DrawText( LabelText, 0, 0, Rect.w, Rect.h, LabelAlign, RedDown, GreenDown, BlueDown, AlphaDown );
 			else 
-				LabelFont->DrawText( LabelText, &Rect, LabelAlign, RedOver, GreenOver, BlueOver, AlphaOver );
+				LabelFont->DrawText( LabelText, 0, 0, Rect.w, Rect.h, LabelAlign, RedOver, GreenOver, BlueOver, AlphaOver );
 		}
 		else
-			LabelFont->DrawText( LabelText, &Rect, LabelAlign, RedNormal, GreenNormal, BlueNormal, AlphaNormal );
+			LabelFont->DrawText( LabelText, 0, 0, Rect.w, Rect.h, LabelAlign, RedNormal, GreenNormal, BlueNormal, AlphaNormal );
 	}
 }

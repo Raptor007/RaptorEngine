@@ -30,12 +30,16 @@ public:
 	
 	int GetLineSkip( void );
 	int GetHeight( void );
+	int GetAscent( void );
+	int GetDescent( void );
 	
 	void TextSize( std::string text, SDL_Rect *r );
 	int TextHeight( std::string text );
 	int LineWidth( std::string text );
 	void DrawText( std::string text, int x, int y, uint8_t align );
 	void DrawText( std::string text, int x, int y, uint8_t align, float r, float g, float b, float a );
+	void DrawText( std::string text, int x1, int y1, int w, int h, uint8_t align );
+	void DrawText( std::string text, int x1, int y1, int w, int h, uint8_t align, float r, float g, float b, float a );
 	void DrawText( std::string text, SDL_Rect *rect, uint8_t align );
 	void DrawText( std::string text, SDL_Rect *rect, uint8_t align, float r, float g, float b, float a );
 	void DrawText3D( std::string text, const Pos3D *pos, uint8_t align, double scale = 1. );
@@ -49,6 +53,9 @@ public:
 		ALIGN_MIDDLE_LEFT,
 		ALIGN_MIDDLE_CENTER,
 		ALIGN_MIDDLE_RIGHT,
+		ALIGN_BASELINE_LEFT,
+		ALIGN_BASELINE_CENTER,
+		ALIGN_BASELINE_RIGHT,
 		ALIGN_BOTTOM_LEFT,
 		ALIGN_BOTTOM_CENTER,
 		ALIGN_BOTTOM_RIGHT

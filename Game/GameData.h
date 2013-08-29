@@ -40,7 +40,7 @@ public:
 	
 	
 	GameData( void );
-	~GameData();
+	virtual ~GameData();
 	
 	uint32_t AddObject( GameObject *obj );
 	uint16_t AddPlayer( Player *player );

@@ -19,6 +19,7 @@ NetClient::NetClient( void )
 	Thread = NULL;
 	Socket = NULL;
 	NetRate = 30.0;
+	PingRate = 4.;
 	Precision = 0;
 	BytesSent = 0;
 	BytesReceived = 0;
@@ -46,6 +47,7 @@ NetClient::~NetClient()
 		Thread = NULL;
 	}
 	
+	// Clean up old data and socket.
 	Cleanup();
 	
 	if( Lock )
@@ -118,6 +120,10 @@ int NetClient::Connect( const char *hostname, int port, const char *name, const 
 	if( Connected )
 		DisconnectNice();
 	
+	// Clean up old data and socket.
+	SDL_Delay( 1 );
+	Cleanup();
+	
 	// Show the wait screen.
 	char cstr[ 1024 ] = "";
 	snprintf( cstr, 1024, "Connecting to %s:%i...", hostname, Port );
@@ -128,17 +134,15 @@ int NetClient::Connect( const char *hostname, int port, const char *name, const 
 	IPaddress ip;
 	if( SDLNet_ResolveHost( &ip, hostname, Port ) < 0 )
 	{
-		Raptor::Game->Console.Print( "Failed to resolve server hostname." );
-		//fprintf( stderr, "SDLNet_ResolveHost: %s\n", SDLNet_GetError() );
+		Raptor::Game->Console.Print( "Failed to resolve server hostname.", TextConsole::MSG_ERROR );
 		Raptor::Game->ChangeState( Raptor::State::DISCONNECTED );
 		return -1;
 	}
-
+	
 	// Open a connection with the IP provided.
 	if( !( Socket = SDLNet_TCP_Open(&ip) ) )
 	{
-		Raptor::Game->Console.Print( "Failed to open socket to server." );
-		//fprintf( stderr, "SDLNet_TCP_Open: %s\n", SDLNet_GetError() );
+		Raptor::Game->Console.Print( "Failed to open socket to server.", TextConsole::MSG_ERROR );
 		Raptor::Game->ChangeState( Raptor::State::DISCONNECTED );
 		return -1;
 	}
@@ -229,8 +233,6 @@ void NetClient::Disconnect( void )
 	// If we're hosting the game, stop the server.
 	if( Raptor::Server->IsRunning() )
 		Raptor::Server->StopAndWait();
-	
-	// Let the thread handle cleanup.
 }
 
 
@@ -240,18 +242,21 @@ void NetClient::Cleanup( void )
 	{
 		Raptor::Game->ChangeState( Raptor::State::DISCONNECTED );
 		
-		// If the connection is open, close it.
-		if( Socket )
+		if( ! Thread )
 		{
-			SDLNet_TCP_Close( Socket );
-			Socket = NULL;
+			// If the connection is open, close it.
+			if( Socket )
+			{
+				SDLNet_TCP_Close( Socket );
+				Socket = NULL;
+			}
+			
+			// This empties the incoming packet buffer.
+			ClearPackets();
+			
+			PingTimes.clear();
+			SentPings.clear();
 		}
-		
-		// This empties the incoming packet buffer.
-		ClearPackets();
-		
-		PingTimes.clear();
-		SentPings.clear();
 	}
 }
 
@@ -345,21 +350,24 @@ bool NetClient::ProcessPacket( Packet *packet )
 	else if( type == Raptor::Packet::LOGIN )
 	{
 		Raptor::Game->PlayerID = packet->NextUShort();
-		Raptor::Game->ChangeState( Raptor::State::CONNECTED );
+		if( Raptor::Game->State >= Raptor::State::CONNECTING )
+			Raptor::Game->ChangeState( Raptor::State::CONNECTED );
+		else
+			DisconnectNice();
 	}
 	
 	else if( type == Raptor::Packet::DISCONNECT )
 	{
 		std::string message = packet->NextString();
 		
-		DisconnectNice();
+		Disconnect();
 	}
 	
 	else if( type == Raptor::Packet::RECONNECT )
 	{
 		uint8_t time = packet->NextUChar();
 		
-		DisconnectNice();
+		Disconnect();
 		
 		ReconnectTime = time;
 		ReconnectAttempts = 3;
@@ -396,10 +404,21 @@ int NetClient::Send( Packet *packet )
 
 void NetClient::SendUpdates( void )
 {
-	if( Connected && (NetClock.ElapsedSeconds() >= (1.0 / NetRate)) )
+	// Reduce update rate temporarily in high-ping situations.
+	double temp_netrate = NetRate;
+	temp_netrate /= ((int) LatestPing() / 100) + 1;
+	
+	// Send an update if it's time to do so.
+	if( Connected && (NetClock.ElapsedSeconds() >= (1.0 / temp_netrate)) )
 	{
 		NetClock.Reset();
-		SendPing();
+		
+		if( PingClock.ElapsedSeconds() >= (1.0 / PingRate) )
+		{
+			PingClock.Reset();
+			SendPing();
+		}
+		
 		SendUpdate();
 	}
 }

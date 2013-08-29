@@ -28,7 +28,7 @@ public:
 
 	MouseState( void );
 	MouseState( Animation *cursor, int size );
-	~MouseState();
+	virtual ~MouseState();
 	
 	void TrackEvent( SDL_Event *event );
 	bool ButtonDown( Uint8 button );

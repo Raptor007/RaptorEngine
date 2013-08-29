@@ -3,6 +3,7 @@
  */
 
 #include "PacketBuffer.h"
+#include <cstddef>
 
 
 PacketBuffer::PacketBuffer( void )

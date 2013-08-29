@@ -5,6 +5,7 @@
 #ifdef WIN32
 
 #include "gettimeofday.h"
+#include <cstddef>
 #include <windows.h>
 
 #if defined(_MSC_VER) || defined(_MSC_EXTENSIONS)

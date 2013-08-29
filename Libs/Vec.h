@@ -3,21 +3,13 @@
  */
 
 #pragma once
-class Vec;
 class Vec2D;
 class Vec3D;
 
 #include "PlatformSpecific.h"
 
 
-class Vec
-{
-public:
-	virtual ~Vec();
-};
-
-
-class Vec2D : public Vec
+class Vec2D
 {
 public:
 	double X, Y;
@@ -72,6 +64,7 @@ public:
 	virtual double Dot( const Vec3D &other ) const;
 	virtual double Dot( double x, double y, double z ) const;
 	virtual Vec3D Cross( const Vec3D &other ) const;
+	virtual double AngleBetween( const Vec3D &other ) const;
 	
 	virtual Vec3D &operator +=( const Vec3D &other );
 	virtual Vec3D &operator -=( const Vec3D &other );

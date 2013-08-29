@@ -3,12 +3,14 @@
  */
 
 #include "ListBox.h"
+#include <cstddef>
 #include "RaptorGame.h"
 
 
-ListBox::ListBox( Layer *container, SDL_Rect *rect, Font *font, int scroll_bar_size ) : Layer( container, rect )
+ListBox::ListBox( SDL_Rect *rect, Font *font, int scroll_bar_size ) : Layer( rect )
 {
 	Selected = NULL;
+	TextAlign = Font::ALIGN_TOP_LEFT;
 	TextFont = font;
 	
 	Red = 0.0f;
@@ -34,14 +36,16 @@ ListBox::ListBox( Layer *container, SDL_Rect *rect, Font *font, int scroll_bar_s
 	
 	Scroll = 0;
 	
-	AddElement( new ListBoxButton( this, ListBox::SCROLL_UP, Raptor::Game->Res.GetAnimation("arrow_up.ani"), Raptor::Game->Res.GetAnimation("arrow_up_mdown.ani") ) );
-	AddElement( new ListBoxButton( this, ListBox::SCROLL_DOWN, Raptor::Game->Res.GetAnimation("arrow_down.ani"), Raptor::Game->Res.GetAnimation("arrow_down_mdown.ani") ) );
+	AddElement( new ListBoxButton( ListBox::SCROLL_UP, Raptor::Game->Res.GetAnimation("arrow_up.ani"), Raptor::Game->Res.GetAnimation("arrow_up_mdown.ani") ) );
+	AddElement( new ListBoxButton( ListBox::SCROLL_DOWN, Raptor::Game->Res.GetAnimation("arrow_down.ani"), Raptor::Game->Res.GetAnimation("arrow_down_mdown.ani") ) );
+	UpdateRects();
 }
 
 
-ListBox::ListBox( Layer *container, SDL_Rect *rect, Font *font, int scroll_bar_size, std::vector<ListBoxItem> items ) : Layer( container, rect )
+ListBox::ListBox( SDL_Rect *rect, Font *font, int scroll_bar_size, std::vector<ListBoxItem> items ) : Layer( rect )
 {
 	Selected = NULL;
+	TextAlign = Font::ALIGN_TOP_LEFT;
 	TextFont = font;
 	
 	Red = 0.0f;
@@ -67,8 +71,9 @@ ListBox::ListBox( Layer *container, SDL_Rect *rect, Font *font, int scroll_bar_s
 	
 	Scroll = 0;
 	
-	AddElement( new ListBoxButton( this, ListBox::SCROLL_UP, Raptor::Game->Res.GetAnimation("arrow_up.ani"), Raptor::Game->Res.GetAnimation("arrow_up_mdown.ani") ) );
-	AddElement( new ListBoxButton( this, ListBox::SCROLL_DOWN, Raptor::Game->Res.GetAnimation("arrow_down.ani"), Raptor::Game->Res.GetAnimation("arrow_down_mdown.ani") ) );
+	AddElement( new ListBoxButton( ListBox::SCROLL_UP, Raptor::Game->Res.GetAnimation("arrow_up.ani"), Raptor::Game->Res.GetAnimation("arrow_up_mdown.ani") ) );
+	AddElement( new ListBoxButton( ListBox::SCROLL_DOWN, Raptor::Game->Res.GetAnimation("arrow_down.ani"), Raptor::Game->Res.GetAnimation("arrow_down_mdown.ani") ) );
+	UpdateRects();
 	
 	Items = items;
 }
@@ -178,7 +183,7 @@ void ListBox::ScrollDown( void )
 void ListBox::UpdateRects( void )
 {
 	// FIXME: This method assumes the only elements are ListBoxButtons.
-	for( std::vector<Layer*>::iterator element_iter = Elements.begin(); element_iter != Elements.end(); element_iter ++ )
+	for( std::list<Layer*>::iterator element_iter = Elements.begin(); element_iter != Elements.end(); element_iter ++ )
 	{
 		ListBoxButton *button = (ListBoxButton*)(*element_iter);
 		button->UpdateRect();
@@ -217,17 +222,22 @@ void ListBox::Draw( void )
 	
 	if( TextFont )
 	{
-		int y = -Scroll;
+		SDL_Rect text_rect;
+		text_rect.x = 0;
+		text_rect.y = -Scroll;
+		text_rect.w = Rect.w - ScrollBarSize;
+		text_rect.h = TextFont->GetHeight();
+		
 		for( std::vector<ListBoxItem>::iterator iter = Items.begin(); iter != Items.end(); iter ++ )
 		{
-			if( (y < Rect.h) && ((y + LineScroll()) >= 0) )
+			if( (text_rect.y < Rect.h) && ((text_rect.y + LineScroll()) >= 0) )
 			{
 				if( Selected == &(*iter) )
-					TextFont->DrawText( (*iter).Text, 0, y, Font::ALIGN_TOP_LEFT, SelectedRed, SelectedGreen, SelectedBlue, SelectedAlpha );
+					TextFont->DrawText( (*iter).Text, &text_rect, TextAlign, SelectedRed, SelectedGreen, SelectedBlue, SelectedAlpha );
 				else
-					TextFont->DrawText( (*iter).Text, 0, y, Font::ALIGN_TOP_LEFT, TextRed, TextGreen, TextBlue, TextAlpha );
+					TextFont->DrawText( (*iter).Text, &text_rect, TextAlign, TextRed, TextGreen, TextBlue, TextAlpha );
 			}
-			y += LineScroll();
+			text_rect.y += LineScroll();
 		}
 	}
 	
@@ -343,17 +353,17 @@ ListBoxItem::ListBoxItem( std::string value, std::string text )
 // ---------------------------------------------------------------------------
 
 
-ListBoxButton::ListBoxButton( ListBox *list_box, uint8_t action, Animation *normal, Animation *mouse_down ) : Button( list_box, NULL, normal, mouse_down )
+ListBoxButton::ListBoxButton( uint8_t action, Animation *normal, Animation *mouse_down ) : Button( NULL, normal, mouse_down )
 {
-	Container = list_box;
 	Action = action;
-	
-	UpdateRect();
 }
 
 
 void ListBoxButton::UpdateRect( void )
 {
+	if( ! Container )
+		return;
+	
 	ListBox *list_box = (ListBox*) Container;
 	
 	int scroll_button_h = list_box->ScrollBarSize;

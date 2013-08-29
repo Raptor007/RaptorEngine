@@ -6,7 +6,7 @@
 class ClientConfig;
 
 #include "PlatformSpecific.h"
-
+#include <cstddef>
 #include <map>
 #include <string>
 #include <SDL/SDL.h>
@@ -25,7 +25,7 @@ public:
 	
 	
 	ClientConfig( void );
-	~ClientConfig();
+	virtual ~ClientConfig();
 	
 	void SetDefaults( void );
 	

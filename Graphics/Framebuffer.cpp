@@ -3,6 +3,8 @@
  */
 
 #include "Framebuffer.h"
+
+#include <cstddef>
 #include <cmath>
 #include <cfloat>
 #include <string>

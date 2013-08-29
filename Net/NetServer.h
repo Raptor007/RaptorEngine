@@ -35,7 +35,7 @@ public:
 	
 	
 	NetServer( void );
-	~NetServer();
+	virtual ~NetServer();
 	
 	int Initialize( int port = 7000 );
 	void DisconnectNice( const char *message );
@@ -45,6 +45,7 @@ public:
 	void ProcessIn( void );
 	void ProcessTop( void );
 	
+	void SendToPlayer( Packet *packet, uint32_t player_id );
 	void SendAll( Packet *packet );
 	void SendAllExcept( Packet *packet, ConnectedClient *except );
 	void SendAllReconnect( uint8_t seconds_to_wait = 3 );

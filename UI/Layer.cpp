@@ -8,9 +8,9 @@
 #include "RaptorGame.h"
 
 
-Layer::Layer( Layer *container, SDL_Rect *rect )
+Layer::Layer( SDL_Rect *rect )
 {
-	Container = container;
+	Container = NULL;
 	
 	Removed = false;
 	Dirty = false;
@@ -36,12 +36,15 @@ Layer::Layer( Layer *container, SDL_Rect *rect )
 		Rect.h = Raptor::Game->Gfx.H;
 	}
 	
+	CalcRect.x = Rect.x;
+	CalcRect.y = Rect.y;
+	CalcRect.w = Rect.w;
+	CalcRect.h = Rect.h;
+	
 	Red = 1.f;
 	Green = 1.f;
 	Blue = 1.f;
 	Alpha = 1.f;
-	
-	UpdateCalcRects();
 }
 
 
@@ -54,21 +57,17 @@ Layer::~Layer()
 	Container = NULL;
 	Selected = NULL;
 	
-	for( int i = Elements.size() - 1; i >= 0; i -- )
+	for( std::list<Layer*>::iterator layer_iter = Elements.begin(); layer_iter != Elements.end(); )
 	{
-		try
-		{
-			Layer *element = Elements.at( i );
-			delete element;
-			Elements[ i ] = NULL;
-		}
-		catch( std::out_of_range &exception )
-		{
-			fprintf( stderr, "Layer::~Layer: std::out_of_range\n" );
-		}
+		std::list<Layer*>::iterator layer_iter_next = layer_iter;
+		layer_iter_next ++;
+		
+		Layer *layer = *layer_iter;
+		Elements.erase( layer_iter );
+		delete layer;
+		
+		layer_iter = layer_iter_next;
 	}
-	
-	Elements.clear();
 }
 
 
@@ -77,28 +76,22 @@ void Layer::Cleanup( void )
 	if( Dirty )
 	{
 		Dirty = false;
-
-		for( int i = Elements.size() - 1; i >= 0; i -- )
+		
+		for( std::list<Layer*>::iterator layer_iter = Elements.begin(); layer_iter != Elements.end(); )
 		{
-			try
+			std::list<Layer*>::iterator layer_iter_next = layer_iter;
+			layer_iter_next ++;
+			
+			Layer *layer = *layer_iter;
+			if( layer->Removed )
 			{
-				Layer *element = Elements.at( i );
-				if( element->Removed )
-				{
-					// Create an iterator so the vector::erase method will work properly.
-					std::vector<Layer *>::iterator iter = Elements.begin() + i;
-					Elements.erase( iter );
-
-					delete element;
-				}
-				else if( element->Dirty )
-					element->Cleanup();
+				Elements.erase( layer_iter );
+				delete layer;
 			}
-			catch( std::out_of_range &exception )
-			{
-				fprintf( stderr, "Layer::Cleanup: std::out_of_range\n" );
-				Dirty = true;
-			}
+			else if( layer->Dirty )
+				layer->Cleanup();
+			
+			layer_iter = layer_iter_next;
 		}
 	}
 }
@@ -120,7 +113,7 @@ void Layer::UpdateCalcRects( int offset_x, int offset_y )
 		CalcRect.y = Rect.y + offset_y;
 	}
 	
-	for( std::vector<Layer*>::iterator layer_iter = Elements.begin(); layer_iter != Elements.end(); layer_iter ++ )
+	for( std::list<Layer*>::iterator layer_iter = Elements.begin(); layer_iter != Elements.end(); layer_iter ++ )
 	{
 		(*layer_iter)->UpdateCalcRects();
 	}
@@ -142,7 +135,7 @@ void Layer::Draw( void )
 
 void Layer::DrawElements( void )
 {
-	for( std::vector<Layer*>::iterator layer_iter = Elements.begin(); layer_iter != Elements.end(); layer_iter ++ )
+	for( std::list<Layer*>::iterator layer_iter = Elements.begin(); layer_iter != Elements.end(); layer_iter ++ )
 	{
 		// Draw all Layers, from bottom to top.
 		if( (*layer_iter)->Visible )
@@ -168,81 +161,97 @@ bool Layer::IsSelected( void )
 }
 
 
-bool Layer::HandleEvent( SDL_Event *event, bool already_handled )
+void Layer::TrackEvent( SDL_Event *event )
 {
-	if( ! Enabled )
-		already_handled = true;
-	
-	bool handled = false;
-	
-	
-	// Pass the event down the stack to see if one of the elements processes it.
-	
-	for( std::vector<Layer*>::iterator layer_iter = Elements.begin(); layer_iter != Elements.end(); layer_iter ++ )
-	{
-		if( (*layer_iter)->HandleEvent( event, handled ) )
-			handled = true;
-	}
+	// Pass the event down the stack so the elements can track it too.
+	for( std::list<Layer*>::reverse_iterator layer_iter = Elements.rbegin(); layer_iter != Elements.rend(); layer_iter ++ )
+		(*layer_iter)->TrackEvent( event );
 	
 	
-	// See what kind of event this is, and handle accordingly.
+	// Watch for MouseEnter/MouseLeave.
 	
 	bool mouse_is_within = MouseIsWithin;
-	bool mouse_is_down = MouseIsDown;
-	Uint8 button = 0;
 	
 	if( event->type == SDL_MOUSEMOTION )
+	{
 		mouse_is_within = WithinCalcRect( event->motion.x, event->motion.y );
-	else if( event->type == SDL_MOUSEBUTTONDOWN )
+	}
+	else if( (event->type == SDL_MOUSEBUTTONDOWN) || (event->type == SDL_MOUSEBUTTONUP) )
 	{
 		mouse_is_within = WithinCalcRect( event->button.x, event->button.y );
-		mouse_is_down = true;
-		button = event->button.button;
-	}
-	else if( event->type == SDL_MOUSEBUTTONUP )
-	{
-		mouse_is_within = WithinCalcRect( event->button.x, event->button.y );
-		mouse_is_down = false;
-		button = event->button.button;
-	}
-	else if( event->type == SDL_KEYDOWN )
-	{
-		if( !( handled || already_handled ) )
-			handled = KeyDown( event->key.keysym.sym );
-	}
-	else if( event->type == SDL_KEYUP )
-	{
-		if( !( handled || already_handled ) )
-			handled = KeyUp( event->key.keysym.sym );
 	}
 	
 	if( mouse_is_within != MouseIsWithin )
 	{
 		MouseIsWithin = mouse_is_within;
 		
-		// Always do MouseEnter and MouseLeave, even if the event was handled.
 		if( mouse_is_within )
 			MouseEnter();
 		else
 			MouseLeave();
 	}
 	
-	if( mouse_is_down != MouseIsDown )
+	if( MouseIsDown && (event->type == SDL_MOUSEBUTTONUP) && ! mouse_is_within )
+		MouseIsDown = false;
+}
+
+
+bool Layer::HandleEvent( SDL_Event *event )
+{
+	if( ! Enabled )
+		return false;
+	
+	
+	// Pass the event down the stack until one of the elements processes it.
+	for( std::list<Layer*>::reverse_iterator layer_iter = Elements.rbegin(); layer_iter != Elements.rend(); layer_iter ++ )
 	{
-		// Only track MouseIsDown if it's within this element and wasn't already handled.
-		if( (MouseIsWithin || ! mouse_is_down) && !( handled || already_handled ) )
-			MouseIsDown = mouse_is_down;
-		
-		// If the mouse is within this element and the event hasn't been handled yet, do MouseDown or MouseUp.
-		if( MouseIsWithin && !( handled || already_handled ) )
-		{
-			if( mouse_is_down )
-				handled = MouseDown( button );
-			else
-				handled = MouseUp( button );
-		}
+		if( (*layer_iter)->HandleEvent( event ) )
+			return true;
 	}
 	
+	
+	// See what kind of event this is, and handle accordingly.
+	
+	bool handled = false;
+	
+	bool mouse_is_within = MouseIsWithin;
+	bool mouse_is_down = MouseIsDown;
+	Uint8 mouse_button = 0;
+	
+	if( event->type == SDL_MOUSEMOTION )
+	{
+		mouse_is_within = WithinCalcRect( event->motion.x, event->motion.y );
+	}
+	else if( event->type == SDL_MOUSEBUTTONDOWN )
+	{
+		mouse_is_within = WithinCalcRect( event->button.x, event->button.y );
+		mouse_is_down = true;
+		mouse_button = event->button.button;
+	}
+	else if( event->type == SDL_MOUSEBUTTONUP )
+	{
+		mouse_is_within = WithinCalcRect( event->button.x, event->button.y );
+		mouse_is_down = false;
+		mouse_button = event->button.button;
+	}
+	else if( event->type == SDL_KEYDOWN )
+	{
+		handled = KeyDown( event->key.keysym.sym );
+	}
+	else if( event->type == SDL_KEYUP )
+	{
+		handled = KeyUp( event->key.keysym.sym );
+	}
+	
+	if( mouse_is_within && (mouse_is_down != MouseIsDown) )
+	{
+		MouseIsDown = mouse_is_down;
+		
+		if( mouse_is_down )
+			handled = MouseDown( mouse_button );
+		else
+			handled = MouseUp( mouse_button );
+	}
 	
 	return handled;
 }
@@ -293,17 +302,8 @@ bool Layer::IsTop( void )
 
 Layer *Layer::TopElement( void )
 {
-	if( int size = Elements.size() )
-	{
-		try
-		{
-			return Elements.at( size - 1 );
-		}
-		catch( std::out_of_range exception )
-		{
-			fprintf( stderr, "Layer::TopElement: std::out_of_range\n" );
-		}
-	}
+	if( Elements.size() )
+		return Elements.back();
 	
 	return NULL;
 }
@@ -329,6 +329,7 @@ void Layer::SetDirty( void )
 
 void Layer::AddElement( Layer *element )
 {
+	element->Container = this;
 	Elements.push_back( element );
 }
 
@@ -339,16 +340,10 @@ void Layer::RemoveElement( Layer *element )
 }
 
 
-void Layer::RemoveElement( int index )
+void Layer::RemoveAllElements( void )
 {
-	try
+	for( std::list<Layer*>::iterator layer_iter = Elements.begin(); layer_iter != Elements.end(); layer_iter ++ )
 	{
-		Layer *element = Elements.at( index );
-		element->Remove();
-	}
-	catch( std::out_of_range &exception )
-	{
-		fprintf( stderr, "State::RemoveElement: std::out_of_range\n" );
+		(*layer_iter)->Remove();
 	}
 }
-

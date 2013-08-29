@@ -4,6 +4,7 @@
 
 #include "GameData.h"
 
+#include <cstddef>
 #include "Camera.h"
 #include "RaptorGame.h"
 

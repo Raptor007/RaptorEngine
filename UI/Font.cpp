@@ -3,6 +3,8 @@
  */
 
 #include "Font.h"
+
+#include <cstddef>
 #include "Str.h"
 #include "Graphics.h"
 #include "ResourceManager.h"
@@ -37,7 +39,7 @@ void Font::InitFont( void )
 	
 	if( TTFont )
 		TTF_CloseFont( TTFont );
-
+	
 	TTFont = TTF_OpenFont( Name.c_str(), PointSize );
 	if( ! TTFont )
 	{
@@ -45,12 +47,12 @@ void Font::InitFont( void )
 		fprintf( stderr, "Can't open font file: %s\n", Name.c_str() );
 		return;
 	}
-
+	
 	Height = TTF_FontHeight( TTFont );
 	Ascent = TTF_FontAscent( TTFont );
 	Descent = TTF_FontDescent( TTFont );
 	LineSkip = TTF_FontLineSkip( TTFont );
-
+	
 	for( int i = 0; i < 256; i ++ )
 	{
 		Glyphs[ i ].Pic = NULL;
@@ -91,7 +93,7 @@ void Font::LoadChar( char c )
 		if( g1 )
 		{
 			Glyphs[ (unsigned char) c ].Pic = g1;
-			Glyphs[ (unsigned char) c ].Tex = Raptor::Game->Gfx.SDL_GL_LoadTexture( g1, texcoord );  // FIXME
+			Glyphs[ (unsigned char) c ].Tex = Raptor::Game->Gfx.LoadTexture( g1, texcoord );  // FIXME?
 			Glyphs[ (unsigned char) c ].TexMinX = texcoord[ 0 ];
 			Glyphs[ (unsigned char) c ].TexMinY = texcoord[ 1 ];
 			Glyphs[ (unsigned char) c ].TexMaxX = texcoord[ 2 ];
@@ -110,6 +112,18 @@ int Font::GetLineSkip( void )
 int Font::GetHeight( void )
 {
 	return Height;
+}
+
+
+int Font::GetAscent( void )
+{
+	return Ascent;
+}
+
+
+int Font::GetDescent( void )
+{
+	return Descent;
 }
 
 
@@ -222,6 +236,11 @@ void Font::DrawText( std::string text, int x, int y, uint8_t align, float r, flo
 		case ALIGN_MIDDLE_RIGHT:
 			y -= text_height / 2;
 			break;
+		case ALIGN_BASELINE_LEFT:
+		case ALIGN_BASELINE_CENTER:
+		case ALIGN_BASELINE_RIGHT:
+			y -= Ascent;
+			break;
 		case ALIGN_BOTTOM_LEFT:
 		case ALIGN_BOTTOM_CENTER:
 		case ALIGN_BOTTOM_RIGHT:
@@ -250,11 +269,13 @@ void Font::DrawText( std::string text, int x, int y, uint8_t align, float r, flo
 	{
 		case ALIGN_TOP_CENTER:
 		case ALIGN_MIDDLE_CENTER:
+		case ALIGN_BASELINE_CENTER:
 		case ALIGN_BOTTOM_CENTER:
 			x -= line_width / 2;
 			break;
 		case ALIGN_TOP_RIGHT:
 		case ALIGN_MIDDLE_RIGHT:
+		case ALIGN_BASELINE_RIGHT:
 		case ALIGN_BOTTOM_RIGHT:
 			x -= line_width;
 			break;
@@ -274,11 +295,13 @@ void Font::DrawText( std::string text, int x, int y, uint8_t align, float r, flo
 			{
 				case ALIGN_TOP_CENTER:
 				case ALIGN_MIDDLE_CENTER:
+				case ALIGN_BASELINE_CENTER:
 				case ALIGN_BOTTOM_CENTER:
 					x -= line_width / 2;
 					break;
 				case ALIGN_TOP_RIGHT:
 				case ALIGN_MIDDLE_RIGHT:
+				case ALIGN_BASELINE_RIGHT:
 				case ALIGN_BOTTOM_RIGHT:
 					x -= line_width;
 					break;
@@ -319,34 +342,75 @@ void Font::DrawText( std::string text, int x, int y, uint8_t align, float r, flo
 }
 
 
+void Font::DrawText( std::string text, int x1, int y1, int w, int h, uint8_t align )
+{
+	DrawText( text, x1, y1, w, h, align, 1.f, 1.f, 1.f, 1.f );
+}
+
+
+void Font::DrawText( std::string text, int x1, int y1, int w, int h, uint8_t align, float r, float g, float b, float a )
+{
+	int x = 0, y = 0;
+	
+	switch( align )
+	{
+		case ALIGN_TOP_LEFT:
+		case ALIGN_TOP_CENTER:
+		case ALIGN_TOP_RIGHT:
+			y = y1;
+			break;
+		case ALIGN_MIDDLE_LEFT:
+		case ALIGN_MIDDLE_CENTER:
+		case ALIGN_MIDDLE_RIGHT:
+			y = y1 + h/2;
+			break;
+		case ALIGN_BASELINE_LEFT:
+		case ALIGN_BASELINE_CENTER:
+		case ALIGN_BASELINE_RIGHT:
+			y = y1 + Ascent;
+			break;
+		case ALIGN_BOTTOM_LEFT:
+		case ALIGN_BOTTOM_CENTER:
+		case ALIGN_BOTTOM_RIGHT:
+			y = y1 + h;
+			break;
+	}
+	
+	switch( align )
+	{
+		case ALIGN_TOP_LEFT:
+		case ALIGN_MIDDLE_LEFT:
+		case ALIGN_BASELINE_LEFT:
+		case ALIGN_BOTTOM_LEFT:
+			x = x1;
+			break;
+		case ALIGN_TOP_CENTER:
+		case ALIGN_MIDDLE_CENTER:
+		case ALIGN_BASELINE_CENTER:
+		case ALIGN_BOTTOM_CENTER:
+			x = x1 + w/2;
+			break;
+		case ALIGN_TOP_RIGHT:
+		case ALIGN_MIDDLE_RIGHT:
+		case ALIGN_BASELINE_RIGHT:
+		case ALIGN_BOTTOM_RIGHT:
+			x = x1 + w;
+			break;
+	}
+	
+	DrawText( text, x, y, align, r, g, b, a );
+}
+
+
 void Font::DrawText( std::string text, SDL_Rect *rect, uint8_t align )
 {
-	DrawText( text, rect, align, 1.f, 1.f, 1.f, 1.f );
+	DrawText( text, rect->x, rect->y, rect->w, rect->h, align, 1.f, 1.f, 1.f, 1.f );
 }
 
 
 void Font::DrawText( std::string text, SDL_Rect *rect, uint8_t align, float r, float g, float b, float a )
 {
-	int x = 0, y = 0;
-	
-	if( rect )
-	{
-		if( (align == Font::ALIGN_TOP_LEFT) || (align == Font::ALIGN_TOP_CENTER) || (align == Font::ALIGN_TOP_RIGHT) )
-			y = 0;
-		else if( (align == Font::ALIGN_BOTTOM_LEFT) || (align == Font::ALIGN_BOTTOM_CENTER) || (align == Font::ALIGN_BOTTOM_RIGHT) )
-			y = rect->h;
-		else
-			y = rect->h / 2;
-		
-		if( (align == Font::ALIGN_TOP_LEFT) || (align == Font::ALIGN_MIDDLE_LEFT) || (align == Font::ALIGN_BOTTOM_LEFT) )
-			x = 0;
-		else if( (align == Font::ALIGN_TOP_RIGHT) || (align == Font::ALIGN_MIDDLE_RIGHT) || (align == Font::ALIGN_BOTTOM_RIGHT) )
-			x = rect->w;
-		else
-			x = rect->w / 2;
-	}
-
-	DrawText( text, x, y, align, r, g, b, a );
+	DrawText( text, rect->x, rect->y, rect->w, rect->h, align, r, g, b, a );
 }
 
 
@@ -376,6 +440,11 @@ void Font::DrawText3D( std::string text, const Pos3D *pos, uint8_t align, float 
 		case ALIGN_MIDDLE_RIGHT:
 			y -= text_height / 2;
 			break;
+		case ALIGN_BASELINE_LEFT:
+		case ALIGN_BASELINE_CENTER:
+		case ALIGN_BASELINE_RIGHT:
+			y -= Ascent;
+			break;
 		case ALIGN_BOTTOM_LEFT:
 		case ALIGN_BOTTOM_CENTER:
 		case ALIGN_BOTTOM_RIGHT:
@@ -404,11 +473,13 @@ void Font::DrawText3D( std::string text, const Pos3D *pos, uint8_t align, float 
 	{
 		case ALIGN_TOP_CENTER:
 		case ALIGN_MIDDLE_CENTER:
+		case ALIGN_BASELINE_CENTER:
 		case ALIGN_BOTTOM_CENTER:
 			x -= line_width / 2;
 			break;
 		case ALIGN_TOP_RIGHT:
 		case ALIGN_MIDDLE_RIGHT:
+		case ALIGN_BASELINE_RIGHT:
 		case ALIGN_BOTTOM_RIGHT:
 			x -= line_width;
 			break;
@@ -428,11 +499,13 @@ void Font::DrawText3D( std::string text, const Pos3D *pos, uint8_t align, float 
 			{
 				case ALIGN_TOP_CENTER:
 				case ALIGN_MIDDLE_CENTER:
+				case ALIGN_BASELINE_CENTER:
 				case ALIGN_BOTTOM_CENTER:
 					x -= line_width / 2;
 					break;
 				case ALIGN_TOP_RIGHT:
 				case ALIGN_MIDDLE_RIGHT:
+				case ALIGN_BASELINE_RIGHT:
 				case ALIGN_BOTTOM_RIGHT:
 					x -= line_width;
 					break;

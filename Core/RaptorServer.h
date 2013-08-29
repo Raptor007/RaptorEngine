@@ -24,6 +24,7 @@ public:
 	
 	NetServer Net;
 	SDL_Thread *Thread;
+	TextConsole *Console;
 	int Port;
 	double MaxFPS;
 	double NetRate;
@@ -32,10 +33,10 @@ public:
 	bool UseOutThreads;
 	
 	double FrameTime;
-	GameData Data;
-	int State;
 	
-	TextConsole *Console;
+	volatile int State;
+	GameData Data;
+	
 	
 	RaptorServer( std::string game, std::string version );
 	virtual ~RaptorServer();

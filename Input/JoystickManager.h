@@ -20,7 +20,7 @@ public:
 	bool Initialized;
 	
 	JoystickManager( void );
-	~JoystickManager();
+	virtual ~JoystickManager();
 	
 	void Initialize( void );
 	void FindJoysticks( void );

@@ -20,7 +20,7 @@ public:
 	Animation *ImageMouseOverChecked;
 	
 	
-	CheckBox( Layer *container, SDL_Rect *rect, Font *font, std::string text, bool checked, Animation *u_normal, Animation *u_down, Animation *u_over, Animation *c_normal, Animation *c_down, Animation *c_over );
+	CheckBox( SDL_Rect *rect, Font *font, std::string text, bool checked, Animation *u_normal, Animation *u_down, Animation *u_over, Animation *c_normal, Animation *c_down, Animation *c_over );
 	virtual ~CheckBox();
 	
 	virtual void Draw( void );

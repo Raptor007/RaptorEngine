@@ -4,6 +4,7 @@
 
 #include "ShaderManager.h"
 
+#include <cstddef>
 #include "RaptorGame.h"
 
 
@@ -211,6 +212,32 @@ bool ShaderManager::Ready( void )
 }
 
 
+bool ShaderManager::Set1f( const char *name, double value )
+{
+	if( ProgramHandle )
+	{
+		// See if we already know the variable's loc.  If not, look it up in the shader.
+		ShaderVar *var = &(Vars[ std::string(name) ]);
+		if( var->Loc < 0 )
+			var->Loc = glGetUniformLocation( ProgramHandle, name );
+		
+		// Only operate on a valid shader variable.
+		if( var->Loc >= 0 )
+		{
+			// Only tell the shader to change its value if the number is different.
+			if( value != var->Float1 )
+			{
+				glUniform1f( var->Loc, value );
+				var->Float1 = value;
+			}
+			return true;
+		}
+	}
+	
+	return false;
+}
+
+
 bool ShaderManager::Set3f( const char *name, double x, double y, double z )
 {
 	if( ProgramHandle )
@@ -280,4 +307,9 @@ ShaderVar::ShaderVar( void )
 	Int2 = 0;
 	Int3 = 0;
 	Int4 = 0;
+}
+
+
+ShaderVar::~ShaderVar()
+{
 }

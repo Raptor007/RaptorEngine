@@ -8,11 +8,6 @@
 #include "Num.h"
 
 
-Vec::~Vec()
-{
-}
-
-
 Vec2D::Vec2D( const Vec2D &other )
 {
 	Set( other.X, other.Y );
@@ -254,6 +249,15 @@ Vec3D Vec3D::Cross( const Vec3D &other ) const
 	cross.Y = Z * other.X - X * other.Z;
 	cross.Z = X * other.Y - Y * other.X;
 	return cross;
+}
+
+
+double Vec3D::AngleBetween( const Vec3D &other ) const
+{
+	Vec3D unit1 = this, unit2 = other;
+	unit1.ScaleTo( 1. );
+	unit2.ScaleTo( 1. );
+	return Num::RadToDeg( acos( unit1.Dot(unit2) ) );
 }
 
 

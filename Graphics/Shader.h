@@ -22,7 +22,7 @@ public:
 	
 	Shader( void );
 	Shader( ShaderType type, const char *filename, std::map<std::string,std::string> defs );
-	~Shader();
+	virtual ~Shader();
 	
 	void Reload( std::map<std::string,std::string> defs );
 	

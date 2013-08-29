@@ -20,5 +20,5 @@ public:
 	std::map<std::string,std::string> Properties;
 	
 	Player( uint16_t id = 0 );
-	~Player();
+	virtual ~Player();
 };

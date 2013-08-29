@@ -2,8 +2,9 @@
  *  TextConsole.cpp
  */
 
-
 #include "TextConsole.h"
+
+#include <cstddef>
 
 
 TextConsole::TextConsole( void )
@@ -66,4 +67,9 @@ TextConsoleMessage::TextConsoleMessage( std::string text, uint32_t type )
 {
 	Text = text;
 	Type = type;
+}
+
+
+TextConsoleMessage::~TextConsoleMessage()
+{
 }

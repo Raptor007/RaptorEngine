@@ -7,9 +7,14 @@
 #include "RaptorGame.h"
 
 
-WaitScreen::WaitScreen( std::string text, Font *font, SDL_Rect *rect )
+WaitScreen::WaitScreen( std::string text, Font *font, SDL_Rect *rect, Color *color )
 {
 	Text = text;
+	
+	if( font )
+		TextFont = font;
+	else
+		TextFont = Raptor::Game->Res.GetFont( "Verdana.ttf", 16 );
 	
 	if( rect )
 	{
@@ -20,16 +25,20 @@ WaitScreen::WaitScreen( std::string text, Font *font, SDL_Rect *rect )
 	}
 	else
 	{
-		Rect.w = 300;
-		Rect.h = 100;
+		TextFont->TextSize( Text, &Rect );
+		Rect.w += 60;
+		Rect.h += 50;
 		Rect.x = Raptor::Game->Gfx.W / 2 - Rect.w / 2;
 		Rect.y = Raptor::Game->Gfx.H / 2 - Rect.h / 2;
 	}
 	
-	if( font )
-		TextFont = font;
-	else
-		TextFont = Raptor::Game->Res.GetFont( "TimesNR.ttf", 14 );
+	if( color )
+	{
+		Red = color->Red;
+		Green = color->Green;
+		Blue = color->Blue;
+		Alpha = color->Alpha;
+	}
 }
 
 

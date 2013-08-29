@@ -4,6 +4,8 @@
 
 #include "NetUDP.h"
 
+#include <cstddef>
+
 #ifdef WIN32
 #include <windows.h>
 #include <winsock.h>
@@ -143,7 +145,7 @@ void NetUDP::Broadcast( Packet *packet, int port )
 
 	if( ip_table )
 	{
-		for( int i = 0; i < ip_table->dwNumEntries; i ++ )
+		for( DWORD i = 0; i < ip_table->dwNumEntries; i ++ )
 		{
 			const MIB_IPADDRROW &row = ip_table->table[ i ];
 
@@ -242,4 +244,9 @@ NetUDPPacket::NetUDPPacket( UDPpacket *sdl_packet ) : Packet( sdl_packet->data, 
 {
 	IP = sdl_packet->address.host;
 	Port = sdl_packet->address.port;
+}
+
+
+NetUDPPacket::~NetUDPPacket()
+{
 }

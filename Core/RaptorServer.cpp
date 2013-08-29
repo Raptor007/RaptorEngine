@@ -6,6 +6,7 @@
 
 #include "RaptorServer.h"
 
+#include <cstddef>
 #include <string>
 #include <map>
 #include <signal.h>
@@ -514,8 +515,6 @@ int RaptorServer::RaptorServerThread( void *game_server )
 			// Let the thread rest a bit.
 			SDL_Delay( 1 );
 		}
-		
-		((RaptorServer*) game_server)->Net.DisconnectNice( "Server quit." );
 		
 		snprintf( cstr, 1024, "%s server stopped.", ((RaptorServer*) game_server)->Game.c_str() );
 		((RaptorServer*) game_server)->ConsolePrint( cstr );

@@ -40,7 +40,7 @@ public:
 	Packet( PacketType packet_type );
 	Packet( const void *data, int size );
 	Packet( const Packet *other );
-	~Packet();
+	virtual ~Packet();
 	
 	void SetData( const void *data, PacketSize size );
 	void AddData( const void *data, PacketSize size );

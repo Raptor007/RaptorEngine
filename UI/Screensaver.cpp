@@ -21,9 +21,9 @@ Screensaver::~Screensaver()
 }
 
 
-bool Screensaver::HandleEvent( SDL_Event *event, bool already_handled )
+bool Screensaver::HandleEvent( SDL_Event *event )
 {
-	if( (event->type == SDL_MOUSEMOTION) || (event->type == SDL_MOUSEBUTTONDOWN) || (event->type == SDL_KEYDOWN) )
+	if( (event->type == SDL_MOUSEMOTION) || (event->type == SDL_MOUSEBUTTONDOWN) || ((event->type == SDL_KEYDOWN) && (IgnoreKeys.find( event->key.keysym.sym ) == IgnoreKeys.end())) )
 	{
 		Raptor::Game->Quit();
 		return true;

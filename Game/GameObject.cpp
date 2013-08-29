@@ -4,6 +4,7 @@
 
 #include "GameObject.h"
 
+#include <cstddef>
 #include "Num.h"
 #include "RaptorGame.h"
 

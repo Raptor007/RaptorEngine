@@ -22,6 +22,7 @@ ConnectedClient::ConnectedClient( TCPsocket socket, bool use_out_thread, double 
 	Port = 0;
 	Synchronized = false;
 	NetRate = net_rate;
+	PingRate = 4.;
 	Precision = precision;
 	BytesSent = 0;
 	BytesReceived = 0;
@@ -235,6 +236,8 @@ bool ConnectedClient::ProcessPacket( Packet *packet )
 	
 	else if( type == Raptor::Packet::DISCONNECT )
 	{
+		std::string message = packet->NextString();
+		
 		Disconnect();
 	}
 	
@@ -285,12 +288,6 @@ bool ConnectedClient::Send( Packet *packet )
 }
 
 
-void ConnectedClient::SendOthers( Packet *packet )
-{
-	return Raptor::Server->Net.SendAllExcept( packet, this );
-}
-
-
 bool ConnectedClient::SendNow( Packet *packet )
 {
 	if( ! Connected )
@@ -324,6 +321,75 @@ void ConnectedClient::SendToOutBuffer( Packet *packet )
 	
 	if( ! OutLock.Unlock() )
 		fprintf( stderr, "ConnectedClient::Send: OutLock.Unlock: %s\n", SDL_GetError() );
+}
+
+
+void ConnectedClient::SendOthers( Packet *packet )
+{
+	return Raptor::Server->Net.SendAllExcept( packet, this );
+}
+
+
+void ConnectedClient::SendPing( void )
+{
+	uint8_t ping_id = 0;
+	bool found_available = false;
+	
+	for( int i = 0; i <= 255; i ++ )
+	{
+		if( SentPings.find( i ) == SentPings.end() )
+		{
+			ping_id = i;
+			found_available = true;
+			break;
+		}
+	}
+	
+	if( ! found_available )
+	{
+		for( std::map<uint8_t,Clock>::iterator ping_iter = SentPings.begin(); ping_iter != SentPings.end(); )
+		{
+			std::map<uint8_t,Clock>::iterator ping_next = ping_iter;
+			ping_next ++;
+			
+			if( ping_iter->second.ElapsedSeconds() > 3. )
+			{
+				ping_id = ping_iter->first;
+				SentPings.erase( ping_iter );
+				found_available = true;
+				break;
+			}
+			
+			ping_iter = ping_next;
+		}
+	}
+	
+	if( found_available )
+	{
+		SentPings[ ping_id ].Reset();
+		
+		Packet ping( Raptor::Packet::PING );
+		ping.AddUChar( ping_id );
+		Send( &ping );
+	}
+}
+
+
+double ConnectedClient::LatestPing( void )
+{
+	return PingTimes.size() ? PingTimes.back() : 0.;
+}
+
+
+double ConnectedClient::AveragePing( void )
+{
+	return PingTimes.size() ? Num::Avg(PingTimes) : 0.;
+}
+
+
+double ConnectedClient::MedianPing( void )
+{
+	return PingTimes.size() ? Num::Med(PingTimes) : 0.;
 }
 
 

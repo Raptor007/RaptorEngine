@@ -18,7 +18,7 @@ public:
 	bool Listening;
 
 	NetUDP( void );
-	~NetUDP();
+	virtual ~NetUDP();
 	
 	int Initialize( void );
 	int StartListening( int port );
@@ -43,4 +43,5 @@ public:
 	uint16_t Port;
 
 	NetUDPPacket( UDPpacket *sdl_packet );
+	virtual ~NetUDPPacket();
 };

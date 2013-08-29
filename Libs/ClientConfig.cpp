@@ -209,6 +209,7 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "g_fullscreen" ] = "true";
 	Settings[ "g_fsaa" ] = "4";
 	Settings[ "g_af" ] = "16";
+	Settings[ "g_znear" ] = Num::ToString(Z_NEAR);
 	Settings[ "g_shader_enable" ] = "true";
 	Settings[ "g_shader_file" ] = "model";
 	
@@ -222,9 +223,6 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "s_music_volume" ] = "1.0";
 	
 	Settings[ "name" ] = "Name";
-	
-	Settings[ "joy_enable" ] = "true";
-	Settings[ "joy_deadzone" ] = "0.03";
 	
 	Settings[ "netrate" ] = "30";
 	Settings[ "maxfps" ] = "120";
@@ -278,13 +276,13 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 			
 			if( elements.size() )
 			{
-				std::string cmd = elements.at( 0 );
+				std::string cmd = elements.at(0);
 				std::transform( cmd.begin(), cmd.end(), cmd.begin(), tolower );
 				
 				if( cmd == "echo" )
 				{
 					if( elements.size() >= 2 )
-						Raptor::Game->Console.Print( elements.at( 1 ) );
+						Raptor::Game->Console.Print( elements.at(1) );
 					else
 						Raptor::Game->Console.Print( "" );
 				}
@@ -294,7 +292,7 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 					if( elements.size() >= 2 )
 					{
 						int count = 0;
-						const char *cstr = elements.at( 1 ).c_str();
+						const char *cstr = elements.at(1).c_str();
 						int len = strlen(cstr);
 						for( std::map<std::string, std::string>::iterator setting_iter = Settings.begin(); setting_iter != Settings.end(); setting_iter ++ )
 						{
@@ -305,7 +303,7 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 							}
 						}
 						if( ! count )
-							Raptor::Game->Console.Print( elements.at( 1 ) + " is not defined." );
+							Raptor::Game->Console.Print( elements.at(1) + " is not defined." );
 					}
 					else
 					{
@@ -317,7 +315,7 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 				else if( cmd == "set" )
 				{
 					if( elements.size() >= 3 )
-						Settings[ elements.at( 1 ) ] = elements.at( 2 );
+						Settings[ elements.at(1) ] = elements.at(2);
 					else
 						Raptor::Game->Console.Print( "Usage: set <variable> <value>", TextConsole::MSG_ERROR );
 				}
@@ -326,11 +324,11 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 				{
 					if( elements.size() >= 2 )
 					{
-						std::map<std::string, std::string>::iterator setting_iter = Settings.find( elements.at( 1 ) );
+						std::map<std::string, std::string>::iterator setting_iter = Settings.find( elements.at(1) );
 						if( setting_iter != Settings.end() )
 							Settings.erase( setting_iter );
 						else
-							Raptor::Game->Console.Print( elements.at( 1 ) + " is not defined." );
+							Raptor::Game->Console.Print( elements.at(1) + " is not defined." );
 					}
 					else
 						Raptor::Game->Console.Print( "Usage: unset <variable>", TextConsole::MSG_ERROR );
@@ -340,21 +338,21 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 				{
 					if( elements.size() >= 3 )
 					{
-						uint8_t control = ControlID( elements.at( 2 ) );
+						uint8_t control = ControlID( elements.at(2) );
 						if( control != UNBOUND )
 						{
-							SDLKey key = KeyID( elements.at( 1 ) );
-							Uint8 mouse = MouseID( elements.at( 1 ) );
+							SDLKey key = KeyID( elements.at(1) );
+							Uint8 mouse = MouseID( elements.at(1) );
 							
 							if( key != SDLK_UNKNOWN )
 								KeyBinds[ key ] = control;
 							else if( mouse )
 								MouseBinds[ mouse ] = control;
 							else
-								Raptor::Game->Console.Print( "Unknown key: " + elements.at( 1 ), TextConsole::MSG_ERROR );
+								Raptor::Game->Console.Print( "Unknown key: " + elements.at(1), TextConsole::MSG_ERROR );
 						}
 						else
-							Raptor::Game->Console.Print( "Unknown command: " + elements.at( 2 ), TextConsole::MSG_ERROR );
+							Raptor::Game->Console.Print( "Unknown command: " + elements.at(2), TextConsole::MSG_ERROR );
 					}
 					else
 						Raptor::Game->Console.Print( "Usage: bind <input> <command>", TextConsole::MSG_ERROR );
@@ -364,12 +362,12 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 				{
 					if( elements.size() >= 2 )
 					{
-						SDLKey key = KeyID( elements.at( 1 ) );
+						SDLKey key = KeyID( elements.at(1) );
 						if( key != SDLK_UNKNOWN )
 							KeyBinds[ key ] = UNBOUND;
 						else
 						{
-							Uint8 mouse = MouseID( elements.at( 1 ) );
+							Uint8 mouse = MouseID( elements.at(1) );
 							if( mouse )
 								MouseBinds[ mouse ] = UNBOUND;
 						}
@@ -386,7 +384,7 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 				else if( cmd == "exec" )
 				{
 					if( elements.size() >= 2 )
-						Load( elements.at( 1 ) );
+						Load( elements.at(1) );
 					else
 						Raptor::Game->Console.Print( "Usage: exec <file>", TextConsole::MSG_ERROR );
 				}
@@ -394,7 +392,7 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 				else if( cmd == "export" )
 				{
 					if( elements.size() >= 2 )
-						Save( elements.at( 1 ) );
+						Save( elements.at(1) );
 					else
 						Raptor::Game->Console.Print( "Usage: export <file>", TextConsole::MSG_ERROR );
 				}
@@ -407,6 +405,12 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 				else if( cmd == "g_shader_restart" )
 				{
 					Raptor::Game->ShaderMgr.LoadShaders( SettingAsString("g_shader_file") );
+				}
+				
+				else if( cmd == "s_reload" )
+				{
+					Raptor::Game->Snd.StopSounds();
+					Raptor::Game->Res.DeleteSounds();
 				}
 				
 				else if( cmd == "music" )
@@ -436,7 +440,7 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 				else if( cmd == "connect" )
 				{
 					if( elements.size() >= 2 )
-						Raptor::Game->Net.Connect( elements.at( 1 ).c_str(), SettingAsString("name").c_str(), SettingAsString("password").c_str() );
+						Raptor::Game->Net.Connect( elements.at(1).c_str(), SettingAsString("name").c_str(), SettingAsString("password").c_str() );
 					else
 						Raptor::Game->Console.Print( "Usage: connect <ip>", TextConsole::MSG_ERROR );
 				}
@@ -485,6 +489,8 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 					snprintf( cstr, 1024, "Objects: %i", (int) Raptor::Game->Data.GameObjects.size() );
 					Raptor::Game->Console.Print( cstr );
 					snprintf( cstr, 1024, "Shaders: %s", Raptor::Game->ShaderMgr.Ready() ? "OK" : "FAILED" );
+					Raptor::Game->Console.Print( cstr );
+					snprintf( cstr, 1024, "Camera Facing: %f %f %f", Raptor::Game->Cam.Fwd.X, Raptor::Game->Cam.Fwd.Y, Raptor::Game->Cam.Fwd.Z );
 					Raptor::Game->Console.Print( cstr );
 					snprintf( cstr, 1024, "FPS: %.0f", 1. / Raptor::Game->FrameTime );
 					Raptor::Game->Console.Print( cstr );
@@ -572,9 +578,18 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 						{
 							if( elements.size() >= 3 )
 							{
-								if( Raptor::Game->Data.Properties.find( elements.at(2) ) != Raptor::Game->Data.Properties.end() )
-									Raptor::Game->Console.Print( elements.at(2) + ": " + Raptor::Game->Data.Properties[ elements.at(2) ] );
-								else
+								int count = 0;
+								const char *cstr = elements.at(2).c_str();
+								int len = strlen(cstr);
+								for( std::map<std::string, std::string>::iterator property_iter = Raptor::Game->Data.Properties.begin(); property_iter != Raptor::Game->Data.Properties.end(); property_iter ++ )
+								{
+									if( strncmp( property_iter->first.c_str(), cstr, len ) == 0 )
+									{
+										Raptor::Game->Console.Print( property_iter->first + ": " + property_iter->second );
+										count ++;
+									}
+								}
+								if( ! count )
 									Raptor::Game->Console.Print( elements.at(2) + " is not defined." );
 							}
 							else
@@ -582,6 +597,19 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 								for( std::map<std::string, std::string>::iterator setting_iter = Raptor::Game->Data.Properties.begin(); setting_iter != Raptor::Game->Data.Properties.end(); setting_iter ++ )
 									Raptor::Game->Console.Print( setting_iter->first + ": " + setting_iter->second );
 							}
+						}
+						else if( Raptor::Game->Data.Properties.find( sv_cmd ) != Raptor::Game->Data.Properties.end() )
+						{
+							if( elements.size() >= 3 )
+							{
+								Packet info = Packet( Raptor::Packet::INFO );
+								info.AddUShort( 1 );
+								info.AddString( sv_cmd );
+								info.AddString( elements.at(2) );
+								Raptor::Game->Net.Send( &info );
+							}
+							else
+								Raptor::Game->Console.Print( sv_cmd + ": " + Raptor::Server->Data.Properties[ sv_cmd ] );
 						}
 						else
 							Raptor::Game->Console.Print( "Unknown rcon command: " + sv_cmd, TextConsole::MSG_ERROR );
@@ -617,9 +645,18 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 						{
 							if( elements.size() >= 3 )
 							{
-								if( Raptor::Server->Data.Properties.find( elements.at(2) ) != Raptor::Server->Data.Properties.end() )
-									Raptor::Game->Console.Print( elements.at(2) + ": " + Raptor::Server->Data.Properties[ elements.at(2) ] );
-								else
+								int count = 0;
+								const char *cstr = elements.at(2).c_str();
+								int len = strlen(cstr);
+								for( std::map<std::string, std::string>::iterator property_iter = Raptor::Server->Data.Properties.begin(); property_iter != Raptor::Server->Data.Properties.end(); property_iter ++ )
+								{
+									if( strncmp( property_iter->first.c_str(), cstr, len ) == 0 )
+									{
+										Raptor::Game->Console.Print( property_iter->first + ": " + property_iter->second );
+										count ++;
+									}
+								}
+								if( ! count )
 									Raptor::Game->Console.Print( elements.at(2) + " is not defined." );
 							}
 							else
@@ -722,6 +759,10 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 									new_state ++;
 								else if( elements.at(2) == "--" )
 									new_state --;
+								else if( (elements.at(2) == "+=") && (elements.size() >= 4) )
+									new_state += atoi( elements.at(3).c_str() );
+								else if( (elements.at(2) == "-=") && (elements.size() >= 4) )
+									new_state -= atoi( elements.at(3).c_str() );
 								else
 									new_state = atoi( elements.at(2).c_str() );
 								
@@ -737,6 +778,21 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 								snprintf( cstr, 1024, "Current server state: %i", Raptor::Server->State );
 								Raptor::Game->Console.Print( cstr );
 							}
+						}
+						else if( Raptor::Server->Data.Properties.find( sv_cmd ) != Raptor::Server->Data.Properties.end() )
+						{
+							if( elements.size() >= 3 )
+							{
+								Raptor::Server->Data.Properties[ sv_cmd ] = elements.at(2);
+								
+								Packet info = Packet( Raptor::Packet::INFO );
+								info.AddUShort( 1 );
+								info.AddString( sv_cmd );
+								info.AddString( elements.at(2) );
+								Raptor::Server->Net.SendAll( &info );
+							}
+							else
+								Raptor::Game->Console.Print( sv_cmd + ": " + Raptor::Server->Data.Properties[ sv_cmd ] );
 						}
 						else
 							Raptor::Game->Console.Print( "Unknown sv command: " + sv_cmd, TextConsole::MSG_ERROR );
@@ -755,7 +811,7 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 					if( HasSetting(cmd) )
 					{
 						if( elements.size() >= 2 )
-							Settings[ cmd ] = elements.at( 1 );
+							Settings[ cmd ] = elements.at(1);
 						else
 							Raptor::Game->Console.Print( cmd + ": " + Settings[ cmd ] );
 					}

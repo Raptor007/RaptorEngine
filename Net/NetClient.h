@@ -6,7 +6,7 @@
 class NetClient;
 
 #include "PlatformSpecific.h"
-
+#include <cstddef>
 #include <stdint.h>
 #include <queue>
 #include <map>
@@ -27,8 +27,8 @@ public:
 	SDL_mutex *Lock;
 	TCPsocket Socket;
 	std::queue< Packet*, std::list<Packet*> > InBuffer;
-	Clock NetClock;
-	double NetRate;
+	Clock NetClock, PingClock;
+	double NetRate, PingRate;
 	int8_t Precision;
 	uintmax_t BytesSent;
 	uintmax_t BytesReceived;
@@ -43,7 +43,7 @@ public:
 	
 	
 	NetClient( void );
-	~NetClient();
+	virtual ~NetClient();
 	
 	int Initialize( double net_rate = 30., int8_t precision = 0 );
 	int Connect( const char *host, const char *name, const char *password );

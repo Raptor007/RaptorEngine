@@ -5,7 +5,7 @@
 #include "Label.h"
 
 
-Label::Label( Layer *container, SDL_Rect *rect, std::string text, Font *font, uint8_t align ) : Layer( container, rect )
+Label::Label( SDL_Rect *rect, std::string text, Font *font, uint8_t align ) : Layer( rect )
 {
 	LabelText = text;
 	LabelAlign = align;
@@ -26,5 +26,7 @@ Label::~Label()
 void Label::Draw( void )
 {
 	if( LabelFont )
-		LabelFont->DrawText( LabelText, &Rect, LabelAlign, Red, Green, Blue, Alpha );
+	{
+		LabelFont->DrawText( LabelText, 0, 0, Rect.w, Rect.h, LabelAlign, Red, Green, Blue, Alpha );
+	}
 }

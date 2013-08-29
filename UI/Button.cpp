@@ -4,10 +4,11 @@
 
 #include "Button.h"
 
+#include <cstddef>
 #include "RaptorGame.h"
 
 
-Button::Button( Layer *container, SDL_Rect *rect, Animation *normal ) : Layer( container, rect )
+Button::Button( SDL_Rect *rect, Animation *normal ) : Layer( rect )
 {
 	ImageNormal = normal;
 	ImageMouseDown = NULL;
@@ -22,7 +23,7 @@ Button::Button( Layer *container, SDL_Rect *rect, Animation *normal ) : Layer( c
 }
 
 
-Button::Button( Layer *container, SDL_Rect *rect, Animation *normal, Animation *mouse_down ) : Layer( container, rect )
+Button::Button( SDL_Rect *rect, Animation *normal, Animation *mouse_down ) : Layer( rect )
 {
 	ImageNormal = normal;
 	ImageMouseDown = mouse_down;
@@ -37,7 +38,7 @@ Button::Button( Layer *container, SDL_Rect *rect, Animation *normal, Animation *
 }
 
 
-Button::Button( Layer *container, SDL_Rect *rect, Animation *normal, Animation *mouse_down, Animation *mouse_over ) : Layer( container, rect )
+Button::Button( SDL_Rect *rect, Animation *normal, Animation *mouse_down, Animation *mouse_over ) : Layer( rect )
 {
 	ImageNormal = normal;
 	ImageMouseDown = mouse_down;

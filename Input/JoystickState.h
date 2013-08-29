@@ -6,7 +6,7 @@
 class JoystickState;
 
 #include "PlatformSpecific.h"
-
+#include <cstddef>
 #include <string>
 #include <map>
 #include <SDL/SDL.h>
@@ -25,7 +25,7 @@ public:
 	std::map<Uint8, int> BallsY;
 	
 	JoystickState( uint8_t id = 255, SDL_Joystick *joystick = NULL, std::string name = "Joystick" );
-	~JoystickState();
+	virtual ~JoystickState();
 	
 	void TrackEvent( SDL_Event *event );
 	static double AxisScale( Sint16 value );

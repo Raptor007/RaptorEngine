@@ -6,8 +6,8 @@
 #include "Str.h"
 
 
-CheckBox::CheckBox( Layer *container, SDL_Rect *rect, Font *font, std::string text, bool checked, Animation *u_normal, Animation *u_down, Animation *u_over, Animation *c_normal, Animation *c_down, Animation *c_over )
-: LabelledButton( container, rect, font, text, Font::ALIGN_MIDDLE_LEFT, u_normal, u_down, u_over )
+CheckBox::CheckBox( SDL_Rect *rect, Font *font, std::string text, bool checked, Animation *u_normal, Animation *u_down, Animation *u_over, Animation *c_normal, Animation *c_down, Animation *c_over )
+: LabelledButton( rect, font, text, Font::ALIGN_MIDDLE_LEFT, u_normal, u_down, u_over )
 {
 	ImageNormalChecked = c_normal;
 	ImageMouseDownChecked = c_down;
@@ -62,19 +62,51 @@ void CheckBox::Draw( void )
 	{
 		int x = 0, y = 0;
 		
-		if( (LabelAlign == Font::ALIGN_TOP_LEFT) || (LabelAlign == Font::ALIGN_TOP_CENTER) || (LabelAlign == Font::ALIGN_TOP_RIGHT) )
-			y = 0;
-		else if( (LabelAlign == Font::ALIGN_BOTTOM_LEFT) || (LabelAlign == Font::ALIGN_BOTTOM_CENTER) || (LabelAlign == Font::ALIGN_BOTTOM_RIGHT) )
-			y = Rect.h;
-		else
-			y = Rect.h / 2;
+		switch( LabelAlign )
+		{
+			case Font::ALIGN_TOP_LEFT:
+			case Font::ALIGN_TOP_CENTER:
+			case Font::ALIGN_TOP_RIGHT:
+				y = 0;
+				break;
+			case Font::ALIGN_MIDDLE_LEFT:
+			case Font::ALIGN_MIDDLE_CENTER:
+			case Font::ALIGN_MIDDLE_RIGHT:
+				y = Rect.h / 2;
+				break;
+			case Font::ALIGN_BASELINE_LEFT:
+			case Font::ALIGN_BASELINE_CENTER:
+			case Font::ALIGN_BASELINE_RIGHT:
+				y = LabelFont->GetAscent();
+				break;
+			case Font::ALIGN_BOTTOM_LEFT:
+			case Font::ALIGN_BOTTOM_CENTER:
+			case Font::ALIGN_BOTTOM_RIGHT:
+				y = Rect.h;
+				break;
+		}
 		
-		if( (LabelAlign == Font::ALIGN_TOP_LEFT) || (LabelAlign == Font::ALIGN_MIDDLE_LEFT) || (LabelAlign == Font::ALIGN_BOTTOM_LEFT) )
-			x = Rect.h;
-		else if( (LabelAlign == Font::ALIGN_TOP_RIGHT) || (LabelAlign == Font::ALIGN_MIDDLE_RIGHT) || (LabelAlign == Font::ALIGN_BOTTOM_RIGHT) )
-			x = Rect.w;
-		else
-			x = (Rect.w - Rect.h) / 2;
+		switch( LabelAlign )
+		{
+			case Font::ALIGN_TOP_LEFT:
+			case Font::ALIGN_MIDDLE_LEFT:
+			case Font::ALIGN_BASELINE_LEFT:
+			case Font::ALIGN_BOTTOM_LEFT:
+				x = Rect.h;
+				break;
+			case Font::ALIGN_TOP_CENTER:
+			case Font::ALIGN_MIDDLE_CENTER:
+			case Font::ALIGN_BASELINE_CENTER:
+			case Font::ALIGN_BOTTOM_CENTER:
+				x = (Rect.h + Rect.w) / 2;
+				break;
+			case Font::ALIGN_TOP_RIGHT:
+			case Font::ALIGN_MIDDLE_RIGHT:
+			case Font::ALIGN_BASELINE_RIGHT:
+			case Font::ALIGN_BOTTOM_RIGHT:
+				x = Rect.w;
+				break;
+		}
 		
 		if( MouseIsWithin )
 		{

@@ -191,10 +191,12 @@ void RaptorGame::Run( void )
 			SDL_Event event;
 			while( SDL_PollEvent( &event ) )
 			{
-				// Keep track of input events.
+				// Keep track of input and mouse position events.
 				Mouse.TrackEvent( &event );
 				Keys.TrackEvent( &event );
 				Joy.TrackEvent( &event );
+				Console.TrackEvent( &event );
+				Layers.TrackEvent( &event );
 				
 				// Pass the event through the layer stack.
 				bool handled = false;
@@ -210,10 +212,8 @@ void RaptorGame::Run( void )
 						Quit();
 					else if( event.type == SDL_VIDEORESIZE )
 						Gfx.SetMode( event.resize.w, event.resize.h );
-					else if( (event.type == SDL_KEYUP) && (event.key.keysym.sym == SDLK_BACKQUOTE) )
-					{
+					else if( (event.type == SDL_KEYUP) && (event.key.keysym.sym == Console.ToggleKey) )
 						Console.ToggleActive();
-					}
 				}
 			}
 			
@@ -230,7 +230,7 @@ void RaptorGame::Run( void )
 			Net.Cleanup();
 			
 			// Send periodic updates to server.
-			Net.NetRate = Raptor::Game->Cfg.SettingAsInt( "netrate" );
+			Net.NetRate = Raptor::Game->Cfg.SettingAsDouble( "netrate", 30. );
 			Net.SendUpdates();
 			
 			// If we're waiting to reconnect, try when it's time.
@@ -588,32 +588,36 @@ Player *RaptorGame::NewPlayer( uint16_t id )
 
 void RaptorGame::Host( void )
 {
-	if( Raptor::Server )
+	if( Net.Connected )
 	{
-		if( ! Raptor::Server->IsRunning() )
+		Net.DisconnectNice( NULL );
+		SDL_Delay( 200 );
+	}
+	
+	if( Server )
+	{
+		Server->Port = Cfg.SettingAsInt( "sv_port", 7000 );
+		Server->MaxFPS = Cfg.SettingAsDouble( "sv_maxfps", 120. );
+		Server->NetRate = Cfg.SettingAsDouble( "sv_netrate", 30. );
+		Server->UseOutThreads = Cfg.SettingAsBool( "sv_use_out_threads", true );
+		Server->Start( Cfg.SettingAsString( "name" , Raptor::Server->Game.c_str() ) );
+		
+		Clock wait_for_start;
+		while( ! Server->IsRunning() )
 		{
-			Raptor::Server->Port = Cfg.SettingAsInt( "sv_port", 7000 );
-			Raptor::Server->MaxFPS = Cfg.SettingAsDouble( "sv_maxfps", 120. );
-			Raptor::Server->NetRate = Cfg.SettingAsDouble( "sv_netrate", 30. );
-			Raptor::Server->UseOutThreads = Cfg.SettingAsBool( "sv_use_out_threads", true );
-			Raptor::Server->Start( Cfg.SettingAsString( "name" , Raptor::Server->Game.c_str() ) );
-			
-			Clock wait_for_start;
-			while( ! Raptor::Server->IsRunning() )
-			{
-				if( wait_for_start.ElapsedSeconds() > 3.0 )
-					break;
-			}
+			if( wait_for_start.ElapsedSeconds() > 3.0 )
+				break;
 		}
 		
-		Net.Connect( "localhost", Raptor::Server->Port, Raptor::Game->Cfg.SettingAsString("name").c_str(), Raptor::Game->Cfg.SettingAsString("password").c_str() );
+		Net.Connect( "localhost", Server->Port, Cfg.SettingAsString("name").c_str(), Cfg.SettingAsString("password").c_str() );
 	}
 }
 
 
 void RaptorGame::Quit( void )
 {
-	Layers.RemoveAll();
+	// This quickly removes all layers without deleting them.
+	Layers.Layers.clear();
 }
 
 

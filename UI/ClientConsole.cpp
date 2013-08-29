@@ -2,17 +2,18 @@
  *  ClientConsole.cpp
  */
 
-
 #include "ClientConsole.h"
 
+#include <cstddef>
+#include <SDL/SDL.h>
 #include "RaptorGame.h"
 
 
-ClientConsole::ClientConsole( void ) : Layer( NULL, &Rect )
+ClientConsole::ClientConsole( void ) : Layer( &Rect )
 {
 	Initialized = false;
 	
-	ToggleKey = (SDLKey) '`';
+	ToggleKey = SDLK_BACKQUOTE;
 	Active = false;
 	
 	Red = 0.f;
@@ -31,9 +32,9 @@ ClientConsole::~ClientConsole()
 
 void ClientConsole::Initialize( void )
 {
-	MessageFont = Raptor::Game->Res.GetFont( "Consolas.ttf", 12 );
+	MessageFont = Raptor::Game->Res.GetFont( "ProFont.ttf", 12 );
 	
-	Input = new TextBox( this, &Rect, Raptor::Game->Res.GetFont( "Consolas.ttf", 12 ), Font::ALIGN_TOP_LEFT );
+	Input = new TextBox( &Rect, Raptor::Game->Res.GetFont( "ProFont.ttf", 12 ), Font::ALIGN_TOP_LEFT );
 	Input->ReturnDeselects = false;
 	Input->Visible = true;
 	Input->SelectedTextRed = 0.f;
@@ -41,10 +42,6 @@ void ClientConsole::Initialize( void )
 	Input->SelectedTextBlue = 1.f;
 	Input->SelectedTextAlpha = 1.f;
 	Input->SelectedAlpha = 0.f;
-	/*
-	Input->CursorAppearance = "_";
-	Input->CenterCursor = false;
-	*/
 	AddElement( Input );
 	
 	UpdateRects();
@@ -151,7 +148,7 @@ void ClientConsole::Draw( void )
 }
 
 
-bool ClientConsole::HandleEvent( SDL_Event *event, bool already_handled )
+bool ClientConsole::HandleEvent( SDL_Event *event )
 {
 	if( ! Initialized )
 		return false;

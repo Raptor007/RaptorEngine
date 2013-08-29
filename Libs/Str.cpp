@@ -160,6 +160,23 @@ std::string CStr::Unescape( const char *str, const char *original, const char *e
 }
 
 
+void CStr::ReplaceChars( char *str, char *find, char *replace )
+{
+	if( str && find && replace && (strlen(find) == strlen(replace)) )
+	{
+		char *str_ptr = str;
+		while( *str_ptr != '\0' )
+		{
+			const char *found_char = strchr( find, *str_ptr );
+			if( found_char )
+				*str_ptr = replace[ found_char - find ];
+			
+			str_ptr ++;
+		}
+	}
+}
+
+
 std::vector<std::string> CStr::SplitToVector( const char *str, const char *delimiters )
 {
 	std::vector<std::string> return_vec;

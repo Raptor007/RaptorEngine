@@ -5,6 +5,7 @@
 #pragma once
 class Label;
 
+#include "PlatformSpecific.h"
 #include "Layer.h"
 #include "Font.h"
 
@@ -16,7 +17,7 @@ public:
 	uint8_t LabelAlign;
 	Font *LabelFont;
 	
-	Label( Layer *container, SDL_Rect *rect, std::string text, Font *font, uint8_t align );
+	Label( SDL_Rect *rect, std::string text, Font *font, uint8_t align );
 	virtual ~Label();
 	
 	void Draw( void );

@@ -24,6 +24,7 @@ public:
 	float AspectRatio;
 	bool Fullscreen;
 	int FSAA, AF;
+	double ZNear;
 	std::string ShaderFile;
 	
 	Graphics( void );
@@ -31,7 +32,7 @@ public:
 	
 	void Initialize( void );
 	void SetMode( int x, int y );
-	void SetMode( int x, int y, bool fullscreen, int fsaa, int af, std::string shader_file );
+	void SetMode( int x, int y, bool fullscreen, int fsaa, int af, double z_near, std::string shader_file );
 	void Restart( void );
 	
 	bool SelectDefaultFramebuffer( void );
@@ -55,23 +56,23 @@ public:
 	void DrawRect2D( int x1, int y1, int x2, int y2, GLuint texture, float r, float g, float b, float a );
 	void DrawRect2D( double x1, double y1, double x2, double y2, GLuint texture, float r, float g, float b, float a );
 	
-	void DrawBox2D( double x1, double y1, double x2, double y2, float r, float g, float b, float a );
+	void DrawBox2D( double x1, double y1, double x2, double y2, float line_width, float r, float g, float b, float a );
 	
 	void DrawCircle2D( double x, double y, double r, int res, GLuint texture = 0 );
 	void DrawCircle2D( double x, double y, double r, int res, GLuint texture, float red, float green, float blue, float alpha );
 	
-	void DrawCircleOutline2D( double x, double y, double r, int res );
-	void DrawCircleOutline2D( double x, double y, double r, int res, float red, float green, float blue, float alpha );
+	void DrawCircleOutline2D( double x, double y, double r, int res, float line_width );
+	void DrawCircleOutline2D( double x, double y, double r, int res, float line_width, float red, float green, float blue, float alpha );
 	
-	void DrawLine2D( double x1, double y1, double x2, double y2, float r, float g, float b, float a );
+	void DrawLine2D( double x1, double y1, double x2, double y2, float line_width, float r, float g, float b, float a );
 	
 	void DrawSphere3D( double x, double y, double z, double r, int res, GLuint texture = 0, uint32_t texture_mode = TEXTURE_MODE_Y_ASIN );
 	void DrawSphere3D( double x, double y, double z, double r, int res, GLuint texture, float red, float green, float blue, float alpha );
 	void DrawSphere3D( double x, double y, double z, double r, int res, GLuint texture, uint32_t texture_mode, float red, float green, float blue, float alpha );
 	
-	void DrawLine3D( double x1, double y1, double z1, double x2, double y2, double z2, float r, float g, float b, float a );
+	void DrawLine3D( double x1, double y1, double z1, double x2, double y2, double z2, float line_width, float r, float g, float b, float a );
 	
-	GLuint SDL_GL_LoadTexture( SDL_Surface *surface, GLfloat *texcoord, GLint texture_mode = GL_LINEAR );
+	GLuint LoadTexture( SDL_Surface *surface, GLfloat *texcoord, GLint texture_mode = GL_LINEAR );
 	
 	enum
 	{

@@ -18,7 +18,7 @@ public:
 	std::map<SDLKey, bool> KeysDown;
 
 	KeyboardState( void );
-	~KeyboardState();
+	virtual ~KeyboardState();
 	
 	void TrackEvent( SDL_Event *event );
 	bool KeyDown( SDLKey key );

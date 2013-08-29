@@ -3,6 +3,7 @@
  */
 
 #include "Mutex.h"
+#include <cstddef>
 
 
 Mutex::Mutex( void )

@@ -13,7 +13,7 @@ class PacketBuffer
 {
 public:
 	PacketBuffer( void );
-	~PacketBuffer();
+	virtual ~PacketBuffer();
 	
 	void AddData( void *data, PacketSize size );
 	Packet *Pop( void );

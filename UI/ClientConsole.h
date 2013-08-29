@@ -31,7 +31,7 @@ public:
 	void UpdateRects( void );
 	
 	void Draw( void );
-	bool HandleEvent( SDL_Event *event, bool already_handled = false );
+	bool HandleEvent( SDL_Event *event );
 	
 	bool IsActive( void );
 	void ToggleActive( void );

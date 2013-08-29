@@ -28,7 +28,7 @@ public:
 	Clock LoadedTime;
 	
 	Framebuffer( int x = FRAMEBUFFER_DEFAULT_RES, int y = 0, GLint texture_filter = GL_LINEAR );
-	~Framebuffer();
+	virtual ~Framebuffer();
 	
 	void Clear( void );
 	void Initialize( void );

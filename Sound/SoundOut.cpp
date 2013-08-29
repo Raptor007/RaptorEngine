@@ -4,6 +4,7 @@
 
 #include "SoundOut.h"
 #include <cmath>
+#include <algorithm>
 #include <stdexcept>
 #include <dirent.h>
 #include "Num.h"
@@ -281,7 +282,13 @@ void SoundOut::Update( const Pos3D *cam )
 	{
 		if( ! Mix_PlayingMusic() )
 		{
-			if( PlayMusic && MusicList.size() )
+			if( PlayMusic && MusicStream.size() )
+			{
+				// The stream allows context-specific music to play smoothly within the background music playlist.
+				PlayMusicWithRetries( MusicStream.front() );
+				MusicStream.pop_front();
+			}
+			else if( PlayMusic && MusicList.size() )
 			{
 				int next_track = CurrentMusic + 1;
 				
@@ -421,9 +428,27 @@ void SoundOut::QueueMusic( Mix_Music *music )
 }
 
 
+void SoundOut::StreamMusic( Mix_Music *music )
+{
+	// This adds an item to the stream without changing the current playback.
+	
+	if( music )
+		MusicStream.push_back( music );
+}
+
+
+void SoundOut::StreamMusicUnique( Mix_Music *music )
+{
+	// This adds an item to the stream without changing the current playback.
+	
+	if( music && (std::find( MusicStream.begin(), MusicStream.end(), music ) == MusicStream.end()) )
+		MusicStream.push_back( music );
+}
+
+
 void SoundOut::StopMusic( void )
 {
-	// This stops music playback and clears the playlist.
+	// This stops music playback and clears the stream and playlist.
 	
 	PlayMusic = false;
 	
@@ -433,6 +458,8 @@ void SoundOut::StopMusic( void )
 		SDL_Delay( 1 );
 	}
 	
+	MusicStream.clear();
+	MusicSubdir = "";
 	MusicList.clear();
 	CurrentMusic = -1;
 }
@@ -443,6 +470,22 @@ void SoundOut::PlayMusicSubdir( std::string dir )
 	StopMusic();
 	
 	QueueMusicSubdir( dir );
+	MusicSubdir = dir;
+	
+	PlayMusic = true;
+}
+
+
+void SoundOut::PlayMusicSubdirNext( std::string dir )
+{
+	if( dir == MusicSubdir )
+		return;
+	
+	MusicList.clear();
+	CurrentMusic = -1;
+	
+	QueueMusicSubdir( dir );
+	MusicSubdir = dir;
 	
 	PlayMusic = true;
 }

@@ -7,11 +7,11 @@ class RaptorGame;
 
 #include "PlatformSpecific.h"
 
+#include <cstddef>
 #include <time.h>
 #include <signal.h>
 #include <map>
 #include <list>
-#include <signal.h>
 #include "RaptorGL.h"
 #include <SDL/SDL.h>
 
@@ -52,12 +52,12 @@ public:
 	double MaxFPS;
 	
 	double FrameTime;
-	GameData Data;
 	MouseState Mouse;
 	KeyboardState Keys;
 	JoystickManager Joy;
 	
-	int State;
+	volatile int State;
+	GameData Data;
 	uint16_t PlayerID;
 	
 	RaptorServer *Server;

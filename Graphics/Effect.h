@@ -6,8 +6,8 @@
 class Effect;
 
 #include "PlatformSpecific.h"
-
 #include "Pos.h"
+#include <cstddef>
 #include "Animation.h"
 #include "SoundOut.h"
 

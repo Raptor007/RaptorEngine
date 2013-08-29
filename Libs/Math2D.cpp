@@ -3,6 +3,7 @@
  */
 
 #include "Math2D.h"
+#include <cstddef>
 #include "Num.h"
 #include <cmath>
 #include <algorithm>

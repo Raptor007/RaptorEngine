@@ -4,6 +4,7 @@
 
 #include "NetServer.h"
 
+#include <cstddef>
 #include "RaptorDefs.h"
 #include "RaptorServer.h"
 
@@ -85,14 +86,14 @@ void NetServer::DisconnectNice( const char *message )
 {
 	if( Listening )
 	{
-		Packet *packet = new Packet( Raptor::Packet::DISCONNECT );
+		Packet disconnect( Raptor::Packet::DISCONNECT );
 		
 		if( message )
-			packet->AddString( message );
+			disconnect.AddString( message );
 		else
-			packet->AddString( "" );
+			disconnect.AddString( "" );
 		
-		SendAll( packet );
+		SendAll( &disconnect );
 	}
 	
 	Disconnect();
@@ -223,6 +224,27 @@ void NetServer::ProcessTop( void )
 }
 
 
+void NetServer::SendToPlayer( Packet *packet, uint32_t player_id )
+{
+	if( ! Lock.Lock() )
+		fprintf( stderr, "NetServer::SendAll: Lock.Lock: %s\n", SDL_GetError() );
+	
+	for( std::list<ConnectedClient*>::iterator iter = Clients.begin(); iter != Clients.end(); )
+	{
+		std::list<ConnectedClient*>::iterator next = iter;
+		next ++;
+		
+		if( (*iter)->PlayerID == player_id )
+			(*iter)->Send( packet );
+		
+		iter = next;
+	}
+	
+	if( ! Lock.Unlock() )
+		fprintf( stderr, "NetServer::SendAll: Lock.Unlock: %s\n", SDL_GetError() );
+}
+
+
 void NetServer::SendAll( Packet *packet )
 {
 	if( ! Lock.Lock() )
@@ -284,9 +306,21 @@ void NetServer::SendUpdates( void )
 		
 		ConnectedClient *client = *iter;
 		
-		if( client->Connected && ( client->NetClock.ElapsedSeconds() >= (1.0 / client->NetRate) ) )
+		// Reduce update rate temporarily in high-ping situations.
+		double temp_netrate = client->NetRate;
+		temp_netrate /= ((int) client->LatestPing() / 100) + 1;
+		
+		// Send an update if it's time to do so.
+		if( client->Connected && ( client->NetClock.ElapsedSeconds() >= (1.0 / temp_netrate) ) )
 		{
 			client->NetClock.Reset();
+			
+			if( client->PingClock.ElapsedSeconds() >= (1.0 / client->PingRate) )
+			{
+				client->PingClock.Reset();
+				client->SendPing();
+			}
+			
 			Raptor::Server->SendUpdate( client, client->Precision );
 		}
 		

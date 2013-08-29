@@ -24,7 +24,7 @@ public:
 	std::map<std::string,std::string> Defs;
 	
 	ShaderManager( void );
-	~ShaderManager();
+	virtual ~ShaderManager();
 	
 	bool Initialize( void );
 	void LoadShaders( std::string shader_name = "model" );
@@ -38,6 +38,7 @@ public:
 	bool Active( void );
 	bool Ready( void );
 	
+	bool Set1f( const char *name, double value );
 	bool Set3f( const char *name, double x, double y, double z );
 	bool Set1i( const char *name, int value );
 	
@@ -54,4 +55,5 @@ public:
 	int Int1, Int2, Int3, Int4;
 	
 	ShaderVar( void );
+	virtual ~ShaderVar();
 };

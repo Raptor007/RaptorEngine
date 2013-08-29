@@ -4,6 +4,7 @@
 
 #include "Graphics.h"
 
+#include <cstddef>
 #include <cmath>
 #include <cfloat>
 #include <SDL/SDL.h>
@@ -21,6 +22,7 @@ Graphics::Graphics( void )
 	W = 640;
 	H = 480;
 	AspectRatio = ((float)( W )) / ((float)( H ));
+	ZNear = Z_NEAR;
 	Fullscreen = false;
 	FSAA = 0;
 	AF = 16;
@@ -66,11 +68,11 @@ void Graphics::Initialize( void )
 
 void Graphics::SetMode( int x, int y )
 {
-	SetMode( x, y, Fullscreen, FSAA, AF, ShaderFile );
+	SetMode( x, y, Fullscreen, FSAA, AF, ZNear, ShaderFile );
 }
 
 
-void Graphics::SetMode( int x, int y, bool fullscreen, int fsaa, int af, std::string shader_file )
+void Graphics::SetMode( int x, int y, bool fullscreen, int fsaa, int af, double z_near, std::string shader_file )
 {
 	// Make sure we've initialized SDL.
 	if( ! Initialized )
@@ -85,6 +87,7 @@ void Graphics::SetMode( int x, int y, bool fullscreen, int fsaa, int af, std::st
 	Fullscreen = fullscreen;
 	FSAA = fsaa;
 	AF = af;
+	ZNear = z_near;
 	ShaderFile = shader_file;
 	
 	// Enable double-buffering and vsync.
@@ -134,9 +137,9 @@ void Graphics::SetMode( int x, int y, bool fullscreen, int fsaa, int af, std::st
 	{
 		// We couldn't set that video mode, so try a few windowed modes.
 		if( (x > 1024) || (y > 768) || fullscreen || (fsaa > 0) )
-			SetMode( 1024, 768, false, 0, af, shader_file );
+			SetMode( 1024, 768, false, 0, 1, z_near, shader_file );
 		else if( (x != 640) || (y != 480) || fullscreen || (fsaa > 0) )
-			SetMode( 640, 480, false, 0, af, shader_file );
+			SetMode( 640, 480, false, 0, 1, z_near, shader_file );
 		else
 		{
 			fprintf( stderr, "Unable to set video mode: %s\n", SDL_GetError() );
@@ -208,6 +211,7 @@ void Graphics::SetMode( int x, int y, bool fullscreen, int fsaa, int af, std::st
 		Raptor::Game->Cfg.Settings[ "g_res_windowed_x" ] = Num::ToString(x);
 		Raptor::Game->Cfg.Settings[ "g_res_windowed_y" ] = Num::ToString(y);
 	}
+	Raptor::Game->Cfg.Settings[ "g_znear" ] = Num::ToString(ZNear);
 	Raptor::Game->Cfg.Settings[ "g_fsaa" ] = Num::ToString(FSAA);
 	Raptor::Game->Cfg.Settings[ "g_af" ] = Num::ToString(AF);
 	Raptor::Game->Cfg.Settings[ "g_shader_file" ] = ShaderFile;
@@ -231,8 +235,9 @@ void Graphics::Restart( void )
 		x = Raptor::Game->Cfg.SettingAsInt( "g_res_windowed_x" );
 		y = Raptor::Game->Cfg.SettingAsInt( "g_res_windowed_y" );
 	}
+	double z_near = Raptor::Game->Cfg.SettingAsDouble( "g_znear" );
 	
-	SetMode( x, y, fullscreen, fsaa, af, shader_file );
+	SetMode( x, y, fullscreen, fsaa, af, z_near, shader_file );
 }
 
 
@@ -338,7 +343,7 @@ void Graphics::Setup3D( double fov_w, double cam_x, double cam_y, double cam_z, 
 	glEnable( GL_DEPTH_TEST );
 	glMatrixMode( GL_PROJECTION );
 	glLoadIdentity();
-	gluPerspective( fov_w / AspectRatio, AspectRatio, 1., FLT_MAX );
+	gluPerspective( fov_w / AspectRatio, AspectRatio, ZNear, FLT_MAX );
 	glMatrixMode( GL_MODELVIEW );
 	glLoadIdentity();
 	gluLookAt( cam_x, cam_y, cam_z,  cam_look_x, cam_look_y, cam_look_z,  cam_up_x, cam_up_y, cam_up_z );
@@ -439,9 +444,10 @@ void Graphics::DrawRect2D( double x1, double y1, double x2, double y2, GLuint te
 // ---------------------------------------------------------------------------
 
 
-void Graphics::DrawBox2D( double x1, double y1, double x2, double y2, float r, float g, float b, float a )
+void Graphics::DrawBox2D( double x1, double y1, double x2, double y2, float line_width, float r, float g, float b, float a )
 {
 	glColor4f( r, g, b, a );
+	glLineWidth( line_width );
 	
 	glBegin( GL_LINE_LOOP );
 		glVertex2d( x1, y1 );
@@ -495,15 +501,16 @@ void Graphics::DrawCircle2D( double x, double y, double r, int res, GLuint textu
 // ---------------------------------------------------------------------------
 
 
-void Graphics::DrawCircleOutline2D( double x, double y, double r, int res )
+void Graphics::DrawCircleOutline2D( double x, double y, double r, int res, float line_width )
 {
-	DrawCircleOutline2D( x, y, r, res, 1.f, 1.f, 1.f, 1.f );
+	DrawCircleOutline2D( x, y, r, res, line_width, 1.f, 1.f, 1.f, 1.f );
 }
 
 
-void Graphics::DrawCircleOutline2D( double x, double y, double r, int res, float red, float green, float blue, float alpha )
+void Graphics::DrawCircleOutline2D( double x, double y, double r, int res, float line_width, float red, float green, float blue, float alpha )
 {
 	glColor4f( red, green, blue, alpha );
+	glLineWidth( line_width );
 	
 	glBegin( GL_LINE_STRIP );
 		
@@ -525,9 +532,10 @@ void Graphics::DrawCircleOutline2D( double x, double y, double r, int res, float
 // ---------------------------------------------------------------------------
 
 
-void Graphics::DrawLine2D( double x1, double y1, double x2, double y2, float r, float g, float b, float a )
+void Graphics::DrawLine2D( double x1, double y1, double x2, double y2, float line_width, float r, float g, float b, float a )
 {
 	glColor4f( r, g, b, a );
+	glLineWidth( line_width );
 	
 	glBegin( GL_LINES );
 		glVertex2d( x1, y1 );
@@ -662,9 +670,10 @@ void Graphics::DrawSphere3D( double x, double y, double z, double r, int res, GL
 // ---------------------------------------------------------------------------
 
 
-void Graphics::DrawLine3D( double x1, double y1, double z1, double x2, double y2, double z2, float r, float g, float b, float a )
+void Graphics::DrawLine3D( double x1, double y1, double z1, double x2, double y2, double z2, float line_width, float r, float g, float b, float a )
 {
 	glColor4f( r, g, b, a );
+	glLineWidth( line_width );
 	
 	glBegin( GL_LINES );
 		glVertex3d( x1, y1, z1 );
@@ -676,7 +685,7 @@ void Graphics::DrawLine3D( double x1, double y1, double z1, double x2, double y2
 // ---------------------------------------------------------------------------
 
 
-GLuint Graphics::SDL_GL_LoadTexture( SDL_Surface *surface, GLfloat *texcoord, GLint texture_mode )
+GLuint Graphics::LoadTexture( SDL_Surface *surface, GLfloat *texcoord, GLint texture_mode )
 {
 	// Use the surface width and height expanded to powers of 2
 	int w = Num::NextPowerOfTwo( surface->w );

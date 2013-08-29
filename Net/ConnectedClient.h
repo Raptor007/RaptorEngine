@@ -6,7 +6,7 @@
 class ConnectedClient;
 
 #include "PlatformSpecific.h"
-
+#include <cstddef>
 #include <queue>
 #include <map>
 #include <stdexcept>
@@ -31,8 +31,8 @@ public:
 	unsigned short Port;
 	std::queue< Packet*, std::list<Packet*> > InBuffer, OutBuffer;
 	bool Synchronized;
-	Clock NetClock;
-	double NetRate;
+	Clock NetClock, PingClock;
+	double NetRate, PingRate;
 	int8_t Precision;
 	uint64_t BytesSent;
 	uint64_t BytesReceived;
@@ -44,7 +44,7 @@ public:
 	
 	
 	ConnectedClient( TCPsocket socket, bool use_out_thread = false, double net_rate = 30., int8_t precision = 0 );
-	~ConnectedClient();
+	virtual ~ConnectedClient();
 	
 	void DisconnectNice( const char *message = NULL );
 	void Disconnect( void );
@@ -54,13 +54,19 @@ public:
 	void ProcessTop( void );
 	bool ProcessPacket( Packet *packet );
 	
+	void Login( std::string name, std::string password );
+	
 	bool Send( Packet *packet );
-	void SendOthers( Packet *packet );
 	
 	// This should ONLY be called by Send() or ConnectedClientOutThread!
 	bool SendNow( Packet *packet );
 	
-	void Login( std::string name, std::string password );
+	void SendOthers( Packet *packet );
+	
+	void SendPing( void );
+	double LatestPing( void );
+	double AveragePing( void );
+	double MedianPing( void );
 	
 	static int ConnectedClientInThread( void *client );
 	static int ConnectedClientOutThread( void *client );

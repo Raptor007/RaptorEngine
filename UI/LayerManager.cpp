@@ -4,6 +4,7 @@
 
 #include "LayerManager.h"
 
+#include <cstddef>
 #include <stdexcept>
 #include "RaptorGame.h"
 
@@ -23,7 +24,7 @@ void LayerManager::Draw( void )
 {
 	Cleanup();
 	
-	for( std::vector<Layer*>::iterator layer_iter = Layers.begin(); layer_iter != Layers.end(); layer_iter ++ )
+	for( std::list<Layer*>::iterator layer_iter = Layers.begin(); layer_iter != Layers.end(); layer_iter ++ )
 	{
 		// Draw all Layers, from bottom to top.
 		(*layer_iter)->UpdateCalcRects();
@@ -37,20 +38,25 @@ void LayerManager::Draw( void )
 }
 
 
+void LayerManager::TrackEvent( SDL_Event *event )
+{
+	Cleanup();
+	
+	// Pass the event down the stack so all layers can see it.
+	for( std::list<Layer*>::reverse_iterator layer_iter = Layers.rbegin(); layer_iter != Layers.rend(); layer_iter ++ )
+		(*layer_iter)->TrackEvent( event );
+}
+
+
 bool LayerManager::HandleEvent( SDL_Event *event )
 {
 	Cleanup();
-
-	if( Layers.size() )
+	
+	// Pass the event down the stack until one of the layers processes it.
+	for( std::list<Layer*>::reverse_iterator layer_iter = Layers.rbegin(); layer_iter != Layers.rend(); layer_iter ++ )
 	{
-		for( std::vector<Layer*>::iterator layer_iter = Layers.end() - 1; true; layer_iter -- )
-		{
-			// Pass the event down the stack until one of the layers processes it.
-			if( bool result = (*layer_iter)->HandleEvent( event ) )
-				return result;
-			else if( layer_iter == Layers.begin() )
-				break;
-		}
+		if( (*layer_iter)->HandleEvent( event ) )
+			return true;
 	}
 	
 	// Event was not handled by any Layer; check for special events.
@@ -60,7 +66,7 @@ bool LayerManager::HandleEvent( SDL_Event *event )
 		return true;
 	}
 	
-	// If unhandled, return 0.
+	// If unhandled, return false.
 	return false;
 }
 
@@ -71,27 +77,21 @@ void LayerManager::Cleanup( void )
 	{
 		Dirty = false;
 		
-		for( int i = Layers.size() - 1; i >= 0; i -- )
+		for( std::list<Layer*>::iterator layer_iter = Layers.begin(); layer_iter != Layers.end(); )
 		{
-			try
+			std::list<Layer*>::iterator layer_iter_next = layer_iter;
+			layer_iter_next ++;
+			
+			Layer *layer = *layer_iter;
+			if( layer->Removed )
 			{
-				Layer *layer = Layers.at( i );
-				if( layer->Removed )
-				{
-					// Create an iterator so the vector::erase method will work properly.
-					std::vector<Layer *>::iterator iter = Layers.begin() + i;
-					Layers.erase( iter );
-					
-					delete layer;
-				}
-				else if( layer->Dirty )
-					layer->Cleanup();
+				Layers.erase( layer_iter );
+				delete layer;
 			}
-			catch( std::out_of_range &exception )
-			{
-				fprintf( stderr, "LayerManager::Cleanup: std::out_of_range\n" );
-				Dirty = true;
-			}
+			else if( layer->Dirty )
+				layer->Cleanup();
+			
+			layer_iter = layer_iter_next;
 		}
 	}
 }
@@ -109,23 +109,12 @@ void LayerManager::Remove( Layer *layer )
 }
 
 
-void LayerManager::Remove( int index )
-{
-	try
-	{
-		Layer *layer = Layers.at( index );
-		layer->Remove();
-	}
-	catch( std::out_of_range &exception )
-	{
-		fprintf( stderr, "LayerManager::RemoveLayer: std::out_of_range\n" );
-	}
-}
-
-
 void LayerManager::RemoveAll( void )
 {
-	Layers.clear();
+	for( std::list<Layer*>::iterator layer_iter = Layers.begin(); layer_iter != Layers.end(); layer_iter ++ )
+	{
+		(*layer_iter)->Remove();
+	}
 }
 
 
@@ -137,18 +126,8 @@ bool LayerManager::IsTop( Layer *layer )
 
 Layer *LayerManager::TopLayer( void )
 {
-	if( int size = Layers.size() )
-	{
-		try
-		{
-			return Layers.at( size - 1 );
-		}
-		catch( std::out_of_range &exception )
-		{
-			fprintf( stderr, "LayerManager::TopLayer: std::out_of_range\n" );
-		}
-	}
-
+	if( Layers.size() )
+		return Layers.back();
+	
 	return NULL;
 }
-

@@ -4,6 +4,8 @@
 
 #include "JoystickManager.h"
 
+#include <cstddef>
+
 
 JoystickManager::JoystickManager( void )
 {
