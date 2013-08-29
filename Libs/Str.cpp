@@ -160,7 +160,7 @@ std::string CStr::Unescape( const char *str, const char *original, const char *e
 }
 
 
-void CStr::ReplaceChars( char *str, char *find, char *replace )
+void CStr::ReplaceChars( char *str, const char *find, const char *replace )
 {
 	if( str && find && replace && (strlen(find) == strlen(replace)) )
 	{

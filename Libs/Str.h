@@ -32,7 +32,7 @@ namespace CStr
 	std::string Escape( const char *str, const char *original, const char *escaped );
 	std::string Unescape( const char *str, const char *original, const char *escaped );
 	
-	void ReplaceChars( char *str, char *find, char *replace );
+	void ReplaceChars( char *str, const char *find, const char *replace );
 	
 	std::vector<std::string> SplitToVector( const char *str, const char *delimiters );
 	std::list<std::string> SplitToList( const char *str, const char *delimiters );
