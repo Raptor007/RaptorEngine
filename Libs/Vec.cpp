@@ -57,7 +57,6 @@ void Vec2D::ScaleBy( double factor )
 	Y *= factor;
 }
 
-
 void Vec2D::ScaleTo( double length )
 {
 	double old_length = sqrt( X*X + Y*Y );
@@ -74,6 +73,24 @@ double Vec2D::Dot( const Vec2D &other ) const
 double Vec2D::Dot( double x, double y ) const
 {
 	return X*x + Y*y;
+}
+
+
+Vec2D Vec2D::Reflect( const Vec2D *normal ) const
+{
+	double dp_x2 = Dot(normal) * 2.0;
+	return Vec2D( X - dp_x2 * normal->X, Y - dp_x2 * normal->Y );
+}
+
+Vec2D Vec2D::ReflectAnySide( const Vec2D *normal ) const
+{
+	if( Dot(normal) <= 0. )
+		return Reflect( normal );
+	else
+	{
+		Vec2D new_normal( normal->X * -1., normal->Y * -1. );
+		return Reflect( &new_normal );
+	}
 }
 
 
@@ -215,7 +232,6 @@ void Vec3D::RotateAround( const Vec3D *axis, double degrees )
 	Z = w * ( u*x + v*y + w*z ) * ( 1 - cos(radians) ) + z * cos(radians) + ( u*y - v*x ) * sin(radians);
 }
 
-
 void Vec3D::RotateAround( const Vec3D *axis, double degrees, const Vec3D *anchor )
 {
 	X -= anchor->X;
@@ -234,7 +250,6 @@ double Vec3D::Dot( const Vec3D &other ) const
 {
 	return Dot( other.X, other.Y, other.Z );
 }
-
 
 double Vec3D::Dot( double x, double y, double z ) const
 {
@@ -258,6 +273,26 @@ double Vec3D::AngleBetween( const Vec3D &other ) const
 	unit1.ScaleTo( 1. );
 	unit2.ScaleTo( 1. );
 	return Num::RadToDeg( acos( unit1.Dot(unit2) ) );
+}
+
+
+Vec3D Vec3D::Reflect( const Vec3D *normal ) const
+{
+	// Note: The general formula is: Out = In - 2*Normal*(In dot Normal)
+	
+	double dp_x2 = Dot(normal) * 2.;
+	return Vec3D( X - dp_x2 * normal->X, Y - dp_x2 * normal->Y, Z - dp_x2 * normal->Z );
+}
+
+Vec3D Vec3D::ReflectAnySide( const Vec3D *normal ) const
+{
+	if( Dot(normal) <= 0. )
+		return Reflect( normal );
+	else
+	{
+		Vec3D new_normal( normal->X * -1., normal->Y * -1., normal->Z * -1. );
+		return Reflect( &new_normal );
+	}
 }
 
 

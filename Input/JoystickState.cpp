@@ -51,6 +51,12 @@ double JoystickState::AxisScale( Sint16 value )
 }
 
 
+bool JoystickState::HasAxis( Uint8 axis )
+{
+	return (Axes.find( axis ) != Axes.end());
+}
+
+
 double JoystickState::Axis( Uint8 axis, double deadzone, double deadzone_at_ends )
 {
 	// Check an axis value.

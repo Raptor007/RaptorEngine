@@ -32,7 +32,7 @@ RaptorServer::RaptorServer( std::string game, std::string version )
 	
 	Thread = NULL;
 	Port = 7000;
-	MaxFPS = 120.;
+	MaxFPS = 60.;
 	NetRate = 30.;
 	Announce = true;
 	AnnounceInterval = 3.;

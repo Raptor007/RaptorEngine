@@ -12,7 +12,13 @@ class SoundOut;
 #include <queue>
 #include <stdint.h>
 #include <SDL/SDL.h>
-#include <SDL_mixer/SDL_mixer.h>
+
+#ifdef __APPLE__
+	#include <SDL_mixer/SDL_mixer.h>
+#else
+	#include <SDL/SDL_mixer.h>
+#endif
+
 #include "PanningSound.h"
 #include "Pos.h"
 

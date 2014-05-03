@@ -8,7 +8,12 @@ class NetUDPPacket;
 
 #include "PlatformSpecific.h"
 
-#include <SDL_net/SDL_net.h>
+#ifdef __APPLE__
+	#include <SDL_net/SDL_net.h>
+#else
+	#include <SDL/SDL_net.h>
+#endif
+
 #include "Packet.h"
 
 

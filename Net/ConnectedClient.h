@@ -12,7 +12,13 @@ class ConnectedClient;
 #include <stdexcept>
 #include <SDL/SDL.h>
 #include <SDL/SDL_thread.h>
-#include <SDL_net/SDL_net.h>
+
+#ifdef __APPLE__
+	#include <SDL_net/SDL_net.h>
+#else
+	#include <SDL/SDL_net.h>
+#endif
+
 #include "Packet.h"
 #include "Clock.h"
 #include "Identifier.h"

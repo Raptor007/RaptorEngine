@@ -27,6 +27,7 @@ public:
 	void ReleaseJoysticks( void );
 	
 	void TrackEvent( SDL_Event *event );
+	bool HasAxis( int joystick_id, Uint8 axis );
 	double Axis( int joystick_id, Uint8 axis, double deadzone = 0., double deadzone_at_ends = 0. );
 	double AxisScaled( int joystick_id, Uint8 axis, double low, double high, double deadzone = 0., double deadzone_at_ends = 0. );
 	bool ButtonDown( int joystick_id, Uint8 button );

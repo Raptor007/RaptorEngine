@@ -29,7 +29,8 @@ public:
 	
 	void TrackEvent( SDL_Event *event );
 	static double AxisScale( Sint16 value );
-
+	
+	bool HasAxis( Uint8 axis );
 	double Axis( Uint8 axis, double deadzone = 0., double deadzone_at_ends = 0. );
 	double AxisScaled( Uint8 axis, double low, double high, double deadzone = 0., double deadzone_at_ends = 0. );
 	bool ButtonDown( Uint8 button );

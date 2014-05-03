@@ -29,19 +29,39 @@ void Model::Clear( void )
 {
 	Objects.clear();
 	Materials.clear();
+	ExplodedSeconds = 0.;
 	Length = 0.;
 	Width = 0.;
 	Height = 0.;
-	ExplodedSeconds = 0.;
+	MaxRadius = 0.;
 }
 
 
 void Model::Reset( void )
 {
 	ExplodedSeconds = 0.;
-	
+	RandomizeExplosionVectors();
+}
+
+
+void Model::RandomizeExplosionVectors( double speed_scale )
+{
 	for( std::map<std::string,ModelObject>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
-		obj_iter->second.RandomizeExplosionVectors();
+		obj_iter->second.RandomizeExplosionVectors( speed_scale );
+}
+
+
+void Model::SeedExplosionVectors( int seed, double speed_scale )
+{
+	for( std::map<std::string,ModelObject>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
+	{
+		// Generate a per-object seed based on the object name.
+		int this_seed = seed * obj_iter->first.length();
+		for( size_t i = 0; i < obj_iter->first.length(); i ++ )
+			this_seed += (i + 1) * (int)( obj_iter->first[ i ] );
+		
+		obj_iter->second.SeedExplosionVectors( this_seed, speed_scale );
+	}
 }
 
 
@@ -61,20 +81,21 @@ void Model::BecomeInstance( Model *other )
 	Length = other->GetLength();
 	Width = other->GetWidth();
 	Height = other->GetHeight();
+	MaxRadius = other->GetMaxRadius();
 }
 
 
-bool Model::LoadOBJ( std::string filename )
+bool Model::LoadOBJ( std::string filename, bool get_textures )
 {
 	Clear();
 	
-	bool return_value = IncludeOBJ( filename );
+	bool return_value = IncludeOBJ( filename, get_textures );
 	MakeMaterialArrays();
 	return return_value;
 }
 
 
-bool Model::IncludeOBJ( std::string filename )
+bool Model::IncludeOBJ( std::string filename, bool get_textures )
 {
 	std::ifstream input( filename.c_str() );
 	if( input.is_open() )
@@ -209,6 +230,7 @@ bool Model::IncludeOBJ( std::string filename )
 				{
 					// Build the previous object's arrays, since we're changing objects now.
 					Objects[ obj ].AddFaces( mtl, faces );
+					Objects[ obj ].Name = obj;
 					faces.clear();
 					
 					if( elements.size() >= 2 )
@@ -220,6 +242,7 @@ bool Model::IncludeOBJ( std::string filename )
 				{
 					// Build the previous object's arrays, since we're changing materials now.
 					Objects[ obj ].AddFaces( mtl, faces );
+					Objects[ obj ].Name = obj;
 					faces.clear();
 					
 					if( elements.size() >= 2 )
@@ -255,7 +278,7 @@ bool Model::IncludeOBJ( std::string filename )
 				}
 				else if( elements.at( 0 ) == "map_Kd" )
 				{
-					if( elements.size() >= 2 )
+					if( get_textures && (elements.size() >= 2) )
 						Materials[ mtl ].Texture.BecomeInstance( Raptor::Game->Res.GetAnimation( elements.at( 1 ) ) );
 				}
 				else if( elements.at( 0 ) == "Ka" )
@@ -280,6 +303,7 @@ bool Model::IncludeOBJ( std::string filename )
 			
 			// Build the final object's arrays.
 			Objects[ obj ].AddFaces( mtl, faces );
+			Objects[ obj ].Name = obj;
 			faces.clear();
 		}
 		
@@ -420,7 +444,6 @@ void Model::DrawAt( const Pos3D *pos, double scale, double fwd_scale, double up_
 		Pos3D draw_pos;
 		Vec3D x_vec, y_vec, z_vec;
 		
-		int obj_num = 0;
 		for( std::map<std::string,ModelObject>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
 		{
 			draw_pos.Copy( pos );
@@ -478,8 +501,6 @@ void Model::DrawAt( const Pos3D *pos, double scale, double fwd_scale, double up_
 					glDrawArrays( GL_TRIANGLES, 0, array_iter->second.VertexCount );
 				}
 			}
-			
-			obj_num ++;
 		}
 	}
 	
@@ -496,6 +517,265 @@ void Model::DrawAt( const Pos3D *pos, double scale, double fwd_scale, double up_
 		Raptor::Game->ShaderMgr.Set3f( "ZVec", 0., 0., 1. );
 		Raptor::Game->ShaderMgr.Set3f( "AmbientColor", 1., 1., 1. );
 		Raptor::Game->ShaderMgr.Set3f( "DiffuseColor", 0., 0., 0. );
+	}
+}
+
+
+void Model::DrawObjectsAt( const std::list<std::string> *object_names, const Pos3D *pos, double scale, double fwd_scale, double up_scale, double right_scale )
+{
+	bool use_shaders = Raptor::Game->ShaderMgr.Active();
+	
+	glEnable( GL_TEXTURE_2D );
+	glEnableClientState( GL_VERTEX_ARRAY );
+	glEnableClientState( GL_TEXTURE_COORD_ARRAY );
+	glEnableClientState( GL_NORMAL_ARRAY );
+	
+	glColor4f( 1.f, 1.f, 1.f, 1.f );
+	
+	Pos3D draw_pos;
+	Vec3D x_vec, y_vec, z_vec;
+	
+	// Loop on the list of object names.
+	for( std::list<std::string>::const_iterator obj_name_iter = object_names->begin(); obj_name_iter != object_names->end(); obj_name_iter ++ )
+	{
+		// For each name, find it in Objects.
+		std::map<std::string,ModelObject>::iterator obj_iter = Objects.find( *obj_name_iter );
+		if( obj_iter == Objects.end() )
+			continue;
+		
+		draw_pos.Copy( pos );
+		
+		draw_pos += obj_iter->second.GetExplosionMotion() * ExplodedSeconds;
+		
+		draw_pos.Fwd.RotateAround( &(obj_iter->second.ExplosionRotationAxis), ExplodedSeconds * obj_iter->second.ExplosionRotationRate );
+		draw_pos.Up.RotateAround( &(obj_iter->second.ExplosionRotationAxis), ExplodedSeconds * obj_iter->second.ExplosionRotationRate );
+		draw_pos.Right.RotateAround( &(obj_iter->second.ExplosionRotationAxis), ExplodedSeconds * obj_iter->second.ExplosionRotationRate );
+		
+		if( use_shaders )
+		{
+			// In model space, X = fwd, Y = up, Z = right.
+			x_vec.Set( draw_pos.Fwd.X * fwd_scale, draw_pos.Up.X * up_scale, draw_pos.Right.X * right_scale );
+			y_vec.Set( draw_pos.Fwd.Y * fwd_scale, draw_pos.Up.Y * up_scale, draw_pos.Right.Y * right_scale );
+			z_vec.Set( draw_pos.Fwd.Z * fwd_scale, draw_pos.Up.Z * up_scale, draw_pos.Right.Z * right_scale );
+			
+			x_vec *= scale;
+			y_vec *= scale;
+			z_vec *= scale;
+			
+			Raptor::Game->ShaderMgr.Set3f( "Pos", draw_pos.X, draw_pos.Y, draw_pos.Z );
+			Raptor::Game->ShaderMgr.Set3f( "XVec", x_vec.X, x_vec.Y, x_vec.Z );
+			Raptor::Game->ShaderMgr.Set3f( "YVec", y_vec.X, y_vec.Y, y_vec.Z );
+			Raptor::Game->ShaderMgr.Set3f( "ZVec", z_vec.X, z_vec.Y, z_vec.Z );
+		}
+		
+		for( std::map<std::string,ModelArrays>::iterator array_iter = obj_iter->second.Arrays.begin(); array_iter != obj_iter->second.Arrays.end(); array_iter ++ )
+		{
+			if( array_iter->second.VertexCount )
+			{
+				if( use_shaders )
+				{
+					Raptor::Game->ShaderMgr.Set3f( "AmbientColor", Materials[ array_iter->first ].Ambient.Red, Materials[ array_iter->first ].Ambient.Green, Materials[ array_iter->first ].Ambient.Blue );
+					Raptor::Game->ShaderMgr.Set3f( "DiffuseColor", Materials[ array_iter->first ].Diffuse.Red, Materials[ array_iter->first ].Diffuse.Green, Materials[ array_iter->first ].Diffuse.Blue );
+					
+					glActiveTexture( GL_TEXTURE0 + 0 );
+					Raptor::Game->ShaderMgr.Set1i( "Texture", 0 );
+					
+					glVertexPointer( 3, GL_DOUBLE, 0, array_iter->second.VertexArray );
+				}
+				else
+				{
+					// Calculate worldspace coordinates on the CPU (slow for complex models).
+					array_iter->second.MakeWorldSpace( &draw_pos, scale, fwd_scale, up_scale, right_scale );
+					
+					glVertexPointer( 3, GL_DOUBLE, 0, array_iter->second.WorldSpaceVertexArray );
+				}
+				
+				glBindTexture( GL_TEXTURE_2D, Materials[ array_iter->first ].Texture.CurrentFrame() );
+				
+				glTexCoordPointer( 2, GL_FLOAT, 0, array_iter->second.TexCoordArray );
+				glNormalPointer( GL_FLOAT, 0, array_iter->second.NormalArray );
+				
+				glDrawArrays( GL_TRIANGLES, 0, array_iter->second.VertexCount );
+			}
+		}
+	}
+	
+	glDisableClientState( GL_NORMAL_ARRAY );
+	glDisableClientState( GL_TEXTURE_COORD_ARRAY );
+	glDisableClientState( GL_VERTEX_ARRAY );
+	glDisable( GL_TEXTURE_2D );
+	
+	if( use_shaders )
+	{
+		Raptor::Game->ShaderMgr.Set3f( "Pos", 0., 0., 0. );
+		Raptor::Game->ShaderMgr.Set3f( "XVec", 1., 0., 0. );
+		Raptor::Game->ShaderMgr.Set3f( "YVec", 0., 1., 0. );
+		Raptor::Game->ShaderMgr.Set3f( "ZVec", 0., 0., 1. );
+		Raptor::Game->ShaderMgr.Set3f( "AmbientColor", 1., 1., 1. );
+		Raptor::Game->ShaderMgr.Set3f( "DiffuseColor", 0., 0., 0. );
+	}
+}
+
+
+void Model::DrawWireframeAt( const Pos3D *pos, Color color, double scale, double fwd_scale, double up_scale, double right_scale )
+{
+	bool use_shaders = Raptor::Game->ShaderMgr.Active();
+	
+	glEnableClientState( GL_VERTEX_ARRAY );
+	glEnableClientState( GL_NORMAL_ARRAY );
+	
+	glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+	
+	glColor4f( 1.f, 1.f, 1.f, 1.f );
+	
+	if( ExplodedSeconds <= 0. )
+	{
+		// The model is not exploding, so draw per-material arrays (faster).
+		
+		if( use_shaders )
+		{
+			// In model space, X = fwd, Y = up, Z = right.
+			Vec3D x_vec( pos->Fwd.X * fwd_scale, pos->Up.X * up_scale, pos->Right.X * right_scale );
+			Vec3D y_vec( pos->Fwd.Y * fwd_scale, pos->Up.Y * up_scale, pos->Right.Y * right_scale );
+			Vec3D z_vec( pos->Fwd.Z * fwd_scale, pos->Up.Z * up_scale, pos->Right.Z * right_scale );
+			
+			x_vec *= scale;
+			y_vec *= scale;
+			z_vec *= scale;
+			
+			Raptor::Game->ShaderMgr.Set3f( "Pos", pos->X, pos->Y, pos->Z );
+			Raptor::Game->ShaderMgr.Set3f( "XVec", x_vec.X, x_vec.Y, x_vec.Z );
+			Raptor::Game->ShaderMgr.Set3f( "YVec", y_vec.X, y_vec.Y, y_vec.Z );
+			Raptor::Game->ShaderMgr.Set3f( "ZVec", z_vec.X, z_vec.Y, z_vec.Z );
+		}
+			
+		for( std::map<std::string,ModelMaterial>::iterator mtl_iter = Materials.begin(); mtl_iter != Materials.end(); mtl_iter ++ )
+		{
+			if( mtl_iter->second.Arrays.VertexCount )
+			{
+				if( use_shaders )
+				{
+					Raptor::Game->ShaderMgr.Set3f( "AmbientColor", color.Red, color.Green, color.Blue );
+					Raptor::Game->ShaderMgr.Set3f( "DiffuseColor", 0., 0., 0. );
+					
+					glVertexPointer( 3, GL_DOUBLE, 0, mtl_iter->second.Arrays.VertexArray );
+				}
+				else
+				{
+					// Calculate worldspace coordinates on the CPU (slow for complex models).
+					mtl_iter->second.Arrays.MakeWorldSpace( pos, scale, fwd_scale, up_scale, right_scale );
+					
+					glVertexPointer( 3, GL_DOUBLE, 0, mtl_iter->second.Arrays.WorldSpaceVertexArray );
+				}
+				
+				glNormalPointer( GL_FLOAT, 0, mtl_iter->second.Arrays.NormalArray );
+				
+				glDrawArrays( GL_TRIANGLES, 0, mtl_iter->second.Arrays.VertexCount );
+			}
+		}
+	}
+	else
+	{
+		// The model is exploding, so draw per-object arrays (slower, but allows multiple positions and rotations).
+		
+		Pos3D draw_pos;
+		Vec3D x_vec, y_vec, z_vec;
+		
+		for( std::map<std::string,ModelObject>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
+		{
+			draw_pos.Copy( pos );
+			
+			draw_pos += obj_iter->second.GetExplosionMotion() * ExplodedSeconds;
+			
+			draw_pos.Fwd.RotateAround( &(obj_iter->second.ExplosionRotationAxis), ExplodedSeconds * obj_iter->second.ExplosionRotationRate );
+			draw_pos.Up.RotateAround( &(obj_iter->second.ExplosionRotationAxis), ExplodedSeconds * obj_iter->second.ExplosionRotationRate );
+			draw_pos.Right.RotateAround( &(obj_iter->second.ExplosionRotationAxis), ExplodedSeconds * obj_iter->second.ExplosionRotationRate );
+			
+			if( use_shaders )
+			{
+				// In model space, X = fwd, Y = up, Z = right.
+				x_vec.Set( draw_pos.Fwd.X * fwd_scale, draw_pos.Up.X * up_scale, draw_pos.Right.X * right_scale );
+				y_vec.Set( draw_pos.Fwd.Y * fwd_scale, draw_pos.Up.Y * up_scale, draw_pos.Right.Y * right_scale );
+				z_vec.Set( draw_pos.Fwd.Z * fwd_scale, draw_pos.Up.Z * up_scale, draw_pos.Right.Z * right_scale );
+				
+				x_vec *= scale;
+				y_vec *= scale;
+				z_vec *= scale;
+				
+				Raptor::Game->ShaderMgr.Set3f( "Pos", draw_pos.X, draw_pos.Y, draw_pos.Z );
+				Raptor::Game->ShaderMgr.Set3f( "XVec", x_vec.X, x_vec.Y, x_vec.Z );
+				Raptor::Game->ShaderMgr.Set3f( "YVec", y_vec.X, y_vec.Y, y_vec.Z );
+				Raptor::Game->ShaderMgr.Set3f( "ZVec", z_vec.X, z_vec.Y, z_vec.Z );
+			}
+			
+			for( std::map<std::string,ModelArrays>::iterator array_iter = obj_iter->second.Arrays.begin(); array_iter != obj_iter->second.Arrays.end(); array_iter ++ )
+			{
+				if( array_iter->second.VertexCount )
+				{
+					if( use_shaders )
+					{
+						Raptor::Game->ShaderMgr.Set3f( "AmbientColor", color.Red, color.Green, color.Blue );
+						Raptor::Game->ShaderMgr.Set3f( "DiffuseColor", 0., 0., 0. );
+						
+						glVertexPointer( 3, GL_DOUBLE, 0, array_iter->second.VertexArray );
+					}
+					else
+					{
+						// Calculate worldspace coordinates on the CPU (slow for complex models).
+						array_iter->second.MakeWorldSpace( &draw_pos, scale, fwd_scale, up_scale, right_scale );
+						
+						glVertexPointer( 3, GL_DOUBLE, 0, array_iter->second.WorldSpaceVertexArray );
+					}
+					
+					glNormalPointer( GL_FLOAT, 0, array_iter->second.NormalArray );
+					
+					glDrawArrays( GL_TRIANGLES, 0, array_iter->second.VertexCount );
+				}
+			}
+		}
+	}
+	
+	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+	
+	glDisableClientState( GL_NORMAL_ARRAY );
+	glDisableClientState( GL_VERTEX_ARRAY );
+	
+	if( use_shaders )
+	{
+		Raptor::Game->ShaderMgr.Set3f( "Pos", 0., 0., 0. );
+		Raptor::Game->ShaderMgr.Set3f( "XVec", 1., 0., 0. );
+		Raptor::Game->ShaderMgr.Set3f( "YVec", 0., 1., 0. );
+		Raptor::Game->ShaderMgr.Set3f( "ZVec", 0., 0., 1. );
+		Raptor::Game->ShaderMgr.Set3f( "AmbientColor", 1., 1., 1. );
+		Raptor::Game->ShaderMgr.Set3f( "DiffuseColor", 0., 0., 0. );
+	}
+}
+
+
+void Model::Move( double fwd, double up, double right )
+{
+	// FIXME: What does this mean if we're using someone else's memory?
+	
+	for( std::map<std::string,ModelObject>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
+	{
+		for( std::map<std::string,ModelArrays>::iterator array_iter = obj_iter->second.Arrays.begin(); array_iter != obj_iter->second.Arrays.end(); array_iter ++ )
+		{
+			// FIXME: Vectorize and/or parallelize?
+			for( int i = 0; i < array_iter->second.VertexCount; i ++ )
+			{
+				array_iter->second.VertexArray[ i*3     ] += fwd;
+				array_iter->second.VertexArray[ i*3 + 1 ] += up;
+				array_iter->second.VertexArray[ i*3 + 2 ] += right;
+			}
+		}
+	}
+	
+	MakeMaterialArrays();
+	
+	if( MaxRadius >= 0. )
+	{
+		MaxRadius = 0.;
+		GetMaxRadius();
 	}
 }
 
@@ -529,6 +809,12 @@ void Model::ScaleBy( double fwd_scale, double up_scale, double right_scale )
 	Length *= fwd_scale;
 	Height *= up_scale;
 	Width *= right_scale;
+	
+	if( MaxRadius >= 0. )
+	{
+		MaxRadius = 0.;
+		GetMaxRadius();
+	}
 }
 
 
@@ -650,6 +936,12 @@ double Model::GetTriagonal( void )
 }
 
 
+double Model::PrecalculatedTriagonal( void ) const
+{
+	return sqrt( Length*Length + Width*Width + Height*Height );
+}
+
+
 double Model::GetMaxDim( void )
 {
 	double l = GetLength(), w = GetWidth(), h = GetHeight();
@@ -662,35 +954,71 @@ double Model::GetMaxDim( void )
 }
 
 
+double Model::GetMaxRadius( void )
+{
+	if( MaxRadius <= 0. )
+	{
+		double x = 0., y = 0., z = 0.;
+		double dist = 0.;
+		
+		for( std::map<std::string,ModelObject>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
+		{
+			for( std::map<std::string,ModelArrays>::iterator array_iter = obj_iter->second.Arrays.begin(); array_iter != obj_iter->second.Arrays.end(); array_iter ++ )
+			{
+				for( int i = 0; i < array_iter->second.VertexCount; i ++ )
+				{
+					x = array_iter->second.VertexArray[ i*3 ];
+					y = array_iter->second.VertexArray[ i*3 + 1 ];
+					z = array_iter->second.VertexArray[ i*3 + 2 ];
+					
+					dist = sqrt( x*x + y*y + z*z );
+					
+					if( dist > MaxRadius )
+						MaxRadius = dist;
+				}
+			}
+		}
+	}
+	
+	return MaxRadius;
+}
+
+
+double Model::PrecalculatedMaxRadius( void ) const
+{
+	return MaxRadius;
+}
+
+
 void Model::Explode( double dt )
 {
 	ExplodedSeconds += dt;
 }
 
 
-int Model::ArrayCount( void )
+int Model::ArrayCount( void ) const
 {
 	int count = 0;
 	
-	for( std::map<std::string,ModelObject>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
+	for( std::map<std::string,ModelObject>::const_iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
 		count += obj_iter->second.Arrays.size();
 	
 	return count;
 }
 
 
-int Model::TriangleCount( void )
+int Model::TriangleCount( void ) const
 {
 	return VertexCount() / 3;
 }
 
 
-int Model::VertexCount( void )
+int Model::VertexCount( void ) const
 {
 	int count = 0;
 	
-	for( std::map<std::string,ModelObject>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
-		for( std::map<std::string,ModelArrays>::iterator array_iter = obj_iter->second.Arrays.begin(); array_iter != obj_iter->second.Arrays.end(); array_iter ++ )
+	for( std::map<std::string,ModelObject>::const_iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
+		for( std::map<std::string,ModelArrays>::const_iterator array_iter = obj_iter->second.Arrays.begin(); array_iter != obj_iter->second.Arrays.end(); array_iter ++ )
 			count += array_iter->second.VertexCount;
 	
 	return count;
@@ -815,18 +1143,20 @@ void ModelArrays::BecomeCopy( const ModelArrays *other )
 }
 
 
-void ModelArrays::BecomeInstance( const ModelArrays *other )
+void ModelArrays::BecomeInstance( const ModelArrays *other, bool copy )
 {
-	Clear();
-	
-	VertexCount = other->VertexCount;
-	
-	VertexArray = other->VertexArray;
-	TexCoordArray = other->TexCoordArray;
-	NormalArray = other->NormalArray;
-	
-	// FIXME: This shouldn't be necessary, and it wastes memory!
-	BecomeCopy( other );
+	if( copy )
+		BecomeCopy( other );
+	else
+	{
+		Clear();
+		
+		VertexCount = other->VertexCount;
+		
+		VertexArray = other->VertexArray;
+		TexCoordArray = other->TexCoordArray;
+		NormalArray = other->NormalArray;
+	}
 }
 
 
@@ -1062,7 +1392,8 @@ void ModelArrays::MakeWorldSpace( const Pos3D *pos, double scale, double fwd_sca
 
 ModelObject::ModelObject( void )
 {
-	CenterPoint.Set( 0., 0., 0. );
+	CenterPoint.SetPos( 0., 0., 0. );
+	MaxRadius = 0.;
 	NeedsRecalc = false;
 	
 	RandomizeExplosionVectors();
@@ -1074,6 +1405,7 @@ ModelObject::ModelObject( const ModelObject &other )
 	Arrays = other.Arrays;
 	
 	CenterPoint = other.CenterPoint;
+	MaxRadius = other.MaxRadius;
 	NeedsRecalc = other.NeedsRecalc;
 	
 	ExplosionRotationAxis = other.ExplosionRotationAxis;
@@ -1091,6 +1423,8 @@ void ModelObject::BecomeInstance( const ModelObject *other )
 {
 	Arrays.clear();
 	
+	Name = other->Name;
+	
 	ExplosionMotion = other->ExplosionMotion;
 	ExplosionRotationAxis = other->ExplosionRotationAxis;
 	ExplosionRotationRate = other->ExplosionRotationRate;
@@ -1102,12 +1436,41 @@ void ModelObject::BecomeInstance( const ModelObject *other )
 }
 
 
-void ModelObject::RandomizeExplosionVectors( void )
+void ModelObject::RandomizeExplosionVectors( double speed_scale )
 {
-	// Generate a random rotation axis for this chunk of debris.
+	if( NeedsRecalc )
+		Recalc();
+	
+	// Generate a random rotation axis and rate for this chunk of debris.
 	ExplosionRotationAxis.Set( Rand::Double( -1., 1. ), Rand::Double( -1., 1. ), Rand::Double( -1., 1. ) );
 	ExplosionRotationAxis.ScaleTo( 1. );
-	ExplosionRotationRate = Rand::Double( 360., 720. );
+	ExplosionRotationRate = Rand::Double( 360., 720. ) * speed_scale;
+	
+	// Generate a random motion axis, mostly away from object center.
+	double center_motion_scale = Rand::Double( 10., 40. );
+	ExplosionMotion.X = CenterPoint.X * center_motion_scale + Rand::Double( -5., 5. );
+	ExplosionMotion.Y = CenterPoint.Y * center_motion_scale + Rand::Double( -5., 5. );
+	ExplosionMotion.Z = CenterPoint.Z * center_motion_scale + Rand::Double( -5., 5. );
+	ExplosionMotion.ScaleBy( speed_scale );
+}
+
+
+void ModelObject::SeedExplosionVectors( int seed, double speed_scale )
+{
+	if( NeedsRecalc )
+		Recalc();
+	
+	// Generate predictable rotation axis for this chunk of debris, based on a seed value.
+	ExplosionRotationAxis.Set( -1. + ((seed + 1234) % 201) / 100., -1. + ((seed + 12345) % 201) / 100., -1. + ((seed + 123456) % 201) / 100. );
+	ExplosionRotationAxis.ScaleTo( 1. );
+	ExplosionRotationRate = (360. + (seed + 1337) % 361) * speed_scale;
+	
+	// Generate a predictable motion axis, mostly away from object center.
+	double center_motion_scale = 10. + ((seed + 666) % 300) / 10.;
+	ExplosionMotion.X = CenterPoint.X * center_motion_scale - 5. + 10. * ((seed + 512) % 344) / 343.;
+	ExplosionMotion.Y = CenterPoint.Y * center_motion_scale - 5. + 10. * ((seed + 1024) % 344) / 343.;
+	ExplosionMotion.Z = CenterPoint.Z * center_motion_scale - 5. + 10. * ((seed + 2048) % 344) / 343.;
+	ExplosionMotion.ScaleBy( speed_scale );
 }
 
 
@@ -1124,7 +1487,8 @@ void ModelObject::Recalc( void )
 	// FIXME: Use a better algorithm than this?
 	// FIXME: Vectorize and/or parallelize?
 	
-	CenterPoint.Set( 0., 0., 0. );
+	CenterPoint.SetPos( 0., 0., 0. );
+	MaxRadius = 0.;
 	int vertex_count = 0;
 	
 	for( std::map<std::string,ModelArrays>::iterator array_iter = Arrays.begin(); array_iter != Arrays.end(); array_iter ++ )
@@ -1144,12 +1508,20 @@ void ModelObject::Recalc( void )
 		CenterPoint.X /= vertex_count;
 		CenterPoint.Y /= vertex_count;
 		CenterPoint.Z /= vertex_count;
+		
+		for( std::map<std::string,ModelArrays>::iterator array_iter = Arrays.begin(); array_iter != Arrays.end(); array_iter ++ )
+		{
+			for( int i = 0; i < array_iter->second.VertexCount; i ++ )
+			{
+				double x = array_iter->second.VertexArray[ i*3     ] - CenterPoint.X;
+				double y = array_iter->second.VertexArray[ i*3 + 1 ] - CenterPoint.Y;
+				double z = array_iter->second.VertexArray[ i*3 + 2 ] - CenterPoint.Z;
+				double dist = sqrt( x*x + y*y + z*z );
+				if( dist > MaxRadius )
+					MaxRadius = dist;
+			}
+		}
 	}
-	
-	ExplosionMotion = CenterPoint * Rand::Double( 10., 40. );
-	ExplosionMotion.X += Rand::Double( -5., 5. );
-	ExplosionMotion.Y += Rand::Double( -5., 5. );
-	ExplosionMotion.Z += Rand::Double( -5., 5. );
 	
 	NeedsRecalc = false;
 }
@@ -1162,12 +1534,33 @@ void ModelObject::CalculateNormals( void )
 }
 
 
-Vec3D ModelObject::GetCenter( void )
+Pos3D ModelObject::GetCenterPoint( void )
 {
 	if( NeedsRecalc )
 		Recalc();
 	
 	return CenterPoint;
+}
+
+
+Pos3D ModelObject::PrecalculatedCenterPoint( void ) const
+{
+	return CenterPoint;
+}
+
+
+double ModelObject::GetMaxRadius( void )
+{
+	if( NeedsRecalc )
+		Recalc();
+	
+	return MaxRadius;
+}
+
+
+double ModelObject::PrecalculatedMaxRadius( void ) const
+{
+	return MaxRadius;
 }
 
 

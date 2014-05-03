@@ -26,37 +26,46 @@ class Model
 public:
 	std::map<std::string,ModelObject> Objects;
 	std::map<std::string,ModelMaterial> Materials;
+	double ExplodedSeconds;
 	
 	Model( void );
 	virtual ~Model();
 	
 	void Clear( void );
 	void Reset( void );
+	void RandomizeExplosionVectors( double speed_scale = 1. );
+	void SeedExplosionVectors( int seed, double speed_scale = 1. );
 	void BecomeInstance( Model *other );
-	bool LoadOBJ( std::string filename );
-	bool IncludeOBJ( std::string filename );
+	bool LoadOBJ( std::string filename, bool get_textures = true );
+	bool IncludeOBJ( std::string filename, bool get_textures = true );
 	void MakeMaterialArrays( void );
 	void CalculateNormals( void );
 	
 	void DrawAt( const Pos3D *pos, double scale = 1., double fwd_scale = 1., double up_scale = 1., double right_scale = 1. );
+	void DrawObjectsAt( const std::list<std::string> *object_names, const Pos3D *pos, double scale = 1., double fwd_scale = 1., double up_scale = 1., double right_scale = 1. );
+	void DrawWireframeAt( const Pos3D *pos, Color color, double scale = 1., double fwd_scale = 1., double up_scale = 1., double right_scale = 1. );
 	
+	void Move( double fwd, double up, double right );
 	void ScaleBy( double scale );
 	void ScaleBy( double fwd_scale, double up_scale, double right_scale );
 	double GetLength( void );
 	double GetHeight( void );
 	double GetWidth( void );
 	double GetTriagonal( void );
+	double PrecalculatedTriagonal( void ) const;
 	double GetMaxDim( void );
+	double GetMaxRadius( void );
+	double PrecalculatedMaxRadius( void ) const;
 	
 	void Explode( double dt );
 	
-	int ArrayCount( void );
-	int TriangleCount( void );
-	int VertexCount( void );
+	int ArrayCount( void ) const;
+	int TriangleCount( void ) const;
+	int VertexCount( void ) const;
 	
 private:
 	double Length, Height, Width;
-	double ExplodedSeconds;
+	double MaxRadius;
 };
 
 
@@ -87,7 +96,7 @@ public:
 	
 	void Clear( void );
 	void BecomeCopy( const ModelArrays *other );
-	void BecomeInstance( const ModelArrays *other );
+	void BecomeInstance( const ModelArrays *other, bool copy = true );  // FIXME: Copy shouldn't be necessary!
 	void Resize( int vertex_count );
 	void AddFaces( std::vector<ModelFace> &faces );
 	void CalculateNormals( void );
@@ -98,6 +107,7 @@ public:
 class ModelObject
 {
 public:
+	std::string Name;
 	std::map<std::string,ModelArrays> Arrays;
 	Vec3D ExplosionRotationAxis, ExplosionMotion;
 	double ExplosionRotationRate;
@@ -107,15 +117,20 @@ public:
 	virtual ~ModelObject();
 	
 	void BecomeInstance( const ModelObject *other );
-	void RandomizeExplosionVectors( void );
+	void RandomizeExplosionVectors( double speed_scale = 1. );
+	void SeedExplosionVectors( int seed, double speed_scale = 1. );
 	void AddFaces( std::string mtl, std::vector<ModelFace> &faces );
 	void Recalc( void );
 	void CalculateNormals( void );
-	Vec3D GetCenter( void );
+	Pos3D GetCenterPoint( void );
+	Pos3D PrecalculatedCenterPoint( void ) const;
+	double GetMaxRadius( void );
+	double PrecalculatedMaxRadius( void ) const;
 	Vec3D GetExplosionMotion( void );
 	
 private:
-	Vec3D CenterPoint;
+	Pos3D CenterPoint;
+	double MaxRadius;
 	bool NeedsRecalc;
 };
 

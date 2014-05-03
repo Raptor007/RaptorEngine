@@ -11,7 +11,13 @@ class FontID;
 #include <string>
 #include "RaptorGL.h"
 #include <SDL/SDL.h>
-#include <SDL_ttf/SDL_ttf.h>
+
+#ifdef __APPLE__
+	#include <SDL_ttf/SDL_ttf.h>
+#else
+	#include <SDL/SDL_ttf.h>
+#endif
+
 #include "Clock.h"
 #include "Pos.h"
 

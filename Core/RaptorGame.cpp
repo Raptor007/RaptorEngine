@@ -29,7 +29,7 @@ RaptorGame::RaptorGame( std::string game, std::string version, RaptorServer *ser
 	// This arbitrary large value allows us to use Data.AddObject for client-side non-networked objects, if we want to.
 	Data.GameObjectIDs.Clear( 0x10000000 );
 	
-	MaxFPS = 120.;
+	MaxFPS = 0.;
 	FrameTime = 0.;
 	State = Raptor::State::DISCONNECTED;
 	PlayerID = 0;
@@ -152,6 +152,14 @@ void RaptorGame::Initialize( int argc, char **argv )
 	Setup( argc, argv );
 	
 	
+	// Start Saitek DirectOutput if enabled.
+	
+	#ifdef WIN32
+		if( Cfg.SettingAsBool( "saitek_enable", true ) )
+			Saitek.Initialize();
+	#endif
+	
+	
 	// Finish handling command-line options that had to wait for initialization.
 	
 	if( connect )
@@ -233,6 +241,9 @@ void RaptorGame::Run( void )
 			Net.NetRate = Raptor::Game->Cfg.SettingAsDouble( "netrate", 30. );
 			Net.SendUpdates();
 			
+			// Honor the maxfps variable.
+			MaxFPS = Cfg.SettingAsDouble("maxfps");
+			
 			// If we're waiting to reconnect, try when it's time.
 			if( (Net.ReconnectTime > 0) && (Net.ReconnectClock.ElapsedSeconds() > Net.ReconnectTime) )
 				Net.Reconnect( Cfg.SettingAsString("name").c_str(), Cfg.SettingAsString("password").c_str() );
@@ -255,6 +266,11 @@ void RaptorGame::Run( void )
 	// If we were hosting, stop that too.
 	if( Server && Server->IsRunning() )
 		Server->StopAndWait( 2. );
+	
+	// Cleanup for Saitek DirectOutput.
+	#ifdef WIN32
+		Saitek.Deinitialize();
+	#endif
 }
 
 
@@ -597,7 +613,7 @@ void RaptorGame::Host( void )
 	if( Server )
 	{
 		Server->Port = Cfg.SettingAsInt( "sv_port", 7000 );
-		Server->MaxFPS = Cfg.SettingAsDouble( "sv_maxfps", 120. );
+		Server->MaxFPS = Cfg.SettingAsDouble( "sv_maxfps", 60. );
 		Server->NetRate = Cfg.SettingAsDouble( "sv_netrate", 30. );
 		Server->UseOutThreads = Cfg.SettingAsBool( "sv_use_out_threads", true );
 		Server->Start( Cfg.SettingAsString( "name" , Raptor::Server->Game.c_str() ) );

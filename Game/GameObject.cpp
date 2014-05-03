@@ -91,6 +91,12 @@ bool GameObject::IsMoving( void ) const
 }
 
 
+bool GameObject::ComplexCollisionDetection( void ) const
+{
+	return false;
+}
+
+
 void GameObject::AddToInitPacket( Packet *packet, int8_t precision )
 {
 	AddToUpdatePacketFromServer( packet, precision );
@@ -239,7 +245,7 @@ void GameObject::ReadFromUpdatePacketFromClient( Packet *packet, int8_t precisio
 }
 
 
-bool GameObject::WillCollide( const GameObject *other, double dt ) const
+bool GameObject::WillCollide( const GameObject *other, double dt, std::string *this_object, std::string *other_object ) const
 {
 	return false;
 }

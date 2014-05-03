@@ -29,6 +29,9 @@ public:
 	
 	virtual double Dot( const Vec2D &other ) const;
 	virtual double Dot( double x, double y ) const;
+
+	virtual Vec2D Reflect( const Vec2D *normal ) const;
+	virtual Vec2D ReflectAnySide( const Vec2D *normal ) const;
 	
 	virtual Vec2D &operator +=( const Vec2D &other );
 	virtual Vec2D &operator -=( const Vec2D &other );
@@ -65,6 +68,9 @@ public:
 	virtual double Dot( double x, double y, double z ) const;
 	virtual Vec3D Cross( const Vec3D &other ) const;
 	virtual double AngleBetween( const Vec3D &other ) const;
+	
+	virtual Vec3D Reflect( const Vec3D *normal ) const;
+	virtual Vec3D ReflectAnySide( const Vec3D *normal ) const;
 	
 	virtual Vec3D &operator +=( const Vec3D &other );
 	virtual Vec3D &operator -=( const Vec3D &other );

@@ -30,6 +30,10 @@ class RaptorGame;
 #include "KeyboardState.h"
 #include "JoystickManager.h"
 
+#ifdef WIN32
+#include "SaitekManager.h"
+#endif
+
 #include "RaptorServer.h"
 
 
@@ -55,6 +59,10 @@ public:
 	MouseState Mouse;
 	KeyboardState Keys;
 	JoystickManager Joy;
+	
+	#ifdef WIN32
+	SaitekManager Saitek;
+	#endif
 	
 	volatile int State;
 	GameData Data;

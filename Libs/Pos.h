@@ -64,4 +64,7 @@ public:
 	virtual Pos3D &operator -=( const Vec3D &vec );
 	virtual Pos3D &operator +=( const Pos3D &other );
 	virtual Pos3D &operator -=( const Pos3D &other );
+	
+	virtual const Pos3D operator+( const Vec3D &other ) const;
+	virtual const Pos3D operator-( const Vec3D &other ) const;
 };

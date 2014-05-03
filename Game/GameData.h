@@ -4,6 +4,8 @@
 
 #pragma once
 class GameData;
+class Collision;
+class CollisionDataSet;
 
 #include "PlatformSpecific.h"
 
@@ -17,8 +19,6 @@ class GameData;
 #include "Effect.h"
 #include "Clock.h"
 
-
-typedef std::pair<GameObject*,GameObject*> Collision;
 
 class GameData
 {
@@ -54,3 +54,33 @@ public:
 	void CheckCollisions( double dt );
 	void Update( double dt );
 };
+
+
+class Collision
+{
+public:
+	// These names mimic std::pair<GameObject*,GameObject*> that was used before.
+	GameObject *first, *second;
+	std::string FirstObject, SecondObject;
+	
+	Collision( GameObject *a, GameObject *b, std::string *a_object = NULL, std::string *b_object = NULL );
+	virtual ~Collision();
+};
+
+
+class CollisionDataSet
+{
+public:
+	SDL_Thread *Thread;
+	std::list<GameObject*> Objects1, Objects2;
+	double dT;
+	std::list<Collision> Collisions;
+	
+	CollisionDataSet( double dt );
+	virtual ~CollisionDataSet();
+	
+	void DetectCollisions( void );
+};
+
+
+int FindCollisionsThread( void *data_set_ptr );

@@ -13,7 +13,13 @@ class NetServer;
 #include <SDL/SDL.h>
 #include <SDL/SDL_thread.h>
 #include <SDL/SDL_mutex.h>
-#include <SDL_net/SDL_net.h>
+
+#ifdef __APPLE__
+	#include <SDL_net/SDL_net.h>
+#else
+	#include <SDL/SDL_net.h>
+#endif
+
 #include "Packet.h"
 #include "ConnectedClient.h"
 #include "Mutex.h"

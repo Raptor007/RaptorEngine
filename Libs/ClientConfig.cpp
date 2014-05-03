@@ -12,6 +12,10 @@
 #include "Num.h"
 #include "RaptorGame.h"
 
+#include "Math3D.h"
+#include <cmath>
+#include <cfloat>
+
 
 #define ORIGINAL "\"/\n\r\t"
 #define ESCAPED  "\"/nrt"
@@ -222,6 +226,10 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "s_effect_volume" ] = "0.5";
 	Settings[ "s_music_volume" ] = "1.0";
 	
+	#ifdef WIN32
+		Settings[ "saitek_enable" ] = "true";
+	#endif
+	
 	Settings[ "name" ] = "Name";
 	
 	Settings[ "netrate" ] = "30";
@@ -237,7 +245,7 @@ void ClientConfig::SetDefaults( void )
 	
 	Settings[ "sv_port" ] = "7000";
 	Settings[ "sv_netrate" ] = "30";
-	Settings[ "sv_maxfps" ] = "120";
+	Settings[ "sv_maxfps" ] = "60";
 	Settings[ "sv_use_out_threads" ] = "true";
 	
 	Settings[ "password" ] = "";
@@ -508,7 +516,7 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 					{
 						Model *model = Raptor::Game->Res.GetModel(elements.at(1));
 						char cstr[ 1024 ] = "";
-						snprintf( cstr, 1024, "%s: %i materials, %i objects, %i arrays, %i triangles, %.1f x %.1f x %.1f", elements.at(1).c_str(), (int) model->Materials.size(), (int) model->Objects.size(), model->ArrayCount(), model->TriangleCount(), model->GetLength(), model->GetWidth(), model->GetHeight() );
+						snprintf( cstr, 1024, "%s: %i materials, %i objects, %i arrays, %i triangles, %.3f x %.3f x %.3f, radius %.3f", elements.at(1).c_str(), (int) model->Materials.size(), (int) model->Objects.size(), model->ArrayCount(), model->TriangleCount(), model->GetLength(), model->GetWidth(), model->GetHeight(), model->GetMaxRadius() );
 						Raptor::Game->Console.Print( cstr );
 					}
 					else
@@ -693,7 +701,7 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 							if( elements.size() >= 3 )
 							{
 								Settings["sv_maxfps"] = elements.at(2);
-								Raptor::Server->MaxFPS = SettingAsDouble( "sv_maxfps", 120. );
+								Raptor::Server->MaxFPS = SettingAsDouble( "sv_maxfps", 60. );
 							}
 							else
 								Raptor::Game->Console.Print( std::string("Server maxfps: ") + Num::ToString( (int)( Raptor::Game->Server->MaxFPS + 0.5 ) ) );
@@ -713,7 +721,7 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 						{
 							Raptor::Server->Port = Raptor::Game->Cfg.SettingAsInt( "sv_port", 7000 );
 							Raptor::Server->NetRate = Raptor::Game->Cfg.SettingAsDouble( "sv_netrate", 30. );
-							Raptor::Server->MaxFPS = Raptor::Game->Cfg.SettingAsDouble( "sv_maxfps", 120. );
+							Raptor::Server->MaxFPS = Raptor::Game->Cfg.SettingAsDouble( "sv_maxfps", 60. );
 							Raptor::Server->UseOutThreads = Raptor::Game->Cfg.SettingAsBool( "sv_out_threads", true );
 							
 							Raptor::Server->Start( Raptor::Game->Cfg.SettingAsString("name") );

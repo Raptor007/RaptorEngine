@@ -96,6 +96,18 @@ void JoystickManager::TrackEvent( SDL_Event *event )
 }
 
 
+bool JoystickManager::HasAxis( int joystick_id, Uint8 axis )
+{
+	// Return true if this joystick has ever seen motion on this axis.
+	
+	std::map<Uint8, JoystickState>::iterator joy_iter = Joysticks.find( joystick_id );
+	if( joy_iter != Joysticks.end() )
+		return joy_iter->second.HasAxis( axis );
+
+	return 0.;
+}
+
+
 double JoystickManager::Axis( int joystick_id, Uint8 axis, double deadzone, double deadzone_at_ends )
 {
 	// Return the value of a joystick's axis.

@@ -7,14 +7,27 @@
 #include "PlatformSpecific.h"
 
 #ifndef NO_GLEW
-	#include <GLEW/glew.h>
+	#ifdef __APPLE__
+		#include <GLEW/glew.h>
+	#else
+		#include <GL/glew.h>
+	#endif
 #endif
 
-#include <OpenGL/gl.h>
+#ifdef __APPLE__
+	#include <OpenGL/gl.h>
+#else
+	#include <GL/gl.h>
+#endif
 
 #ifdef NO_GLEW
-	#include <OpenGL/glu.h>
-	#include <OpenGL/glext.h>
+	#ifdef __APPLE__
+		#include <OpenGL/glu.h>
+		#include <OpenGL/glext.h>
+	#else
+		#include <GL/glu.h>
+		#include <GL/glext.h>
+	#endif
 	
 	#define GL_FRAMEBUFFER GL_FRAMEBUFFER_EXT
 	#define GL_RENDERBUFFER GL_RENDERBUFFER_EXT

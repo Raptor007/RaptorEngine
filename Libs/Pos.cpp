@@ -324,3 +324,15 @@ Pos3D &Pos3D::operator -=( const Pos3D &other )
 	Z -= other.Z;
 	return *this;
 }
+
+
+const Pos3D Pos3D::operator+( const Vec3D &other ) const
+{
+	return Pos3D(this) += other;
+}
+
+
+const Pos3D Pos3D::operator-( const Vec3D &other ) const
+{
+	return Pos3D(this) -= other;
+}

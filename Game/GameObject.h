@@ -47,6 +47,7 @@ public:
 	virtual bool CanCollideWithOwnType( void ) const;
 	virtual bool CanCollideWithOtherTypes( void ) const;
 	virtual bool IsMoving( void ) const;
+	virtual bool ComplexCollisionDetection( void ) const;
 	
 	virtual void AddToInitPacket( Packet *packet, int8_t precision = 0 );
 	virtual void ReadFromInitPacket( Packet *packet, int8_t precision = 0 );
@@ -57,7 +58,7 @@ public:
 	virtual void AddToUpdatePacketFromClient( Packet *packet, int8_t precision = 0 );
 	virtual void ReadFromUpdatePacketFromClient( Packet *packet, int8_t precision = 0 );
 	
-	virtual bool WillCollide( const GameObject *other, double dt ) const;
+	virtual bool WillCollide( const GameObject *other, double dt, std::string *this_object = NULL, std::string *other_object = NULL ) const;
 	virtual void Update( double dt );
 	
 	virtual void Draw( void );
