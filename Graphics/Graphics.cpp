@@ -6,7 +6,6 @@
 
 #include <cstddef>
 #include <cmath>
-#include <cfloat>
 #include <SDL/SDL.h>
 #include "Endian.h"
 #include "Num.h"
@@ -23,6 +22,7 @@ Graphics::Graphics( void )
 	H = 480;
 	AspectRatio = ((float)( W )) / ((float)( H ));
 	ZNear = Z_NEAR;
+	ZFar = Z_FAR;
 	Fullscreen = false;
 	FSAA = 0;
 	AF = 16;
@@ -68,11 +68,11 @@ void Graphics::Initialize( void )
 
 void Graphics::SetMode( int x, int y )
 {
-	SetMode( x, y, Fullscreen, FSAA, AF, ZNear, ShaderFile );
+	SetMode( x, y, Fullscreen, FSAA, AF, ZNear, ZFar, ShaderFile );
 }
 
 
-void Graphics::SetMode( int x, int y, bool fullscreen, int fsaa, int af, double z_near, std::string shader_file )
+void Graphics::SetMode( int x, int y, bool fullscreen, int fsaa, int af, double z_near, double z_far, std::string shader_file )
 {
 	// Make sure we've initialized SDL.
 	if( ! Initialized )
@@ -88,6 +88,7 @@ void Graphics::SetMode( int x, int y, bool fullscreen, int fsaa, int af, double 
 	FSAA = fsaa;
 	AF = af;
 	ZNear = z_near;
+	ZFar = z_far;
 	ShaderFile = shader_file;
 	
 	// Enable double-buffering and vsync.
@@ -122,7 +123,7 @@ void Graphics::SetMode( int x, int y, bool fullscreen, int fsaa, int af, double 
 	
 	#ifndef __APPLE__
 		// Set the titlebar icon.
-		SDL_Surface *icon = SDL_LoadBMP("icon.bmp");
+		SDL_Surface *icon = SDL_LoadBMP( Raptor::Game->Res.TextureDir.empty() ? "icon.bmp" : (Raptor::Game->Res.TextureDir + "/icon.bmp").c_str() );
 		if( icon )
 		{
 			SDL_WM_SetIcon( icon, NULL );
@@ -137,9 +138,9 @@ void Graphics::SetMode( int x, int y, bool fullscreen, int fsaa, int af, double 
 	{
 		// We couldn't set that video mode, so try a few windowed modes.
 		if( (x > 1024) || (y > 768) || fullscreen || (fsaa > 0) )
-			SetMode( 1024, 768, false, 0, 1, z_near, shader_file );
+			SetMode( 1024, 768, false, 0, 1, z_near, z_far, shader_file );
 		else if( (x != 640) || (y != 480) || fullscreen || (fsaa > 0) )
-			SetMode( 640, 480, false, 0, 1, z_near, shader_file );
+			SetMode( 640, 480, false, 0, 1, z_near, z_far, shader_file );
 		else
 		{
 			fprintf( stderr, "Unable to set video mode: %s\n", SDL_GetError() );
@@ -212,6 +213,7 @@ void Graphics::SetMode( int x, int y, bool fullscreen, int fsaa, int af, double 
 		Raptor::Game->Cfg.Settings[ "g_res_windowed_y" ] = Num::ToString(y);
 	}
 	Raptor::Game->Cfg.Settings[ "g_znear" ] = Num::ToString(ZNear);
+	Raptor::Game->Cfg.Settings[ "g_zfar" ] = Num::ToString(ZFar);
 	Raptor::Game->Cfg.Settings[ "g_fsaa" ] = Num::ToString(FSAA);
 	Raptor::Game->Cfg.Settings[ "g_af" ] = Num::ToString(AF);
 	Raptor::Game->Cfg.Settings[ "g_shader_file" ] = ShaderFile;
@@ -224,7 +226,7 @@ void Graphics::Restart( void )
 	bool fullscreen = Raptor::Game->Cfg.SettingAsBool( "g_fullscreen" );
 	int fsaa = Raptor::Game->Cfg.SettingAsInt( "g_fsaa" );
 	int af = Raptor::Game->Cfg.SettingAsInt( "g_af" );
-	std::string shader_file = Raptor::Game->Cfg.SettingAsString( "g_shader_file" );
+	std::string shader_file = Raptor::Game->Cfg.SettingAsString( "g_shader_file", "model" );
 	if( fullscreen )
 	{
 		x = Raptor::Game->Cfg.SettingAsInt( "g_res_fullscreen_x" );
@@ -235,9 +237,10 @@ void Graphics::Restart( void )
 		x = Raptor::Game->Cfg.SettingAsInt( "g_res_windowed_x" );
 		y = Raptor::Game->Cfg.SettingAsInt( "g_res_windowed_y" );
 	}
-	double z_near = Raptor::Game->Cfg.SettingAsDouble( "g_znear" );
+	double z_near = Raptor::Game->Cfg.SettingAsDouble( "g_znear", Z_NEAR );
+	double z_far = Raptor::Game->Cfg.SettingAsDouble( "g_zfar", Z_FAR );
 	
-	SetMode( x, y, fullscreen, fsaa, af, z_near, shader_file );
+	SetMode( x, y, fullscreen, fsaa, af, z_near, z_far, shader_file );
 }
 
 
@@ -333,9 +336,9 @@ void Graphics::Setup3D( double fov_w, double cam_x, double cam_y, double cam_z, 
 
 void Graphics::Setup3D( double fov_w, double cam_x, double cam_y, double cam_z, double cam_look_x, double cam_look_y, double cam_look_z, double cam_up_x, double cam_up_y, double cam_up_z )
 {
-	// If we pass FOV=0, calculate a good default.  4:3 is FOV 90, widescreen is scaled appropriately.
+	// If we pass FOV=0, calculate a good default.  4:3 is FOV 80, widescreen is scaled appropriately.
 	if( fov_w == 0. )
-		fov_w = 67.5 * AspectRatio;
+		fov_w = 60. * AspectRatio;
 	// If we pass FOV<0, treat its absolute value as fov_h.
 	else if( fov_w < 0. )
 		fov_w *= -AspectRatio;
@@ -343,7 +346,7 @@ void Graphics::Setup3D( double fov_w, double cam_x, double cam_y, double cam_z, 
 	glEnable( GL_DEPTH_TEST );
 	glMatrixMode( GL_PROJECTION );
 	glLoadIdentity();
-	gluPerspective( fov_w / AspectRatio, AspectRatio, ZNear, FLT_MAX );
+	gluPerspective( fov_w / AspectRatio, AspectRatio, ZNear, ZFar );
 	glMatrixMode( GL_MODELVIEW );
 	glLoadIdentity();
 	gluLookAt( cam_x, cam_y, cam_z,  cam_look_x, cam_look_y, cam_look_z,  cam_up_x, cam_up_y, cam_up_z );

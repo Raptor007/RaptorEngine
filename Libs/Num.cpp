@@ -19,6 +19,25 @@ std::string Num::ToString( double num )
 {
 	char cstr[ 1024 ] = "";
 	snprintf( cstr, 1024, "%f", num );
+	
+	// Trim trailing zeros after decimal point.
+	char *dot = strchr( cstr, '.' );
+	if( dot )
+	{
+		for( char *last = dot + strlen(dot) - 1; last >= dot; last -- )
+		{
+			if( last[ 0 ] == '0' )
+				last[ 0 ] = '\0';
+			else if( last == dot )
+			{
+				last[ 0 ] = '\0';
+				break;
+			}
+			else
+				break;
+		}
+	}
+	
 	return std::string(cstr);
 }
 

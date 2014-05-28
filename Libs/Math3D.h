@@ -16,6 +16,9 @@ typedef Pos3D Plane3D;
 
 namespace Math3D
 {
+	Vec3D WorldspaceVec( const Pos3D *pos, double fwd, double up, double right );
+	Pos3D WorldspacePos( const Pos3D *pos, double fwd, double up, double right );
+	
 	double PointToPointDist( const Pos3D *pt1, const Pos3D *pt2 );
 	double PointToLineSegDist( const Pos3D *pt, const Pos3D *end1, const Pos3D *end2 );
 	double LineSegToLineSegDist( const Pos3D *line1end1, const Pos3D *line1end2, const Pos3D *line2end1, const Pos3D *line2end2 );

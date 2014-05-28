@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <cmath>
+#include "Rand.h"
 
 
 Pos3D::Pos3D( void )
@@ -95,9 +96,28 @@ void Pos3D::FixVectors( void )
 {
 	Fwd.ScaleTo( 1. );
 	Up.ScaleTo( 1. );
+	if( fabs(Fwd.Dot(&Up)) >= 1. )
+	{
+		Up.Set( Rand::Double(-1,1), Rand::Double(-1,1), Rand::Double(-1,1) );
+		Up.ScaleTo( 1. );
+	}
 	UpdateRight();
 	Right.ScaleTo( 1. );
 	Up = Right.Cross( &Fwd );
+}
+
+void Pos3D::FixVectorsKeepUp( void )
+{
+	Fwd.ScaleTo( 1. );
+	Up.ScaleTo( 1. );
+	if( fabs(Fwd.Dot(&Up)) >= 1. )
+	{
+		Fwd.Set( Rand::Double(-1,1), Rand::Double(-1,1), Rand::Double(-1,1) );
+		Fwd.ScaleTo( 1. );
+	}
+	UpdateRight();
+	Right.ScaleTo( 1. );
+	Fwd = Up.Cross( &Right );
 }
 
 
@@ -327,12 +347,22 @@ Pos3D &Pos3D::operator -=( const Pos3D &other )
 
 
 const Pos3D Pos3D::operator+( const Vec3D &other ) const
+
 {
+
 	return Pos3D(this) += other;
+
 }
+
+
+
 
 
 const Pos3D Pos3D::operator-( const Vec3D &other ) const
+
 {
+
 	return Pos3D(this) -= other;
+
 }
+

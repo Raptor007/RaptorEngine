@@ -46,8 +46,8 @@ public:
 	void DrawText( std::string text, int x, int y, uint8_t align, float r, float g, float b, float a );
 	void DrawText( std::string text, int x1, int y1, int w, int h, uint8_t align );
 	void DrawText( std::string text, int x1, int y1, int w, int h, uint8_t align, float r, float g, float b, float a );
-	void DrawText( std::string text, SDL_Rect *rect, uint8_t align );
-	void DrawText( std::string text, SDL_Rect *rect, uint8_t align, float r, float g, float b, float a );
+	void DrawText( std::string text, const SDL_Rect *rect, uint8_t align );
+	void DrawText( std::string text, const SDL_Rect *rect, uint8_t align, float r, float g, float b, float a );
 	void DrawText3D( std::string text, const Pos3D *pos, uint8_t align, double scale = 1. );
 	void DrawText3D( std::string text, const Pos3D *pos, uint8_t align, float r, float g, float b, float a, double scale = 1. );
 	

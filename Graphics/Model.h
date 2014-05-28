@@ -14,6 +14,7 @@ class ModelMaterial;
 #include <vector>
 #include <string>
 #include <map>
+#include <utility>
 #include "RaptorGL.h"
 #include "Vec.h"
 #include "Pos.h"
@@ -26,6 +27,8 @@ class Model
 public:
 	std::map<std::string,ModelObject> Objects;
 	std::map<std::string,ModelMaterial> Materials;
+	double Length, Height, Width;
+	double MaxRadius;
 	double ExplodedSeconds;
 	
 	Model( void );
@@ -43,6 +46,7 @@ public:
 	
 	void DrawAt( const Pos3D *pos, double scale = 1., double fwd_scale = 1., double up_scale = 1., double right_scale = 1. );
 	void DrawObjectsAt( const std::list<std::string> *object_names, const Pos3D *pos, double scale = 1., double fwd_scale = 1., double up_scale = 1., double right_scale = 1. );
+	void DrawObjectSpheresAt( const std::list<std::string> *object_names, const Pos3D *pos, double scale = 1. );
 	void DrawWireframeAt( const Pos3D *pos, Color color, double scale = 1., double fwd_scale = 1., double up_scale = 1., double right_scale = 1. );
 	
 	void Move( double fwd, double up, double right );
@@ -52,20 +56,15 @@ public:
 	double GetHeight( void );
 	double GetWidth( void );
 	double GetTriagonal( void );
-	double PrecalculatedTriagonal( void ) const;
+	double Triagonal( void ) const;
 	double GetMaxDim( void );
 	double GetMaxRadius( void );
-	double PrecalculatedMaxRadius( void ) const;
 	
 	void Explode( double dt );
 	
 	int ArrayCount( void ) const;
 	int TriangleCount( void ) const;
 	int VertexCount( void ) const;
-	
-private:
-	double Length, Height, Width;
-	double MaxRadius;
 };
 
 
@@ -109,6 +108,10 @@ class ModelObject
 public:
 	std::string Name;
 	std::map<std::string,ModelArrays> Arrays;
+	std::vector<Vec3D> Points;
+	std::vector< std::vector<Vec3D> > Lines;
+	Pos3D CenterPoint;
+	double MaxRadius;
 	Vec3D ExplosionRotationAxis, ExplosionMotion;
 	double ExplosionRotationRate;
 	
@@ -123,14 +126,10 @@ public:
 	void Recalc( void );
 	void CalculateNormals( void );
 	Pos3D GetCenterPoint( void );
-	Pos3D PrecalculatedCenterPoint( void ) const;
 	double GetMaxRadius( void );
-	double PrecalculatedMaxRadius( void ) const;
 	Vec3D GetExplosionMotion( void );
 	
 private:
-	Pos3D CenterPoint;
-	double MaxRadius;
 	bool NeedsRecalc;
 };
 

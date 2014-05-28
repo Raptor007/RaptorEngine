@@ -30,7 +30,7 @@ public:
 	float AspectRatio;
 	bool Fullscreen;
 	int FSAA, AF;
-	double ZNear;
+	double ZNear, ZFar;
 	std::string ShaderFile;
 	
 	Graphics( void );
@@ -38,7 +38,7 @@ public:
 	
 	void Initialize( void );
 	void SetMode( int x, int y );
-	void SetMode( int x, int y, bool fullscreen, int fsaa, int af, double z_near, std::string shader_file );
+	void SetMode( int x, int y, bool fullscreen, int fsaa, int af, double z_near, double z_far, std::string shader_file );
 	void Restart( void );
 	
 	bool SelectDefaultFramebuffer( void );

@@ -257,9 +257,9 @@ void Framebuffer::Setup3D( double fov_w, double cam_x, double cam_y, double cam_
 
 void Framebuffer::Setup3D( double fov_w, double cam_x, double cam_y, double cam_z, double cam_look_x, double cam_look_y, double cam_look_z, double cam_up_x, double cam_up_y, double cam_up_z )
 {
-	// If we pass FOV=0, calculate a good default.  4:3 is FOV 90, widescreen is scaled appropriately.
+	// If we pass FOV=0, calculate a good default.  4:3 is FOV 80, widescreen is scaled appropriately.
 	if( fov_w == 0. )
-		fov_w = 67.5 * AspectRatio;
+		fov_w = 60. * AspectRatio;
 	// If we pass FOV<0, treat its absolute value as fov_h.
 	else if( fov_w < 0. )
 		fov_w *= -AspectRatio;
@@ -267,7 +267,7 @@ void Framebuffer::Setup3D( double fov_w, double cam_x, double cam_y, double cam_
 	glEnable( GL_DEPTH_TEST );
 	glMatrixMode( GL_PROJECTION );
 	glLoadIdentity();
-	gluPerspective( fov_w / AspectRatio, AspectRatio, 1., FLT_MAX );
+	gluPerspective( fov_w / AspectRatio, AspectRatio, Raptor::Game->Gfx.ZNear, Raptor::Game->Gfx.ZFar );
 	glMatrixMode( GL_MODELVIEW );
 	glLoadIdentity();
 	gluLookAt( cam_x, cam_y, cam_z,  cam_look_x, cam_look_y, cam_look_z,  cam_up_x, cam_up_y, cam_up_z );

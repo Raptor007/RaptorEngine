@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <cmath>
+#include <cfloat>
 #include <fstream>
 #include <set>
 #include "Str.h"
@@ -180,11 +181,17 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 						int vertex_num = atoi(element_items.at(0).c_str());
 						if( vertex_num )
 						{
+							if( vertex_num < 0 )
+								vertex_num += vertices.size() + 1;
+							
 							face_vertices.push_back( vertices[ vertex_num - 1 ] );
 							
 							if( element_items.size() >= 2 )
 							{
 								int tex_coord_num = atoi(element_items.at(1).c_str());
+								if( tex_coord_num < 0 )
+									tex_coord_num += tex_coords.size() + 1;
+								
 								if( tex_coord_num )
 									face_tex_coords.push_back( tex_coords[ tex_coord_num - 1 ] );
 								else
@@ -196,6 +203,9 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 							if( element_items.size() >= 3 )
 							{
 								int normal_num = atoi(element_items.at(2).c_str());
+								if( normal_num < 0 )
+									normal_num += normals.size() + 1;
+								
 								if( normal_num )
 									face_normals.push_back( normals[ normal_num - 1 ] );
 								else
@@ -209,10 +219,10 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 					// Calculate a normal, in case we didn't have one specified in the model.
 					if( face_vertices.size() >= 3 )
 					{
-						calc_normal.Copy( ( face_vertices[ 1 ] - face_vertices[ 0 ] ).Cross( face_vertices[ 2 ] - face_vertices[ 0 ] ) );
+						calc_normal = ( face_vertices[ 1 ] - face_vertices[ 0 ] ).Cross( face_vertices[ 2 ] - face_vertices[ 0 ] );
 						calc_normal.ScaleTo( 1. );
 					}
-
+					
 					// Replace any zero-length normals with our calculated one.
 					for( std::vector<Vec3D>::iterator normal_iter = face_normals.begin(); normal_iter != face_normals.end(); normal_iter ++ )
 					{
@@ -228,10 +238,13 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 				}
 				else if( elements.at( 0 ) == "o" )
 				{
-					// Build the previous object's arrays, since we're changing objects now.
-					Objects[ obj ].AddFaces( mtl, faces );
-					Objects[ obj ].Name = obj;
-					faces.clear();
+					if( !( obj.empty() && faces.empty() ) )
+					{
+						// Build the previous object's arrays, since we're changing objects now.
+						Objects[ obj ].AddFaces( mtl, faces );
+						Objects[ obj ].Name = obj;
+						faces.clear();
+					}
 					
 					if( elements.size() >= 2 )
 						obj = elements.at( 1 );
@@ -240,15 +253,48 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 				}
 				else if( elements.at( 0 ) == "usemtl" )
 				{
-					// Build the previous object's arrays, since we're changing materials now.
-					Objects[ obj ].AddFaces( mtl, faces );
-					Objects[ obj ].Name = obj;
-					faces.clear();
+					if( !( obj.empty() && faces.empty() ) )
+					{
+						// Build the previous object's arrays, since we're changing materials now.
+						Objects[ obj ].AddFaces( mtl, faces );
+						Objects[ obj ].Name = obj;
+						faces.clear();
+					}
 					
 					if( elements.size() >= 2 )
 						mtl = elements.at( 1 );
 					else
 						mtl = "";
+				}
+				else if( elements.at( 0 ) == "p" )
+				{
+					for( size_t i = 1; i < elements.size(); i ++ )
+					{
+						int vertex_num = atoi(elements.at(i).c_str());
+						if( vertex_num )
+						{
+							if( vertex_num < 0 )
+								vertex_num += vertices.size() + 1;
+							
+							Objects[ obj ].Points.push_back( vertices[ vertex_num - 1 ] );
+						}
+					}
+				}
+				else if( elements.at( 0 ) == "l" )
+				{
+					Objects[ obj ].Lines.push_back( std::vector<Vec3D>() );
+					
+					for( size_t i = 1; i < elements.size(); i ++ )
+					{
+						int vertex_num = atoi(elements.at(i).c_str());
+						if( vertex_num )
+						{
+							if( vertex_num < 0 )
+								vertex_num += vertices.size() + 1;
+							
+							Objects[ obj ].Lines.back().push_back( vertices[ vertex_num - 1 ] );
+						}
+					}
 				}
 				else if( elements.at( 0 ) == "mtllib" )
 				{
@@ -301,10 +347,13 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 				}
 			}
 			
-			// Build the final object's arrays.
-			Objects[ obj ].AddFaces( mtl, faces );
-			Objects[ obj ].Name = obj;
-			faces.clear();
+			if( !( obj.empty() && faces.empty() ) )
+			{
+				// Build the final object's arrays.
+				Objects[ obj ].AddFaces( mtl, faces );
+				Objects[ obj ].Name = obj;
+				faces.clear();
+			}
 		}
 		
 		input.close();
@@ -448,11 +497,17 @@ void Model::DrawAt( const Pos3D *pos, double scale, double fwd_scale, double up_
 		{
 			draw_pos.Copy( pos );
 			
-			draw_pos += obj_iter->second.GetExplosionMotion() * ExplodedSeconds;
+			// Convert explosion vectors to worldspace.
+			Vec3D explosion_motion = obj_iter->second.GetExplosionMotion() * ExplodedSeconds;
+			Vec3D explosion_rotation_axis = (pos->Fwd * obj_iter->second.ExplosionRotationAxis.X) + (pos->Up * obj_iter->second.ExplosionRotationAxis.Y) + (pos->Right * obj_iter->second.ExplosionRotationAxis.Z);
 			
-			draw_pos.Fwd.RotateAround( &(obj_iter->second.ExplosionRotationAxis), ExplodedSeconds * obj_iter->second.ExplosionRotationRate );
-			draw_pos.Up.RotateAround( &(obj_iter->second.ExplosionRotationAxis), ExplodedSeconds * obj_iter->second.ExplosionRotationRate );
-			draw_pos.Right.RotateAround( &(obj_iter->second.ExplosionRotationAxis), ExplodedSeconds * obj_iter->second.ExplosionRotationRate );
+			draw_pos.MoveAlong( &(pos->Fwd), explosion_motion.X );
+			draw_pos.MoveAlong( &(pos->Up), explosion_motion.Y );
+			draw_pos.MoveAlong( &(pos->Right), explosion_motion.Z );
+			
+			draw_pos.Fwd.RotateAround( &explosion_rotation_axis, ExplodedSeconds * obj_iter->second.ExplosionRotationRate );
+			draw_pos.Up.RotateAround( &explosion_rotation_axis, ExplodedSeconds * obj_iter->second.ExplosionRotationRate );
+			draw_pos.Right.RotateAround( &explosion_rotation_axis, ExplodedSeconds * obj_iter->second.ExplosionRotationRate );
 			
 			if( use_shaders )
 			{
@@ -545,11 +600,20 @@ void Model::DrawObjectsAt( const std::list<std::string> *object_names, const Pos
 		
 		draw_pos.Copy( pos );
 		
-		draw_pos += obj_iter->second.GetExplosionMotion() * ExplodedSeconds;
-		
-		draw_pos.Fwd.RotateAround( &(obj_iter->second.ExplosionRotationAxis), ExplodedSeconds * obj_iter->second.ExplosionRotationRate );
-		draw_pos.Up.RotateAround( &(obj_iter->second.ExplosionRotationAxis), ExplodedSeconds * obj_iter->second.ExplosionRotationRate );
-		draw_pos.Right.RotateAround( &(obj_iter->second.ExplosionRotationAxis), ExplodedSeconds * obj_iter->second.ExplosionRotationRate );
+		if( ExplodedSeconds )
+		{
+			// Convert explosion vectors to worldspace.
+			Vec3D explosion_motion = obj_iter->second.GetExplosionMotion() * ExplodedSeconds;
+			Vec3D explosion_rotation_axis = (pos->Fwd * obj_iter->second.ExplosionRotationAxis.X) + (pos->Up * obj_iter->second.ExplosionRotationAxis.Y) + (pos->Right * obj_iter->second.ExplosionRotationAxis.Z);
+			
+			draw_pos.MoveAlong( &(pos->Fwd), explosion_motion.X );
+			draw_pos.MoveAlong( &(pos->Up), explosion_motion.Y );
+			draw_pos.MoveAlong( &(pos->Right), explosion_motion.Z );
+			
+			draw_pos.Fwd.RotateAround( &explosion_rotation_axis, ExplodedSeconds * obj_iter->second.ExplosionRotationRate );
+			draw_pos.Up.RotateAround( &explosion_rotation_axis, ExplodedSeconds * obj_iter->second.ExplosionRotationRate );
+			draw_pos.Right.RotateAround( &explosion_rotation_axis, ExplodedSeconds * obj_iter->second.ExplosionRotationRate );
+		}
 		
 		if( use_shaders )
 		{
@@ -614,6 +678,78 @@ void Model::DrawObjectsAt( const std::list<std::string> *object_names, const Pos
 		Raptor::Game->ShaderMgr.Set3f( "AmbientColor", 1., 1., 1. );
 		Raptor::Game->ShaderMgr.Set3f( "DiffuseColor", 0., 0., 0. );
 	}
+}
+
+
+void Model::DrawObjectSpheresAt( const std::list<std::string> *object_names, const Pos3D *pos, double scale )
+{
+	bool use_shaders = Raptor::Game->ShaderMgr.Active();
+	if( use_shaders )
+		Raptor::Game->ShaderMgr.StopShaders();
+	
+	glDisable( GL_DEPTH_TEST );
+	
+	Pos3D draw_pos;
+	int i = 0;
+	
+	if( object_names )
+	{
+		// Loop on the list of object names.
+		for( std::list<std::string>::const_iterator obj_name_iter = object_names->begin(); obj_name_iter != object_names->end(); obj_name_iter ++ )
+		{
+			// For each name, find it in Objects.
+			std::map<std::string,ModelObject>::iterator obj_iter = Objects.find( *obj_name_iter );
+			if( obj_iter == Objects.end() )
+				continue;
+			
+			draw_pos.Copy( pos );
+			draw_pos.MoveAlong( &(pos->Fwd), obj_iter->second.CenterPoint.X );
+			draw_pos.MoveAlong( &(pos->Up), obj_iter->second.CenterPoint.Y );
+			draw_pos.MoveAlong( &(pos->Right), obj_iter->second.CenterPoint.Z );
+			
+			// Convert explosion motion vector to worldspace.
+			Vec3D explosion_motion = obj_iter->second.GetExplosionMotion() * ExplodedSeconds;
+			
+			draw_pos.MoveAlong( &(pos->Fwd), explosion_motion.X );
+			draw_pos.MoveAlong( &(pos->Up), explosion_motion.Y );
+			draw_pos.MoveAlong( &(pos->Right), explosion_motion.Z );
+			
+			for( std::map<std::string,ModelArrays>::iterator array_iter = obj_iter->second.Arrays.begin(); array_iter != obj_iter->second.Arrays.end(); array_iter ++ )
+				Raptor::Game->Gfx.DrawSphere3D( draw_pos.X, draw_pos.Y, draw_pos.Z, obj_iter->second.MaxRadius * scale, 6, 0, ((i % 3 == 0) || (i == 4)) ? 1.f : 0.f, ((i % 3 == 1) || (i == 5)) ? 1.f : 0.f, ((i % 3 == 2) || (i == 3)) ? 1.f : 0.f, 0.0625f );
+			
+			i ++;
+			i %= 3;
+		}
+	}
+	else
+	{
+		// Loop on the list of object names.
+		for( std::map<std::string,ModelObject>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
+		{
+			draw_pos.Copy( pos );
+			draw_pos.MoveAlong( &(pos->Fwd), obj_iter->second.CenterPoint.X );
+			draw_pos.MoveAlong( &(pos->Up), obj_iter->second.CenterPoint.Y );
+			draw_pos.MoveAlong( &(pos->Right), obj_iter->second.CenterPoint.Z );
+			
+			// Convert explosion motion vector to worldspace.
+			Vec3D explosion_motion = obj_iter->second.GetExplosionMotion() * ExplodedSeconds;
+			
+			draw_pos.MoveAlong( &(pos->Fwd), explosion_motion.X );
+			draw_pos.MoveAlong( &(pos->Up), explosion_motion.Y );
+			draw_pos.MoveAlong( &(pos->Right), explosion_motion.Z );
+			
+			for( std::map<std::string,ModelArrays>::iterator array_iter = obj_iter->second.Arrays.begin(); array_iter != obj_iter->second.Arrays.end(); array_iter ++ )
+				Raptor::Game->Gfx.DrawSphere3D( draw_pos.X, draw_pos.Y, draw_pos.Z, obj_iter->second.MaxRadius * scale, 6, 0, ((i % 3 == 0) || (i == 4)) ? 1.f : 0.f, ((i % 3 == 1) || (i == 5)) ? 1.f : 0.f, ((i % 3 == 2) || (i == 3)) ? 1.f : 0.f, 0.0625f );
+			
+			i ++;
+			i %= 3;
+		}
+	}
+	
+	glEnable( GL_DEPTH_TEST );
+	
+	if( use_shaders )
+		Raptor::Game->ShaderMgr.ResumeShaders();
 }
 
 
@@ -685,11 +821,17 @@ void Model::DrawWireframeAt( const Pos3D *pos, Color color, double scale, double
 		{
 			draw_pos.Copy( pos );
 			
-			draw_pos += obj_iter->second.GetExplosionMotion() * ExplodedSeconds;
+			// Convert explosion vectors to worldspace.
+			Vec3D explosion_motion = obj_iter->second.GetExplosionMotion() * ExplodedSeconds;
+			Vec3D explosion_rotation_axis = (pos->Fwd * obj_iter->second.ExplosionRotationAxis.X) + (pos->Up * obj_iter->second.ExplosionRotationAxis.Y) + (pos->Right * obj_iter->second.ExplosionRotationAxis.Z);
 			
-			draw_pos.Fwd.RotateAround( &(obj_iter->second.ExplosionRotationAxis), ExplodedSeconds * obj_iter->second.ExplosionRotationRate );
-			draw_pos.Up.RotateAround( &(obj_iter->second.ExplosionRotationAxis), ExplodedSeconds * obj_iter->second.ExplosionRotationRate );
-			draw_pos.Right.RotateAround( &(obj_iter->second.ExplosionRotationAxis), ExplodedSeconds * obj_iter->second.ExplosionRotationRate );
+			draw_pos.MoveAlong( &(pos->Fwd), explosion_motion.X );
+			draw_pos.MoveAlong( &(pos->Up), explosion_motion.Y );
+			draw_pos.MoveAlong( &(pos->Right), explosion_motion.Z );
+			
+			draw_pos.Fwd.RotateAround( &explosion_rotation_axis, ExplodedSeconds * obj_iter->second.ExplosionRotationRate );
+			draw_pos.Up.RotateAround( &explosion_rotation_axis, ExplodedSeconds * obj_iter->second.ExplosionRotationRate );
+			draw_pos.Right.RotateAround( &explosion_rotation_axis, ExplodedSeconds * obj_iter->second.ExplosionRotationRate );
 			
 			if( use_shaders )
 			{
@@ -802,6 +944,25 @@ void Model::ScaleBy( double fwd_scale, double up_scale, double right_scale )
 				array_iter->second.VertexArray[ i*3 + 2 ] *= right_scale;
 			}
 		}
+		
+		for( std::vector<Vec3D>::iterator point_iter = obj_iter->second.Points.begin(); point_iter != obj_iter->second.Points.end(); point_iter ++ )
+		{
+			point_iter->X *= fwd_scale;
+			point_iter->Y *= up_scale;
+			point_iter->Z *= right_scale;
+		}
+		
+		for( std::vector< std::vector<Vec3D> >::iterator line_iter = obj_iter->second.Lines.begin(); line_iter != obj_iter->second.Lines.end(); line_iter ++ )
+		{
+			for( std::vector<Vec3D>::iterator vertex_iter = line_iter->begin(); vertex_iter != line_iter->end(); vertex_iter ++ )
+			{
+				vertex_iter->X *= fwd_scale;
+				vertex_iter->Y *= up_scale;
+				vertex_iter->Z *= right_scale;
+			}
+		}
+		
+		obj_iter->second.Recalc();
 	}
 	
 	MakeMaterialArrays();
@@ -936,7 +1097,7 @@ double Model::GetTriagonal( void )
 }
 
 
-double Model::PrecalculatedTriagonal( void ) const
+double Model::Triagonal( void ) const
 {
 	return sqrt( Length*Length + Width*Width + Height*Height );
 }
@@ -980,12 +1141,6 @@ double Model::GetMaxRadius( void )
 		}
 	}
 	
-	return MaxRadius;
-}
-
-
-double Model::PrecalculatedMaxRadius( void ) const
-{
 	return MaxRadius;
 }
 
@@ -1403,6 +1558,7 @@ ModelObject::ModelObject( void )
 ModelObject::ModelObject( const ModelObject &other )
 {
 	Arrays = other.Arrays;
+	Points = other.Points;
 	
 	CenterPoint = other.CenterPoint;
 	MaxRadius = other.MaxRadius;
@@ -1415,22 +1571,22 @@ ModelObject::ModelObject( const ModelObject &other )
 
 ModelObject::~ModelObject()
 {
-	Arrays.clear();
 }
 
 
 void ModelObject::BecomeInstance( const ModelObject *other )
 {
 	Arrays.clear();
+	for( std::map<std::string,ModelArrays>::const_iterator array_iter = other->Arrays.begin(); array_iter != other->Arrays.end(); array_iter ++ )
+		Arrays[ array_iter->first ].BecomeInstance( &(array_iter->second) );
+	
+	Points = other->Points;
 	
 	Name = other->Name;
 	
 	ExplosionMotion = other->ExplosionMotion;
 	ExplosionRotationAxis = other->ExplosionRotationAxis;
 	ExplosionRotationRate = other->ExplosionRotationRate;
-	
-	for( std::map<std::string,ModelArrays>::const_iterator array_iter = other->Arrays.begin(); array_iter != other->Arrays.end(); array_iter ++ )
-		Arrays[ array_iter->first ].BecomeInstance( &(array_iter->second) );
 	
 	NeedsRecalc = true;
 }
@@ -1441,17 +1597,17 @@ void ModelObject::RandomizeExplosionVectors( double speed_scale )
 	if( NeedsRecalc )
 		Recalc();
 	
-	// Generate a random rotation axis and rate for this chunk of debris.
-	ExplosionRotationAxis.Set( Rand::Double( -1., 1. ), Rand::Double( -1., 1. ), Rand::Double( -1., 1. ) );
-	ExplosionRotationAxis.ScaleTo( 1. );
-	ExplosionRotationRate = Rand::Double( 360., 720. ) * speed_scale;
-	
 	// Generate a random motion axis, mostly away from object center.
 	double center_motion_scale = Rand::Double( 10., 40. );
 	ExplosionMotion.X = CenterPoint.X * center_motion_scale + Rand::Double( -5., 5. );
 	ExplosionMotion.Y = CenterPoint.Y * center_motion_scale + Rand::Double( -5., 5. );
 	ExplosionMotion.Z = CenterPoint.Z * center_motion_scale + Rand::Double( -5., 5. );
 	ExplosionMotion.ScaleBy( speed_scale );
+	
+	// Generate a random rotation axis and rate for this chunk of debris.
+	ExplosionRotationAxis.Set( Rand::Double( -1., 1. ), Rand::Double( -1., 1. ), Rand::Double( -1., 1. ) );
+	ExplosionRotationAxis.ScaleTo( 1. );
+	ExplosionRotationRate = Rand::Double( 360., 720. ) * speed_scale;
 }
 
 
@@ -1460,17 +1616,18 @@ void ModelObject::SeedExplosionVectors( int seed, double speed_scale )
 	if( NeedsRecalc )
 		Recalc();
 	
-	// Generate predictable rotation axis for this chunk of debris, based on a seed value.
-	ExplosionRotationAxis.Set( -1. + ((seed + 1234) % 201) / 100., -1. + ((seed + 12345) % 201) / 100., -1. + ((seed + 123456) % 201) / 100. );
-	ExplosionRotationAxis.ScaleTo( 1. );
-	ExplosionRotationRate = (360. + (seed + 1337) % 361) * speed_scale;
-	
 	// Generate a predictable motion axis, mostly away from object center.
 	double center_motion_scale = 10. + ((seed + 666) % 300) / 10.;
 	ExplosionMotion.X = CenterPoint.X * center_motion_scale - 5. + 10. * ((seed + 512) % 344) / 343.;
 	ExplosionMotion.Y = CenterPoint.Y * center_motion_scale - 5. + 10. * ((seed + 1024) % 344) / 343.;
 	ExplosionMotion.Z = CenterPoint.Z * center_motion_scale - 5. + 10. * ((seed + 2048) % 344) / 343.;
 	ExplosionMotion.ScaleBy( speed_scale );
+	
+	// Generate predictable rotation axis for this chunk of debris, based on a seed value.
+	//ExplosionRotationAxis.Set( -1. + ((seed + 1234) % 201) / 100., -1. + ((seed + 12345) % 201) / 100., -1. + ((seed + 123456) % 201) / 100. );
+	ExplosionRotationAxis = ExplosionMotion;
+	ExplosionRotationAxis.ScaleTo( 1. );
+	ExplosionRotationRate = (360. + (seed + 1337) % 361) * speed_scale;
 }
 
 
@@ -1484,12 +1641,14 @@ void ModelObject::AddFaces( std::string mtl, std::vector<ModelFace> &faces )
 
 void ModelObject::Recalc( void )
 {
-	// FIXME: Use a better algorithm than this?
 	// FIXME: Vectorize and/or parallelize?
 	
 	CenterPoint.SetPos( 0., 0., 0. );
 	MaxRadius = 0.;
 	int vertex_count = 0;
+
+	double min_x = FLT_MAX, min_y = FLT_MAX, min_z = FLT_MAX;
+	double max_x = -FLT_MAX, max_y = -FLT_MAX, max_z = -FLT_MAX;
 	
 	for( std::map<std::string,ModelArrays>::iterator array_iter = Arrays.begin(); array_iter != Arrays.end(); array_iter ++ )
 	{
@@ -1497,17 +1656,32 @@ void ModelObject::Recalc( void )
 		
 		for( int i = 0; i < array_iter->second.VertexCount; i ++ )
 		{
-			CenterPoint.X += array_iter->second.VertexArray[ i*3     ];
-			CenterPoint.Y += array_iter->second.VertexArray[ i*3 + 1 ];
-			CenterPoint.Z += array_iter->second.VertexArray[ i*3 + 2 ];
+			double x = array_iter->second.VertexArray[ i*3     ];
+			double y = array_iter->second.VertexArray[ i*3 + 1 ];
+			double z = array_iter->second.VertexArray[ i*3 + 2 ];
+			
+			if( x < min_x )
+				min_x = x;
+			if( x > max_x )
+				max_x = x;
+			
+			if( y < min_y )
+				min_y = y;
+			if( y > max_y )
+				max_y = y;
+			
+			if( z < min_z )
+				min_z = z;
+			if( z > max_z )
+				max_z = z;
 		}
 	}
 	
 	if( vertex_count )
 	{
-		CenterPoint.X /= vertex_count;
-		CenterPoint.Y /= vertex_count;
-		CenterPoint.Z /= vertex_count;
+		CenterPoint.X = (min_x + max_x) / 2.;
+		CenterPoint.Y = (min_y + max_y) / 2.;
+		CenterPoint.Z = (min_z + max_z) / 2.;
 		
 		for( std::map<std::string,ModelArrays>::iterator array_iter = Arrays.begin(); array_iter != Arrays.end(); array_iter ++ )
 		{
@@ -1543,23 +1717,12 @@ Pos3D ModelObject::GetCenterPoint( void )
 }
 
 
-Pos3D ModelObject::PrecalculatedCenterPoint( void ) const
-{
-	return CenterPoint;
-}
-
 
 double ModelObject::GetMaxRadius( void )
 {
 	if( NeedsRecalc )
 		Recalc();
 	
-	return MaxRadius;
-}
-
-
-double ModelObject::PrecalculatedMaxRadius( void ) const
-{
 	return MaxRadius;
 }
 

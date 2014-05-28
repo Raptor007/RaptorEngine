@@ -48,6 +48,7 @@ public:
 	
 	void UpdateRects( void );
 	void Draw( void );
+	virtual void DrawItem( const ListBoxItem *item, const SDL_Rect *rect );
 	void MouseEnter( void );
 	void MouseLeave( void );
 	bool MouseDown( Uint8 button = SDL_BUTTON_LEFT );

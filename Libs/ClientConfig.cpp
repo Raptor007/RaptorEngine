@@ -214,6 +214,8 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "g_fsaa" ] = "4";
 	Settings[ "g_af" ] = "16";
 	Settings[ "g_znear" ] = Num::ToString(Z_NEAR);
+	Settings[ "g_zfar" ] = Num::ToString(Z_FAR);
+	Settings[ "g_fov" ] = "auto";
 	Settings[ "g_shader_enable" ] = "true";
 	Settings[ "g_shader_file" ] = "model";
 	
@@ -290,7 +292,12 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 				if( cmd == "echo" )
 				{
 					if( elements.size() >= 2 )
-						Raptor::Game->Console.Print( elements.at(1) );
+					{
+						std::string print_me = elements.at(1);
+						for( size_t i = 2; i < elements.size(); i ++ )
+							print_me += std::string(" ") + elements.at(i);
+						Raptor::Game->Console.Print( print_me );
+					}
 					else
 						Raptor::Game->Console.Print( "" );
 				}

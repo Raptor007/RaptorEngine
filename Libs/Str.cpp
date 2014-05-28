@@ -183,11 +183,12 @@ std::vector<std::string> CStr::SplitToVector( const char *str, const char *delim
 	
 	char *copy = CStr::Copy(str);
 	char *pch = NULL;
-	pch = strtok( copy, delimiters );
+	char *save = NULL;
+	pch = strtok_r( copy, delimiters, &save );
 	while( pch )
 	{
 		return_vec.push_back( std::string(pch) );
-		pch = strtok( NULL, delimiters );
+		pch = strtok_r( NULL, delimiters, &save );
 	}
 	CStr::Delete(copy);
 	
@@ -201,11 +202,12 @@ std::list<std::string> CStr::SplitToList( const char *str, const char *delimiter
 	
 	char *copy = CStr::Copy(str);
 	char *pch = NULL;
-	pch = strtok( copy, delimiters );
+	char *save = NULL;
+	pch = strtok_r( copy, delimiters, &save );
 	while( pch )
 	{
 		return_list.push_back( std::string(pch) );
-		pch = strtok( NULL, delimiters );
+		pch = strtok_r( NULL, delimiters, &save );
 	}
 	CStr::Delete(copy);
 	
@@ -252,7 +254,7 @@ std::list<std::string> CStr::ParseCommand( const char *cmd, const char *original
 	if( cmd )
 	{
 		char *buffer = CStr::Copy(cmd);
-		const char DELIMITERS[] = "; ,\t";
+		const char DELIMITERS[] = "; \t";
 		std::string item;
 		
 		// Ignore comments.

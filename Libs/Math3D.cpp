@@ -13,6 +13,28 @@
 #endif
 
 
+// ----------------------------------------------------------------------------
+
+
+Vec3D Math3D::WorldspaceVec( const Pos3D *pos, double fwd, double up, double right )
+{
+	// Return vector translated to worldspace.
+	// Does not add pos X/Y/Z.
+	return ((pos->Fwd * fwd) + (pos->Up * up) + (pos->Right * right));
+}
+
+
+Pos3D Math3D::WorldspacePos( const Pos3D *pos, double fwd, double up, double right )
+{
+	// Return position translated to worldspace.
+	// Does add pos X/Y/Z.
+	return (*pos + (pos->Fwd * fwd) + (pos->Up * up) + (pos->Right * right));
+}
+
+
+// ----------------------------------------------------------------------------
+
+
 double Math3D::PointToPointDist( const Pos3D *pt1, const Pos3D *pt2 )
 {
 	Vec3D diff( pt2->X - pt1->X, pt2->Y - pt1->Y, pt2->Z - pt1->Z );

@@ -151,21 +151,27 @@ const Vec2D Vec2D::operator/( double scale ) const
 // ---------------------------------------------------------------------------
 
 
-Vec3D::Vec3D( const Vec3D &other )
+Vec3D::Vec3D( const Vec3D &other ) : Vec2D()
 {
-	Set( other.X, other.Y, other.Z );
+	X = other.X;
+	Y = other.Y;
+	Z = other.Z;
 }
 
 
-Vec3D::Vec3D( const Vec3D *other )
+Vec3D::Vec3D( const Vec3D *other ) : Vec2D()
 {
-	Set( other->X, other->Y, other->Z );
+	X = other->X;
+	Y = other->Y;
+	Z = other->Z;
 }
 
 
-Vec3D::Vec3D( double x, double y, double z )
+Vec3D::Vec3D( double x, double y, double z ) : Vec2D()
 {
-	Set( x, y, z );
+	X = x;
+	Y = y;
+	Z = z;
 }
 
 
@@ -184,7 +190,8 @@ void Vec3D::Copy( const Vec3D &other )
 
 void Vec3D::Set( double x, double y, double z )
 {
-	Vec2D::Set( x, y );
+	X = x;
+	Y = y;
 	Z = z;
 }
 

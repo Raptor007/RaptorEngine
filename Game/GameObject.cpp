@@ -12,12 +12,15 @@
 #define SMOOTH_RADIUS 128.
 
 
-GameObject::GameObject( uint32_t id, uint32_t type_code, uint16_t player_id )
+GameObject::GameObject( uint32_t id, uint32_t type_code, uint16_t player_id ) : Pos3D()
 {
 	ID = id;
 	TypeCode = type_code;
 	PlayerID = player_id;
 	Data = NULL;
+	Fwd.Set( 1., 0., 0. );
+	Up.Set( 0., 0., 1. );
+	FixVectors();
 	MotionVector.Set( 0., 0., 0. );
 	RollRate = 0.;
 	PitchRate = 0.;
@@ -27,7 +30,7 @@ GameObject::GameObject( uint32_t id, uint32_t type_code, uint16_t player_id )
 }
 
 
-GameObject::GameObject( const GameObject &other )
+GameObject::GameObject( const GameObject &other ) : Pos3D( other )
 {
 	ID = other.ID;
 	TypeCode = other.TypeCode;

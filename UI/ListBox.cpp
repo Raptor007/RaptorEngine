@@ -203,18 +203,14 @@ void ListBox::Draw( void )
 		glVertex2i( 0, Rect.h );
 	glEnd();
 	
-	/*
 	int max_scroll = MaxScroll();
 	if( max_scroll > 0 )
 	{
-		// FIXME: Draw scroll bar!
-		glColor4f( ScrollBarRed, ScrollBarGreen, ScrollBarBlue, ScrollBarAlpha );
-		glBegin( GL_LINES )
-			glVertex2i( x, y );
-			glVertex2i( x+w, y );
-		glEnd();
+		double percent_displayed = Rect.h / (double)( LineScroll() * Items.size() );
+		double scroll_start = (Scroll / (double) max_scroll) * (1. - percent_displayed);
+		int h = Rect.h - ScrollBarSize * 2;
+		Raptor::Game->Gfx.DrawRect2D( Rect.w - ScrollBarSize, (int)( ScrollBarSize + h * scroll_start ), Rect.w, (int)( ScrollBarSize + h * (scroll_start + percent_displayed) ), 0, ScrollBarRed, ScrollBarGreen, ScrollBarBlue, ScrollBarAlpha );
 	}
-	*/
 	
 	glPushMatrix();
 	Raptor::Game->Gfx.Setup2D( 0, 0, Rect.w - ScrollBarSize, Rect.h );
@@ -231,12 +227,8 @@ void ListBox::Draw( void )
 		for( std::vector<ListBoxItem>::iterator iter = Items.begin(); iter != Items.end(); iter ++ )
 		{
 			if( (text_rect.y < Rect.h) && ((text_rect.y + LineScroll()) >= 0) )
-			{
-				if( Selected == &(*iter) )
-					TextFont->DrawText( (*iter).Text, &text_rect, TextAlign, SelectedRed, SelectedGreen, SelectedBlue, SelectedAlpha );
-				else
-					TextFont->DrawText( (*iter).Text, &text_rect, TextAlign, TextRed, TextGreen, TextBlue, TextAlpha );
-			}
+				DrawItem( &(*iter), &text_rect );
+			
 			text_rect.y += LineScroll();
 		}
 	}
@@ -244,6 +236,15 @@ void ListBox::Draw( void )
 	glPopMatrix();
 	glViewport( 0, 0, Raptor::Game->Gfx.W, Raptor::Game->Gfx.H );
 	glColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
+}
+
+
+void ListBox::DrawItem( const ListBoxItem *item, const SDL_Rect *rect )
+{
+	if( Selected == item )
+		TextFont->DrawText( item->Text, rect, TextAlign, SelectedRed, SelectedGreen, SelectedBlue, SelectedAlpha );
+	else
+		TextFont->DrawText( item->Text, rect, TextAlign, TextRed, TextGreen, TextBlue, TextAlpha );
 }
 
 

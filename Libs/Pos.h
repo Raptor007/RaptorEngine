@@ -36,6 +36,7 @@ public:
 	void SetUpPt( double x, double y, double z );
 	void UpdateRight( void );
 	void FixVectors( void );
+	void FixVectorsKeepUp( void );
 	
 	void Yaw( double degrees );
 	void Pitch( double degrees );

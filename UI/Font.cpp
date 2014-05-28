@@ -402,13 +402,13 @@ void Font::DrawText( std::string text, int x1, int y1, int w, int h, uint8_t ali
 }
 
 
-void Font::DrawText( std::string text, SDL_Rect *rect, uint8_t align )
+void Font::DrawText( std::string text, const SDL_Rect *rect, uint8_t align )
 {
 	DrawText( text, rect->x, rect->y, rect->w, rect->h, align, 1.f, 1.f, 1.f, 1.f );
 }
 
 
-void Font::DrawText( std::string text, SDL_Rect *rect, uint8_t align, float r, float g, float b, float a )
+void Font::DrawText( std::string text, const SDL_Rect *rect, uint8_t align, float r, float g, float b, float a )
 {
 	DrawText( text, rect->x, rect->y, rect->w, rect->h, align, r, g, b, a );
 }
