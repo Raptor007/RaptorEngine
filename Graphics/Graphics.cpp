@@ -26,7 +26,6 @@ Graphics::Graphics( void )
 	Fullscreen = false;
 	FSAA = 0;
 	AF = 16;
-	ShaderFile = "model";
 	
 	Screen = NULL;
 }
@@ -68,11 +67,11 @@ void Graphics::Initialize( void )
 
 void Graphics::SetMode( int x, int y )
 {
-	SetMode( x, y, Fullscreen, FSAA, AF, ZNear, ZFar, ShaderFile );
+	SetMode( x, y, Fullscreen, FSAA, AF, ZNear, ZFar );
 }
 
 
-void Graphics::SetMode( int x, int y, bool fullscreen, int fsaa, int af, double z_near, double z_far, std::string shader_file )
+void Graphics::SetMode( int x, int y, bool fullscreen, int fsaa, int af, double z_near, double z_far )
 {
 	// Make sure we've initialized SDL.
 	if( ! Initialized )
@@ -89,7 +88,6 @@ void Graphics::SetMode( int x, int y, bool fullscreen, int fsaa, int af, double 
 	AF = af;
 	ZNear = z_near;
 	ZFar = z_far;
-	ShaderFile = shader_file;
 	
 	// Enable double-buffering and vsync.
 	SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
@@ -115,7 +113,6 @@ void Graphics::SetMode( int x, int y, bool fullscreen, int fsaa, int af, double 
 	
 	// The current OpenGL context will be invalid, so clear all textures from the ResourceManager first.
 	Raptor::Game->Res.DeleteGraphics();
-	Raptor::Game->ShaderMgr.DeleteShaders();
 	
 	// Free the current screen.
 	if( Screen )
@@ -123,7 +120,7 @@ void Graphics::SetMode( int x, int y, bool fullscreen, int fsaa, int af, double 
 	
 	#ifndef __APPLE__
 		// Set the titlebar icon.
-		SDL_Surface *icon = SDL_LoadBMP( Raptor::Game->Res.TextureDir.empty() ? "icon.bmp" : (Raptor::Game->Res.TextureDir + "/icon.bmp").c_str() );
+		SDL_Surface *icon = SDL_LoadBMP( Raptor::Game->Res.Find("icon.bmp").c_str() );
 		if( icon )
 		{
 			SDL_WM_SetIcon( icon, NULL );
@@ -138,9 +135,9 @@ void Graphics::SetMode( int x, int y, bool fullscreen, int fsaa, int af, double 
 	{
 		// We couldn't set that video mode, so try a few windowed modes.
 		if( (x > 1024) || (y > 768) || fullscreen || (fsaa > 0) )
-			SetMode( 1024, 768, false, 0, 1, z_near, z_far, shader_file );
+			SetMode( 1024, 768, false, 0, 1, z_near, z_far );
 		else if( (x != 640) || (y != 480) || fullscreen || (fsaa > 0) )
-			SetMode( 640, 480, false, 0, 1, z_near, z_far, shader_file );
+			SetMode( 640, 480, false, 0, 1, z_near, z_far );
 		else
 		{
 			fprintf( stderr, "Unable to set video mode: %s\n", SDL_GetError() );
@@ -177,9 +174,8 @@ void Graphics::SetMode( int x, int y, bool fullscreen, int fsaa, int af, double 
 		glDisable( GL_PROGRAM_POINT_SIZE );
 	#endif
 	
-	// Tell the ResourceManager to reload any previously-loaded textures.
+	// Tell the ResourceManager to reload any previously-loaded textures and shaders.
 	Raptor::Game->Res.ReloadGraphics();
-	Raptor::Game->ShaderMgr.LoadShaders( shader_file );
 	
 	// Set the titlebar name.
 	SDL_WM_SetCaption( Raptor::Game->Game.c_str(), NULL );
@@ -216,7 +212,6 @@ void Graphics::SetMode( int x, int y, bool fullscreen, int fsaa, int af, double 
 	Raptor::Game->Cfg.Settings[ "g_zfar" ] = Num::ToString(ZFar);
 	Raptor::Game->Cfg.Settings[ "g_fsaa" ] = Num::ToString(FSAA);
 	Raptor::Game->Cfg.Settings[ "g_af" ] = Num::ToString(AF);
-	Raptor::Game->Cfg.Settings[ "g_shader_file" ] = ShaderFile;
 }
 
 
@@ -226,7 +221,6 @@ void Graphics::Restart( void )
 	bool fullscreen = Raptor::Game->Cfg.SettingAsBool( "g_fullscreen" );
 	int fsaa = Raptor::Game->Cfg.SettingAsInt( "g_fsaa" );
 	int af = Raptor::Game->Cfg.SettingAsInt( "g_af" );
-	std::string shader_file = Raptor::Game->Cfg.SettingAsString( "g_shader_file", "model" );
 	if( fullscreen )
 	{
 		x = Raptor::Game->Cfg.SettingAsInt( "g_res_fullscreen_x" );
@@ -240,7 +234,7 @@ void Graphics::Restart( void )
 	double z_near = Raptor::Game->Cfg.SettingAsDouble( "g_znear", Z_NEAR );
 	double z_far = Raptor::Game->Cfg.SettingAsDouble( "g_zfar", Z_FAR );
 	
-	SetMode( x, y, fullscreen, fsaa, af, z_near, z_far, shader_file );
+	SetMode( x, y, fullscreen, fsaa, af, z_near, z_far );
 }
 
 
@@ -681,6 +675,50 @@ void Graphics::DrawLine3D( double x1, double y1, double z1, double x2, double y2
 	glBegin( GL_LINES );
 		glVertex3d( x1, y1, z1 );
 		glVertex3d( x2, y2, z2 );
+	glEnd();
+}
+
+
+// ---------------------------------------------------------------------------
+
+
+void Graphics::DrawBox3D( const Pos3D *corner, const Vec3D *fwd, const Vec3D *up, const Vec3D *right, float line_width, float r, float g, float b, float a )
+{
+	Vec3D rbl = Vec3D( corner->X, corner->Y, corner->Z );
+	Vec3D fbl = rbl + *fwd;
+	Vec3D rbr = rbl + *right;
+	Vec3D fbr = fbl + *right;
+	Vec3D rtl = rbl + *up;
+	Vec3D ftl = fbl + *up;
+	Vec3D rtr = rbr + *up;
+	Vec3D ftr = fbr + *up;
+	
+	glColor4f( r, g, b, a );
+	glLineWidth( line_width );
+	
+	glBegin( GL_LINE_LOOP );
+		glVertex3d( rbl.X, rbl.Y, rbl.Z );
+		glVertex3d( fbl.X, fbl.Y, fbl.Z );
+		glVertex3d( fbr.X, fbr.Y, fbr.Z );
+		glVertex3d( rbr.X, rbr.Y, rbr.Z );
+	glEnd();
+	
+	glBegin( GL_LINE_LOOP );
+		glVertex3d( rtl.X, rtl.Y, rtl.Z );
+		glVertex3d( ftl.X, ftl.Y, ftl.Z );
+		glVertex3d( ftr.X, ftr.Y, ftr.Z );
+		glVertex3d( rtr.X, rtr.Y, rtr.Z );
+	glEnd();
+	
+	glBegin( GL_LINES );
+		glVertex3d( rtl.X, rtl.Y, rtl.Z );
+		glVertex3d( rbl.X, rbl.Y, rbl.Z );
+		glVertex3d( ftl.X, ftl.Y, ftl.Z );
+		glVertex3d( fbl.X, fbl.Y, fbl.Z );
+		glVertex3d( ftr.X, ftr.Y, ftr.Z );
+		glVertex3d( fbr.X, fbr.Y, fbr.Z );
+		glVertex3d( rtr.X, rtr.Y, rtr.Z );
+		glVertex3d( rbr.X, rbr.Y, rbr.Z );
 	glEnd();
 }
 

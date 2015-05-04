@@ -12,6 +12,7 @@
 #include "Str.h"
 #include "Rand.h"
 #include "Num.h"
+#include "File.h"
 #include "RaptorGame.h"
 
 
@@ -300,10 +301,25 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 				{
 					if( elements.size() >= 2 )
 					{
-						std::list<std::string> path = Str::SplitToList( filename, "/" );
-						path.pop_back();
-						path.push_back( elements.at( 1 ) );
-						std::string mtl_filename = Str::Join( path, "/" );
+						std::string mtl_filename = elements.at( 1 );
+						
+						// Use local path if possible, otherwise ues ResourceManager SearchPath.
+						
+						if( mtl_filename[ 0 ] == '/' )
+							mtl_filename = mtl_filename.substr( 1 );
+						else
+						{
+							std::list<std::string> path = Str::SplitToList( filename, "/" );
+							path.pop_back();
+							path.push_back( mtl_filename );
+							std::string filename_here = Str::Join( path, "/" );
+							
+							if( File::Exists( filename_here.c_str() ) )
+								mtl_filename = filename_here;
+							else
+								mtl_filename = Raptor::Game->Res.Find( mtl_filename );
+						}
+						
 						if( mtl_filename != filename )
 							IncludeOBJ( mtl_filename );
 					}
@@ -325,7 +341,24 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 				else if( elements.at( 0 ) == "map_Kd" )
 				{
 					if( get_textures && (elements.size() >= 2) )
-						Materials[ mtl ].Texture.BecomeInstance( Raptor::Game->Res.GetAnimation( elements.at( 1 ) ) );
+					{
+						std::string tex_filename = elements.at( 1 );
+						
+						// Use local path if possible, otherwise ues ResourceManager SearchPath.
+						
+						if( tex_filename[ 0 ] != '/' )
+						{
+							std::list<std::string> path = Str::SplitToList( filename, "/" );
+							path.pop_back();
+							path.push_back( tex_filename );
+							std::string filename_here = Str::Join( path, "/" );
+							
+							if( File::Exists( filename_here.c_str() ) )
+								tex_filename = std::string("/") + filename_here;
+						}
+						
+						Materials[ mtl ].Texture.BecomeInstance( Raptor::Game->Res.GetAnimation( tex_filename ) );
+					}
 				}
 				else if( elements.at( 0 ) == "Ka" )
 				{
@@ -343,6 +376,15 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 						Materials[ mtl ].Diffuse.Red = atof( elements.at( 1 ).c_str() );
 						Materials[ mtl ].Diffuse.Green = atof( elements.at( 2 ).c_str() );
 						Materials[ mtl ].Diffuse.Blue = atof( elements.at( 3 ).c_str() );
+					}
+				}
+				else if( elements.at( 0 ) == "d" )
+				{
+					if( elements.size() >= 2 )
+					{
+						float alpha = atof( elements.at( 1 ).c_str() );
+						Materials[ mtl ].Ambient.Alpha = alpha;
+						Materials[ mtl ].Diffuse.Alpha = alpha;
 					}
 				}
 			}
@@ -463,6 +505,7 @@ void Model::DrawAt( const Pos3D *pos, double scale, double fwd_scale, double up_
 				{
 					Raptor::Game->ShaderMgr.Set3f( "AmbientColor", mtl_iter->second.Ambient.Red, mtl_iter->second.Ambient.Green, mtl_iter->second.Ambient.Blue );
 					Raptor::Game->ShaderMgr.Set3f( "DiffuseColor", mtl_iter->second.Diffuse.Red, mtl_iter->second.Diffuse.Green, mtl_iter->second.Diffuse.Blue );
+					Raptor::Game->ShaderMgr.Set1f( "Alpha", mtl_iter->second.Ambient.Alpha );
 					
 					glActiveTexture( GL_TEXTURE0 + 0 );
 					Raptor::Game->ShaderMgr.Set1i( "Texture", 0 );
@@ -534,6 +577,7 @@ void Model::DrawAt( const Pos3D *pos, double scale, double fwd_scale, double up_
 					{
 						Raptor::Game->ShaderMgr.Set3f( "AmbientColor", Materials[ array_iter->first ].Ambient.Red, Materials[ array_iter->first ].Ambient.Green, Materials[ array_iter->first ].Ambient.Blue );
 						Raptor::Game->ShaderMgr.Set3f( "DiffuseColor", Materials[ array_iter->first ].Diffuse.Red, Materials[ array_iter->first ].Diffuse.Green, Materials[ array_iter->first ].Diffuse.Blue );
+						Raptor::Game->ShaderMgr.Set1f( "Alpha", Materials[ array_iter->first ].Ambient.Alpha );
 						
 						glActiveTexture( GL_TEXTURE0 + 0 );
 						Raptor::Game->ShaderMgr.Set1i( "Texture", 0 );
@@ -572,6 +616,7 @@ void Model::DrawAt( const Pos3D *pos, double scale, double fwd_scale, double up_
 		Raptor::Game->ShaderMgr.Set3f( "ZVec", 0., 0., 1. );
 		Raptor::Game->ShaderMgr.Set3f( "AmbientColor", 1., 1., 1. );
 		Raptor::Game->ShaderMgr.Set3f( "DiffuseColor", 0., 0., 0. );
+		Raptor::Game->ShaderMgr.Set1f( "Alpha", 1. );
 	}
 }
 
@@ -640,6 +685,7 @@ void Model::DrawObjectsAt( const std::list<std::string> *object_names, const Pos
 				{
 					Raptor::Game->ShaderMgr.Set3f( "AmbientColor", Materials[ array_iter->first ].Ambient.Red, Materials[ array_iter->first ].Ambient.Green, Materials[ array_iter->first ].Ambient.Blue );
 					Raptor::Game->ShaderMgr.Set3f( "DiffuseColor", Materials[ array_iter->first ].Diffuse.Red, Materials[ array_iter->first ].Diffuse.Green, Materials[ array_iter->first ].Diffuse.Blue );
+					Raptor::Game->ShaderMgr.Set1f( "Alpha", Materials[ array_iter->first ].Ambient.Alpha );
 					
 					glActiveTexture( GL_TEXTURE0 + 0 );
 					Raptor::Game->ShaderMgr.Set1i( "Texture", 0 );
@@ -677,6 +723,7 @@ void Model::DrawObjectsAt( const std::list<std::string> *object_names, const Pos
 		Raptor::Game->ShaderMgr.Set3f( "ZVec", 0., 0., 1. );
 		Raptor::Game->ShaderMgr.Set3f( "AmbientColor", 1., 1., 1. );
 		Raptor::Game->ShaderMgr.Set3f( "DiffuseColor", 0., 0., 0. );
+		Raptor::Game->ShaderMgr.Set1f( "Alpha", 1. );
 	}
 }
 
@@ -762,7 +809,7 @@ void Model::DrawWireframeAt( const Pos3D *pos, Color color, double scale, double
 	
 	glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 	
-	glColor4f( 1.f, 1.f, 1.f, 1.f );
+	glColor4f( color.Red, color.Green, color.Blue, color.Alpha );
 	
 	if( ExplodedSeconds <= 0. )
 	{
@@ -793,6 +840,7 @@ void Model::DrawWireframeAt( const Pos3D *pos, Color color, double scale, double
 				{
 					Raptor::Game->ShaderMgr.Set3f( "AmbientColor", color.Red, color.Green, color.Blue );
 					Raptor::Game->ShaderMgr.Set3f( "DiffuseColor", 0., 0., 0. );
+					Raptor::Game->ShaderMgr.Set1f( "Alpha", color.Alpha );
 					
 					glVertexPointer( 3, GL_DOUBLE, 0, mtl_iter->second.Arrays.VertexArray );
 				}
@@ -858,6 +906,7 @@ void Model::DrawWireframeAt( const Pos3D *pos, Color color, double scale, double
 					{
 						Raptor::Game->ShaderMgr.Set3f( "AmbientColor", color.Red, color.Green, color.Blue );
 						Raptor::Game->ShaderMgr.Set3f( "DiffuseColor", 0., 0., 0. );
+						Raptor::Game->ShaderMgr.Set1f( "Alpha", color.Alpha );
 						
 						glVertexPointer( 3, GL_DOUBLE, 0, array_iter->second.VertexArray );
 					}
@@ -890,6 +939,7 @@ void Model::DrawWireframeAt( const Pos3D *pos, Color color, double scale, double
 		Raptor::Game->ShaderMgr.Set3f( "ZVec", 0., 0., 1. );
 		Raptor::Game->ShaderMgr.Set3f( "AmbientColor", 1., 1., 1. );
 		Raptor::Game->ShaderMgr.Set3f( "DiffuseColor", 0., 0., 0. );
+		Raptor::Game->ShaderMgr.Set1f( "Alpha", 1. );
 	}
 }
 
@@ -1647,8 +1697,12 @@ void ModelObject::Recalc( void )
 	MaxRadius = 0.;
 	int vertex_count = 0;
 
-	double min_x = FLT_MAX, min_y = FLT_MAX, min_z = FLT_MAX;
-	double max_x = -FLT_MAX, max_y = -FLT_MAX, max_z = -FLT_MAX;
+	MinFwd = FLT_MAX;
+	MinUp = FLT_MAX;
+	MinRight = FLT_MAX;
+	MaxFwd = -FLT_MAX;
+	MaxUp = -FLT_MAX;
+	MaxRight = -FLT_MAX;
 	
 	for( std::map<std::string,ModelArrays>::iterator array_iter = Arrays.begin(); array_iter != Arrays.end(); array_iter ++ )
 	{
@@ -1656,32 +1710,34 @@ void ModelObject::Recalc( void )
 		
 		for( int i = 0; i < array_iter->second.VertexCount; i ++ )
 		{
+			// In model space, X = fwd, Y = up, Z = right.
 			double x = array_iter->second.VertexArray[ i*3     ];
 			double y = array_iter->second.VertexArray[ i*3 + 1 ];
 			double z = array_iter->second.VertexArray[ i*3 + 2 ];
 			
-			if( x < min_x )
-				min_x = x;
-			if( x > max_x )
-				max_x = x;
+			if( x < MinFwd )
+				MinFwd = x;
+			if( x > MaxFwd )
+				MaxFwd = x;
 			
-			if( y < min_y )
-				min_y = y;
-			if( y > max_y )
-				max_y = y;
+			if( y < MinUp )
+				MinUp = y;
+			if( y > MaxUp )
+				MaxUp = y;
 			
-			if( z < min_z )
-				min_z = z;
-			if( z > max_z )
-				max_z = z;
+			if( z < MinRight )
+				MinRight = z;
+			if( z > MaxRight )
+				MaxRight = z;
 		}
 	}
 	
 	if( vertex_count )
 	{
-		CenterPoint.X = (min_x + max_x) / 2.;
-		CenterPoint.Y = (min_y + max_y) / 2.;
-		CenterPoint.Z = (min_z + max_z) / 2.;
+		// In model space, X = fwd, Y = up, Z = right.
+		CenterPoint.X = (MinFwd + MaxFwd) / 2.;
+		CenterPoint.Y = (MinUp + MaxUp) / 2.;
+		CenterPoint.Z = (MinRight + MaxRight) / 2.;
 		
 		for( std::map<std::string,ModelArrays>::iterator array_iter = Arrays.begin(); array_iter != Arrays.end(); array_iter ++ )
 		{
@@ -1695,6 +1751,15 @@ void ModelObject::Recalc( void )
 					MaxRadius = dist;
 			}
 		}
+	}
+	else
+	{
+		MinFwd = 0.;
+		MinUp = 0.;
+		MinRight = 0.;
+		MaxFwd = 0.;
+		MaxUp = 0.;
+		MaxRight = 0.;
 	}
 	
 	NeedsRecalc = false;
@@ -1716,6 +1781,32 @@ Pos3D ModelObject::GetCenterPoint( void )
 	return CenterPoint;
 }
 
+
+double ModelObject::GetLength( void )
+{
+	if( NeedsRecalc )
+		Recalc();
+	
+	return MaxFwd - MinFwd;
+}
+
+
+double ModelObject::GetHeight( void )
+{
+	if( NeedsRecalc )
+		Recalc();
+	
+	return MaxUp - MinUp;
+}
+
+
+double ModelObject::GetWidth( void )
+{
+	if( NeedsRecalc )
+		Recalc();
+	
+	return MaxRight - MinRight;
+}
 
 
 double ModelObject::GetMaxRadius( void )

@@ -139,6 +139,13 @@ void Pos3D::Roll( double degrees )
 	UpdateRight();
 }
 
+void Pos3D::RotateAround( const Vec3D *axis, double degrees )
+{
+	Fwd.RotateAround( axis, degrees );
+	Up.RotateAround( axis, degrees );
+	Right.RotateAround( axis, degrees );
+}
+
 
 void Pos3D::Move( double dx, double dy, double dz )
 {

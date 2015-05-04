@@ -458,6 +458,7 @@ int RaptorServer::RaptorServerThread( void *game_server )
 		
 		Clock GameClock;
 		Clock AnnounceClock;
+		bool sleep_longer = false;
 		
 		while( ((RaptorServer*) game_server)->Net.Listening )
 		{
@@ -510,10 +511,13 @@ int RaptorServer::RaptorServerThread( void *game_server )
 					
 					ServerAnnouncer.Broadcast( &info, 7000 );
 				}
+				
+				// Don't work very hard if nobody is connected.
+				sleep_longer = ( ((RaptorServer*) game_server)->Net.Clients.size() < 1 );
 			}
 			
 			// Let the thread rest a bit.
-			SDL_Delay( 1 );
+			SDL_Delay( sleep_longer ? 100 : 1 );
 		}
 		
 		snprintf( cstr, 1024, "%s server stopped.", ((RaptorServer*) game_server)->Game.c_str() );

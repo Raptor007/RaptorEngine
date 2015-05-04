@@ -85,6 +85,7 @@ public:
 	virtual void Draw( void );
 	
 	virtual bool HandleEvent( SDL_Event *event );
+	virtual bool HandleCommand( std::string cmd, std::vector<std::string> *elements );
 	virtual bool ProcessPacket( Packet *packet );
 	virtual void SendUpdate( int8_t precision = 0 );
 	
@@ -101,9 +102,12 @@ public:
 };
 
 
-#ifndef RAPTORGAME_CPP
 namespace Raptor
 {
+#ifndef RAPTORGAME_CPP
 	extern RaptorGame *Game;
-}
 #endif
+#ifdef WIN32
+	BOOL WindowsInit( void );
+#endif
+}

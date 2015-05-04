@@ -31,14 +31,13 @@ public:
 	bool Fullscreen;
 	int FSAA, AF;
 	double ZNear, ZFar;
-	std::string ShaderFile;
 	
 	Graphics( void );
 	~Graphics();
 	
 	void Initialize( void );
 	void SetMode( int x, int y );
-	void SetMode( int x, int y, bool fullscreen, int fsaa, int af, double z_near, double z_far, std::string shader_file );
+	void SetMode( int x, int y, bool fullscreen, int fsaa, int af, double z_near, double z_far );
 	void Restart( void );
 	
 	bool SelectDefaultFramebuffer( void );
@@ -77,6 +76,8 @@ public:
 	void DrawSphere3D( double x, double y, double z, double r, int res, GLuint texture, uint32_t texture_mode, float red, float green, float blue, float alpha );
 	
 	void DrawLine3D( double x1, double y1, double z1, double x2, double y2, double z2, float line_width, float r, float g, float b, float a );
+	
+	void DrawBox3D( const Pos3D *corner, const Vec3D *fwd, const Vec3D *up, const Vec3D *right, float line_width, float r, float g, float b, float a );
 	
 	GLuint LoadTexture( SDL_Surface *surface, GLfloat *texcoord, GLint texture_mode = GL_LINEAR );
 	

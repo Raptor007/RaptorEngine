@@ -13,7 +13,7 @@
 Animation::Animation( void )
 {
 	PlayCount = 0;
-	Speed = 1.0;
+	Speed = 1.;
 	MostRecentFrame = 0;
 }
 
@@ -21,7 +21,7 @@ Animation::Animation( void )
 Animation::Animation( std::string name, std::string filename )
 {
 	PlayCount = 0;
-	Speed = 1.0;
+	Speed = 1.;
 	MostRecentFrame = 0;
 	
 	Name = name;
@@ -37,55 +37,69 @@ Animation::~Animation()
 
 void Animation::Load( std::string filename )
 {
-	std::ifstream input( filename.c_str() );
-	if( input.is_open() )
+	if( filename.compare( filename.size() - 4, 4, ".ani" ) == 0 )
+	{
+		std::ifstream input( filename.c_str() );
+		if( input.is_open() )
+		{
+			Frames.clear();
+			FrameTimes.clear();
+			
+			std::string subdir = "";
+			if( strrchr( Name.c_str(), '/' ) )
+			{
+				std::list<std::string> path = Str::SplitToList( Name, "/" );
+				path.pop_back();
+				subdir = Str::Join( path, "/" ) + std::string("/");
+			}
+			
+			char buffer[ 1024 ] = "";
+			GLuint texture = 0;
+			int count = 0;
+			
+			while( ! input.eof() )
+			{
+				buffer[ 0 ] = '\0';
+				input.getline( buffer, 1024 );
+				
+				// Remove unnecessary characters from the buffer and skip empty lines.
+				snprintf( buffer, 1024, "%s", Str::Join( CStr::SplitToList( buffer, "\r\n" ), "" ).c_str() );
+				if( ! strlen(buffer) )
+					continue;
+				
+				// The first line in the file is the play count.
+				if( ! count )
+					PlayCount = atoi(buffer);
+				
+				// We alternate between textures and times.
+				else if( count % 2 )
+				{
+					if( buffer[ 0 ] != '*' )
+						// Unless it's a framebuffer texture, look in same dir as ani file.
+						texture = Raptor::Game->Res.GetTexture( subdir + std::string(buffer) );
+					else
+						texture = Raptor::Game->Res.GetTexture( std::string(buffer) );
+				}
+				else
+					AddFrame( texture, atof(buffer) );
+				
+				count ++;
+				buffer[ 0 ] = '\0';
+			}
+			
+			input.close();
+		}
+	}
+	else
 	{
 		Frames.clear();
 		FrameTimes.clear();
 		
-		std::string subdir = "";
-		if( strrchr( Name.c_str(), '/' ) )
-		{
-			std::list<std::string> path = Str::SplitToList( Name, "/" );
-			path.pop_back();
-			subdir = Str::Join( path, "/" ) + std::string("/");
-		}
+		PlayCount = 0;
+		Speed = 1.;
+		MostRecentFrame = 0;
 		
-		char buffer[ 1024 ] = "";
-		GLuint texture = 0;
-		int count = 0;
-		
-		while( ! input.eof() )
-		{
-			buffer[ 0 ] = '\0';
-			input.getline( buffer, 1024 );
-			
-			// Remove unnecessary characters from the buffer and skip empty lines.
-			snprintf( buffer, 1024, "%s", Str::Join( CStr::SplitToList( buffer, "\r\n" ), "" ).c_str() );
-			if( ! strlen(buffer) )
-				continue;
-			
-			// The first line in the file is the play count.
-			if( ! count )
-				PlayCount = atoi(buffer);
-			
-			// We alternate between textures and times.
-			else if( count % 2 )
-			{
-				if( buffer[ 0 ] != '*' )
-					// Unless it's a framebuffer texture, look in same dir as ani file.
-					texture = Raptor::Game->Res.GetTexture( subdir + std::string(buffer) );
-				else
-					texture = Raptor::Game->Res.GetTexture( std::string(buffer) );
-			}
-			else
-				AddFrame( texture, atof(buffer) );
-			
-			count ++;
-			buffer[ 0 ] = '\0';
-		}
-		
-		input.close();
+		AddFrame( Raptor::Game->Res.GetTexture(filename), 1. );
 	}
 	
 	LoadedTime.Reset();
@@ -133,7 +147,7 @@ void Animation::Clear( void )
 	FrameTimes.clear();
 	
 	PlayCount = 0;
-	Speed = 1.0;
+	Speed = 1.;
 	MostRecentFrame = 0;
 }
 

@@ -217,7 +217,6 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "g_zfar" ] = Num::ToString(Z_FAR);
 	Settings[ "g_fov" ] = "auto";
 	Settings[ "g_shader_enable" ] = "true";
-	Settings[ "g_shader_file" ] = "model";
 	
 	Settings[ "s_channels" ] = "2";
 	Settings[ "s_rate" ] = "44100";
@@ -289,7 +288,10 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 				std::string cmd = elements.at(0);
 				std::transform( cmd.begin(), cmd.end(), cmd.begin(), tolower );
 				
-				if( cmd == "echo" )
+				if( Raptor::Game->HandleCommand( cmd, &elements ) )
+					;
+				
+				else if( cmd == "echo" )
 				{
 					if( elements.size() >= 2 )
 					{
@@ -415,11 +417,6 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 				else if( cmd == "g_restart" )
 				{
 					Raptor::Game->Gfx.Restart();
-				}
-				
-				else if( cmd == "g_shader_restart" )
-				{
-					Raptor::Game->ShaderMgr.LoadShaders( SettingAsString("g_shader_file") );
 				}
 				
 				else if( cmd == "s_reload" )

@@ -5,6 +5,7 @@
 #include "Str.h"
 #include <cstdlib>
 #include <cstring>
+#include <algorithm>
 
 
 char *CStr::Copy( const char *str )
@@ -157,6 +158,18 @@ std::string CStr::Unescape( const char *str, const char *original, const char *e
 	}
 	
 	return return_str;
+}
+
+
+std::string CStr::CapitalizedCopy( const char *str )
+{
+	return Str::CapitalizedCopy( std::string(str) );
+}
+
+
+std::string CStr::LowercaseCopy( const char *str )
+{
+	return Str::LowercaseCopy( std::string(str) );
 }
 
 
@@ -397,6 +410,20 @@ std::string Str::Unescape( std::string str, const char *original, const char *es
 std::vector<std::string> Str::SplitToVector( std::string str, const char *delimiters )
 {
 	return CStr::SplitToVector( str.c_str(), delimiters );
+}
+
+
+std::string Str::CapitalizedCopy( std::string str )
+{
+	std::transform( str.begin(), str.end(), str.begin(), toupper );
+	return str;
+}
+
+
+std::string Str::LowercaseCopy( std::string str )
+{
+	std::transform( str.begin(), str.end(), str.begin(), tolower );
+	return str;
 }
 
 

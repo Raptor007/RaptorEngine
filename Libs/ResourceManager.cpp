@@ -6,17 +6,21 @@
 
 #include <cstddef>
 #include "Str.h"
-#include "RaptorGame.h"
+#include "File.h"
 #include "Endian.h"
+#include "RaptorGame.h"
 
 
 ResourceManager::ResourceManager( void )
 {
-	TextureDir = "Textures";
-	ModelDir = "Models";
-	SoundDir = "Sounds";
-	MusicDir = "Music";
-	FontDir = "Fonts";
+	SearchPath.push_back( "." );
+	SearchPath.push_back( "Data" );
+	SearchPath.push_back( "Textures" );
+	SearchPath.push_back( "Models" );
+	SearchPath.push_back( "Sounds" );
+	SearchPath.push_back( "Music" );
+	SearchPath.push_back( "Fonts" );
+	SearchPath.push_back( "Shaders" );
 }
 
 
@@ -26,7 +30,7 @@ ResourceManager::~ResourceManager()
 }
 
 
-GLuint ResourceManager::GetTexture( std::string name )
+GLuint ResourceManager::GetTexture( const std::string &name )
 {
 	GLuint texture = 0;
 	Lock.Lock();
@@ -55,7 +59,7 @@ GLuint ResourceManager::GetTexture( std::string name )
 }
 
 
-Framebuffer *ResourceManager::GetFramebuffer( std::string name, int x, int y )
+Framebuffer *ResourceManager::GetFramebuffer( const std::string &name, int x, int y )
 {
 	Framebuffer *framebuffer = NULL;
 	Lock.Lock();
@@ -75,7 +79,7 @@ Framebuffer *ResourceManager::GetFramebuffer( std::string name, int x, int y )
 }
 
 
-Animation *ResourceManager::GetAnimation( std::string name )
+Animation *ResourceManager::GetAnimation( const std::string &name )
 {
 	Animation *animation = NULL;
 	Lock.Lock();
@@ -95,27 +99,29 @@ Animation *ResourceManager::GetAnimation( std::string name )
 }
 
 
-Model *ResourceManager::GetModel( std::string name )
+Model *ResourceManager::GetModel( const std::string &name )
 {
 	Model *model = NULL;
-	Lock.Lock();
 	
 	if( ! name.empty() )
 	{
+		Lock.Lock();
+		
 		std::map<std::string, Model*>::iterator it = Models.find( name );
 		if( it != Models.end() )
 			model = it->second;
 		else
 			// If the texture wasn't already loaded, load it now.
 			model = LoadModel( name );
+		
+		Lock.Unlock();
 	}
 	
-	Lock.Unlock();
 	return model;
 }
 
 
-Mix_Chunk *ResourceManager::GetSound( std::string name )
+Mix_Chunk *ResourceManager::GetSound( const std::string &name )
 {
 	if( name.empty() )
 		return NULL;
@@ -124,12 +130,12 @@ Mix_Chunk *ResourceManager::GetSound( std::string name )
 	if( it != Sounds.end() )
 		return it->second;
 	
-	// If the animation wasn't already loaded, load it now.
+	// If the sound wasn't already loaded, load it now.
 	return LoadSound( name );
 }
 
 
-Mix_Music *ResourceManager::GetMusic( std::string name )
+Mix_Music *ResourceManager::GetMusic( const std::string &name )
 {
 	if( name.empty() )
 		return NULL;
@@ -138,12 +144,12 @@ Mix_Music *ResourceManager::GetMusic( std::string name )
 	if( it != Music.end() )
 		return it->second;
 	
-	// If the animation wasn't already loaded, load it now.
+	// If the music wasn't already loaded, load it now.
 	return LoadMusic( name );
 }
 
 
-Font *ResourceManager::GetFont( std::string name, int point_size )
+Font *ResourceManager::GetFont( const std::string &name, int point_size )
 {
 	if( name.empty() )
 		return NULL;
@@ -154,6 +160,28 @@ Font *ResourceManager::GetFont( std::string name, int point_size )
 	
 	// If the font wasn't already loaded, load it now.
 	return LoadFont( name, point_size );
+}
+
+
+Shader *ResourceManager::GetShader( const std::string &name )
+{
+	Shader *shader = NULL;
+	
+	if( ! name.empty() )
+	{
+		Lock.Lock();
+		
+		std::map<std::string, Shader*>::iterator it = Shaders.find( name );
+		if( it != Shaders.end() )
+			shader = it->second;
+		else
+			// If the shader wasn't already loaded, load it now.
+			shader = LoadShader( name );
+		
+		Lock.Unlock();
+	}
+	
+	return shader;
 }
 
 
@@ -169,6 +197,12 @@ void ResourceManager::DeleteGraphics( void )
 			iter->second->Clear();
 	}
 	
+	for( std::map<std::string, Shader*>::iterator iter = Shaders.begin(); iter != Shaders.end(); iter ++ )
+	{
+		if( iter->second )
+			iter->second->Clear();
+	}
+	
 	Lock.Unlock();
 }
 
@@ -176,6 +210,7 @@ void ResourceManager::DeleteGraphics( void )
 void ResourceManager::ReloadGraphics( void )
 {
 	Lock.Lock();
+	
 	DeleteTextures();
 	ResetTime.Reset();
 	
@@ -185,11 +220,29 @@ void ResourceManager::ReloadGraphics( void )
 			iter->second->Reload();
 	}
 	
+	for( std::map<std::string, Shader*>::iterator iter = Shaders.begin(); iter != Shaders.end(); iter ++ )
+	{
+		if( iter->second )
+		{
+			std::string filename = Find( iter->second->Name + std::string(".frag") );
+			filename = filename.substr( 0, filename.find_last_of(".") );
+			
+			std::map<std::string,std::string> defs;
+			for( std::map<std::string,std::string>::iterator setting_iter = Raptor::Game->Cfg.Settings.begin(); setting_iter != Raptor::Game->Cfg.Settings.end(); setting_iter ++ )
+			{
+				if( strncasecmp( setting_iter->first.c_str(), "g_shader_", strlen("g_shader_") ) == 0 )
+					defs[ CStr::CapitalizedCopy( setting_iter->first.c_str() + strlen("g_shader_") ) ] = setting_iter->second;
+			}
+			
+			iter->second->Load( filename, defs );
+		}
+	}
+	
 	for( std::map<std::string, Animation*>::iterator iter = Animations.begin(); iter != Animations.end(); iter ++ )
 	{
 		if( iter->second )
 		{
-			std::string filename = TextureDir + "/" + iter->second->Name;
+			std::string filename = Find( iter->second->Name );
 			iter->second->Load( filename );
 		}
 	}
@@ -207,6 +260,7 @@ void ResourceManager::DeleteAll( void )
 	DeleteAnimations();
 	DeleteSounds();
 	DeleteMusic();
+	DeleteShaders();
 	
 	ResetTime.Reset();
 	Lock.Unlock();
@@ -277,12 +331,24 @@ void ResourceManager::DeleteMusic( void )
 }
 
 
-GLuint ResourceManager::LoadTexture( std::string name )
+void ResourceManager::DeleteShaders( void )
+{
+	for( std::map<std::string, Shader*>::iterator iter = Shaders.begin(); iter != Shaders.end(); iter ++ )
+	{
+		if( iter->second )
+			delete iter->second;
+		iter->second = NULL;
+	}
+	Shaders.clear();
+}
+
+
+GLuint ResourceManager::LoadTexture( const std::string &name )
 {
 	if( name.empty() )
 		return 0;
 	
-	std::string filename = TextureDir + "/" + name;
+	std::string filename = Find( name );
 	
 	GLuint texture = 0; // Texture object handle.
 	SDL_Surface *surface = NULL; // Gives us the information to make the texture.
@@ -370,7 +436,7 @@ GLuint ResourceManager::LoadTexture( std::string name )
 }
 
 
-Framebuffer *ResourceManager::CreateFramebuffer( std::string name, int x, int y )
+Framebuffer *ResourceManager::CreateFramebuffer( const std::string &name, int x, int y )
 {
 	if( name.empty() )
 		return NULL;
@@ -384,33 +450,27 @@ Framebuffer *ResourceManager::CreateFramebuffer( std::string name, int x, int y 
 }
 
 
-Animation *ResourceManager::LoadAnimation( std::string name )
+Animation *ResourceManager::LoadAnimation( const std::string &name )
 {
 	if( name.empty() )
 		return NULL;
 	
-	std::string filename = TextureDir + "/" + name;
+	std::string filename = Find( name );
 	
 	Animation *anim = new Animation( name, filename );
 	
-	if( ! anim )
-	{
-		anim = new Animation();
-		fprintf( stderr, "Couldn't load %s: %s\n", filename.c_str(), "File not found" );
-	}
-		
 	// Even if it's empty (file not found), we'll add it to prevent multiple lookups.
 	Animations[ name ] = anim;
 	return anim;
 }
 
 
-Model *ResourceManager::LoadModel( std::string name )
+Model *ResourceManager::LoadModel( const std::string &name )
 {
 	if( name.empty() )
 		return NULL;
 	
-	std::string filename = ModelDir + "/" + name;
+	std::string filename = Find( name );
 	
 	Model *model = new Model();
 	bool success = model->LoadOBJ( filename );
@@ -427,12 +487,12 @@ Model *ResourceManager::LoadModel( std::string name )
 }
 
 
-Mix_Chunk *ResourceManager::LoadSound( std::string name )
+Mix_Chunk *ResourceManager::LoadSound( const std::string &name )
 {
 	if( name.empty() )
 		return NULL;
 	
-	std::string filename = SoundDir + "/" + name;
+	std::string filename = Find( name );
 	
 	// This loads any supported sound format (not just WAV).
 	Mix_Chunk *sound = Mix_LoadWAV( filename.c_str() );
@@ -445,12 +505,12 @@ Mix_Chunk *ResourceManager::LoadSound( std::string name )
 }
 
 
-Mix_Music *ResourceManager::LoadMusic( std::string name )
+Mix_Music *ResourceManager::LoadMusic( const std::string &name )
 {
 	if( name.empty() )
 		return NULL;
 	
-	std::string filename = MusicDir + "/" + name;
+	std::string filename = Find( name );
 	
 	// This loads any supported sound format (not just WAV).
 	Mix_Music *music = Mix_LoadMUS( filename.c_str() );
@@ -463,16 +523,55 @@ Mix_Music *ResourceManager::LoadMusic( std::string name )
 }
 
 
-Font *ResourceManager::LoadFont( std::string name, int point_size )
+Font *ResourceManager::LoadFont( const std::string &name, int point_size )
 {
 	if( name.empty() )
 		return NULL;
 	
-	std::string filename = FontDir + "/" + name;
+	std::string filename = Find( name );
 	
 	Font *font = new Font( filename, point_size );
 	
 	// Even if it's empty (file not found), we'll add it to prevent multiple lookups.
 	Fonts[ FontID( name, point_size ) ] = font;
 	return font;
+}
+
+
+Shader *ResourceManager::LoadShader( const std::string &name )
+{
+	if( name.empty() )
+		return NULL;
+	
+	std::string filename = Find( name + std::string(".frag") );
+	filename = filename.substr( 0, filename.find_last_of(".") );
+	
+	std::map<std::string,std::string> defs;
+	for( std::map<std::string,std::string>::iterator setting_iter = Raptor::Game->Cfg.Settings.begin(); setting_iter != Raptor::Game->Cfg.Settings.end(); setting_iter ++ )
+	{
+		if( strncasecmp( setting_iter->first.c_str(), "g_shader_", strlen("g_shader_") ) == 0 )
+			defs[ CStr::CapitalizedCopy( setting_iter->first.c_str() + strlen("g_shader_") ) ] = setting_iter->second;
+	}
+	
+	Shader *shader = new Shader( name, filename, defs );
+	
+	// Even if it's empty (file not found), we'll add it to prevent multiple lookups.
+	Shaders[ name ] = shader;
+	return shader;
+}
+
+
+std::string ResourceManager::Find( const std::string &name ) const
+{
+	if( name[ 0 ] == '/' )
+		return name.substr( 1 );
+	
+	for( std::deque<std::string>::const_iterator path_iter = SearchPath.begin(); path_iter != SearchPath.end(); path_iter ++ )
+	{
+		std::string path = *path_iter + "/" + name;
+		if( File::Exists(path.c_str()) )
+			return path;
+	}
+	
+	return name;
 }

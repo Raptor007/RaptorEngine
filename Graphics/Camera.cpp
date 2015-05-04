@@ -4,6 +4,8 @@
 
 #include "Camera.h"
 
+#include "RaptorGame.h"
+
 
 Camera::Camera( void )
 {
@@ -27,7 +29,29 @@ Camera::~Camera()
 }
 
 
-void Camera::SetupGraphics( Graphics *gfx )
+double Camera::FOVW( void ) const
 {
-	gfx->Setup3D( FOV, X, Y, Z, X+Fwd.X, Y+Fwd.Y, Z+Fwd.Z, X+Up.X, Y+Up.Y, Z+Up.Z );
+	if( FOV > 0 )
+		return FOV;
+	else if( FOV < 0 )
+		return -FOV * Raptor::Game->Gfx.AspectRatio;
+	else
+		return 60. * Raptor::Game->Gfx.AspectRatio;
+}
+
+
+double Camera::FOVH( void ) const
+{
+	if( FOV > 0 )
+		return FOV / Raptor::Game->Gfx.AspectRatio;
+	else if( FOV < 0 )
+		return -FOV;
+	else
+		return 60.;
+}
+
+
+void Camera::SetupGraphics( Graphics *gfx ) const
+{
+	gfx->Setup3D( FOV, X, Y, Z, X+Fwd.X, Y+Fwd.Y, Z+Fwd.Z, Up.X, Up.Y, Up.Z );
 }

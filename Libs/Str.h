@@ -32,6 +32,9 @@ namespace CStr
 	std::string Escape( const char *str, const char *original, const char *escaped );
 	std::string Unescape( const char *str, const char *original, const char *escaped );
 	
+	std::string CapitalizedCopy( const char *str );
+	std::string LowercaseCopy( const char *str );
+	
 	void ReplaceChars( char *str, const char *find, const char *replace );
 	
 	std::vector<std::string> SplitToVector( const char *str, const char *delimiters );
@@ -55,6 +58,9 @@ namespace Str
 	
 	std::string Escape( std::string str, const char *original, const char *escaped );
 	std::string Unescape( std::string str, const char *original, const char *escaped );
+	
+	std::string CapitalizedCopy( std::string str );
+	std::string LowercaseCopy( std::string str );
 	
 	std::vector<std::string> SplitToVector( std::string str, const char *delimiters );
 	std::list<std::string> SplitToList( std::string str, const char *delimiters );

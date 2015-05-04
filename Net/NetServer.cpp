@@ -385,8 +385,8 @@ int NetServer::NetServerThread( void *server )
 				fprintf( stderr, "NetServerThread: net_server->Lock.Unlock: %s\n", SDL_GetError() );
 		}
 		
-		// Let the thread rest a bit.
-		SDL_Delay( 1 );
+		// Let the thread rest a bit.  This thread only handles new connections, so it can be a long delay.
+		SDL_Delay( 100 );
 	}
 	
 	// Set the thread pointer to NULL so we can delete the NetServer object.

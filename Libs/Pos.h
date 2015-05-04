@@ -41,6 +41,7 @@ public:
 	void Yaw( double degrees );
 	void Pitch( double degrees );
 	void Roll( double degrees );
+	void RotateAround( const Vec3D *axis, double degrees );
 	void Move( double dx, double dy, double dz );
 	void MoveAlong( const Vec3D *vec, double dist );
 	void MoveAlong( double w, double u, double v, double dist );

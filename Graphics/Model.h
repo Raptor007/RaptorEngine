@@ -52,6 +52,7 @@ public:
 	void Move( double fwd, double up, double right );
 	void ScaleBy( double scale );
 	void ScaleBy( double fwd_scale, double up_scale, double right_scale );
+	
 	double GetLength( void );
 	double GetHeight( void );
 	double GetWidth( void );
@@ -111,6 +112,7 @@ public:
 	std::vector<Vec3D> Points;
 	std::vector< std::vector<Vec3D> > Lines;
 	Pos3D CenterPoint;
+	double MinFwd, MaxFwd, MinUp, MaxUp, MinRight, MaxRight;
 	double MaxRadius;
 	Vec3D ExplosionRotationAxis, ExplosionMotion;
 	double ExplosionRotationRate;
@@ -123,9 +125,13 @@ public:
 	void RandomizeExplosionVectors( double speed_scale = 1. );
 	void SeedExplosionVectors( int seed, double speed_scale = 1. );
 	void AddFaces( std::string mtl, std::vector<ModelFace> &faces );
+	
 	void Recalc( void );
 	void CalculateNormals( void );
 	Pos3D GetCenterPoint( void );
+	double GetLength( void );
+	double GetHeight( void );
+	double GetWidth( void );
 	double GetMaxRadius( void );
 	Vec3D GetExplosionMotion( void );
 	

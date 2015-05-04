@@ -6,45 +6,230 @@
 
 #include <cstddef>
 #include "File.h"
+#include "RaptorGame.h"
 
 
 // http://people.freedesktop.org/~idr/OpenGL_tutorials/02-GLSL-hello-world.html
 
 
-Shader::Shader( void )
+Shader::Shader( std::string name, std::string filename, std::map<std::string,std::string> defs )
 {
-	Type = 0;
-	ShaderHandle = 0;
-	Compiled = false;
-}
-
-
-Shader::Shader( ShaderType type, const char *filename, std::map<std::string,std::string> defs )
-{
-	Type = type;
-	ShaderHandle = 0;
-	Compiled = false;
+	ProgramHandle = 0;
+	Name = name;
 	
-	if( filename )
-	{
-		FileName = std::string(filename);
-		Reload( defs );
-	}
+	Load( filename, defs );
 }
 
 
 Shader::~Shader()
 {
-	if( ShaderHandle )
-		glDeleteShader( ShaderHandle );
+	Clear();
 }
 
 
-void Shader::Reload( std::map<std::string,std::string> defs )
+void Shader::Clear( void )
 {
+	if( ProgramHandle )
+		glDeleteProgram( ProgramHandle );
+	ProgramHandle = 0;
+	
+	for( std::vector<ShaderComponent*>::iterator component_iter = Components.begin(); component_iter != Components.end(); component_iter ++ )
+		delete *component_iter;
+	Components.clear();
+	
+	Vars.clear();
+}
+
+
+void Shader::Load( std::string filename, std::map<std::string,std::string> defs )
+{
+	GLint previous_program = 0;
+	glGetIntegerv( GL_CURRENT_PROGRAM, &previous_program );
+	
+	Clear();
+	
+	ProgramHandle = glCreateProgram();
+	
+	if( ProgramHandle )
+	{
+		Components.push_back( new ShaderComponent( GL_VERTEX_SHADER, filename + std::string(".vert"), defs ) );
+		Components.push_back( new ShaderComponent( GL_FRAGMENT_SHADER, filename + std::string(".frag"), defs ) );
+		
+		for( std::vector<ShaderComponent*>::iterator component_iter = Components.begin(); component_iter != Components.end(); component_iter ++ )
+		{
+			if( *component_iter && (*component_iter)->Ready() )
+				glAttachShader( ProgramHandle, (*component_iter)->ShaderHandle );
+		}
+		
+		glLinkProgram( ProgramHandle );
+		GLint link_status = 0;
+		glGetProgramiv( ProgramHandle, GL_LINK_STATUS, &link_status );
+		
+		if( link_status == GL_TRUE )
+		{
+			glUseProgram( ProgramHandle );
+			
+			GLint current_program = 0;
+			glGetIntegerv( GL_CURRENT_PROGRAM, &current_program );
+			
+			if( (GLuint) current_program != ProgramHandle )
+			{
+				glDeleteProgram( ProgramHandle );
+				ProgramHandle = 0;
+			}
+		}
+	}
+	
+	glUseProgram( previous_program );
+}
+
+
+bool Shader::Ready( void )
+{
+	return ProgramHandle;
+}
+
+
+bool Shader::Active( void )
+{
+	if( ProgramHandle )
+	{
+		GLint current_program = 0;
+		glGetIntegerv( GL_CURRENT_PROGRAM, &current_program );
+		return ((GLuint) current_program == ProgramHandle);
+	}
+	
+	return false;
+}
+
+
+bool Shader::Set1f( const char *name, double value )
+{
+	bool valid = false;
+	
+	if( ProgramHandle )
+	{
+		// See if we already know the variable's loc.  If not, look it up in the shader.
+		ShaderVar *var = &(Vars[ std::string(name) ]);
+		if( var->Loc < 0 )
+			var->Loc = glGetUniformLocation( ProgramHandle, name );
+		
+		// Only operate on a valid shader variable.
+		if( var->Loc >= 0 )
+		{
+			// Only tell the shader to change its value if the number is different.
+			if( value != var->Float1 )
+			{
+				glUniform1f( var->Loc, value );
+				var->Float1 = value;
+			}
+			valid = true;
+		}
+	}
+	
+	return valid;
+}
+
+
+bool Shader::Set3f( const char *name, double x, double y, double z )
+{
+	bool valid = false;
+	
+	if( ProgramHandle )
+	{
+		// See if we already know the variable's loc.  If not, look it up in the shader.
+		ShaderVar *var = &(Vars[ std::string(name) ]);
+		if( var->Loc < 0 )
+			var->Loc = glGetUniformLocation( ProgramHandle, name );
+		
+		// Only operate on a valid shader variable.
+		if( var->Loc >= 0 )
+		{
+			// Only tell the shader to change its values if the numbers are different.
+			if( (x != var->Float1) || (y != var->Float2) || (z != var->Float3) )
+			{
+				glUniform3f( var->Loc, x, y, z );
+				var->Float1 = x;
+				var->Float2 = y;
+				var->Float3 = z;
+			}
+			valid = true;
+		}
+	}
+	
+	return valid;
+}
+
+
+bool Shader::Set4f( const char *name, double x, double y, double z, double w )
+{
+	bool valid = false;
+	
+	if( ProgramHandle )
+	{
+		// See if we already know the variable's loc.  If not, look it up in the shader.
+		ShaderVar *var = &(Vars[ std::string(name) ]);
+		if( var->Loc < 0 )
+			var->Loc = glGetUniformLocation( ProgramHandle, name );
+		
+		// Only operate on a valid shader variable.
+		if( var->Loc >= 0 )
+		{
+			// Only tell the shader to change its values if the numbers are different.
+			if( (x != var->Float1) || (y != var->Float2) || (z != var->Float3) || (w != var->Float4) )
+			{
+				glUniform4f( var->Loc, x, y, z, w );
+				var->Float1 = x;
+				var->Float2 = y;
+				var->Float3 = z;
+				var->Float4 = w;
+			}
+			valid = true;
+		}
+	}
+	
+	return valid;
+}
+
+
+bool Shader::Set1i( const char *name, int value )
+{
+	bool valid = false;
+	
+	if( ProgramHandle )
+	{
+		// See if we already know the variable's loc.  If not, look it up in the shader.
+		ShaderVar *var = &(Vars[ std::string(name) ]);
+		if( var->Loc < 0 )
+			var->Loc = glGetUniformLocation( ProgramHandle, name );
+		
+		// Only operate on a valid shader variable.
+		if( var->Loc >= 0 )
+		{
+			// Only tell the shader to change its value if the number is different.
+			if( value != var->Int1 )
+			{
+				glUniform1i( var->Loc, value );
+				var->Int1 = value;
+			}
+			valid = true;
+		}
+	}
+	
+	return valid;
+}
+
+
+// -----------------------------------------------------------------------------
+
+
+ShaderComponent::ShaderComponent( ShaderComponentType type, std::string filename, std::map<std::string,std::string> defs )
+{
+	Type = type;
 	ShaderHandle = 0;
 	Compiled = false;
 	
+	FileName = filename;
 	if( ! FileName.empty() )
 	{
 		ShaderHandle = glCreateShader( Type );
@@ -74,12 +259,46 @@ void Shader::Reload( std::map<std::string,std::string> defs )
 			char log_buffer[ 1024*128 ];
 			glGetShaderInfoLog( ShaderHandle, 1024*128, NULL, log_buffer );
 			Log = std::string(log_buffer);
+			
+			// If there were errors, display the log in the console.
+			if( ! Compiled )
+				Raptor::Game->Console.Print( FileName + std::string(":\n") + Log, TextConsole::MSG_ERROR );
 		}
 	}
 }
 
 
-bool Shader::Ready( void )
+ShaderComponent::~ShaderComponent()
+{
+	if( ShaderHandle )
+		glDeleteShader( ShaderHandle );
+}
+
+
+bool ShaderComponent::Ready( void )
 {
 	return Compiled;
+}
+
+
+// -----------------------------------------------------------------------------
+
+
+ShaderVar::ShaderVar( void )
+{
+	Loc = -1;
+
+	Float1 = 0.;
+	Float2 = 0.;
+	Float3 = 0.;
+	Float4 = 0.;
+	Int1 = 0;
+	Int2 = 0;
+	Int3 = 0;
+	Int4 = 0;
+}
+
+
+ShaderVar::~ShaderVar()
+{
 }

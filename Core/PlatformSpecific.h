@@ -8,6 +8,8 @@
 #define _USE_MATH_DEFINES
 #include <windows.h>
 #define snprintf(...) (sprintf_s(__VA_ARGS__))
+#define strcasecmp(...) (_stricmp(__VA_ARGS__))
+#define strncasecmp(...) (_strnicmp(__VA_ARGS__))
 #define strtok_r(...) (strtok_s(__VA_ARGS__))
 #undef GetObject
 #undef DrawText

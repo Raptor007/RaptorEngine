@@ -15,7 +15,12 @@ namespace Raptor
 {
 	// Global pointer to the game engine object.
 	RaptorGame *Game = NULL;
+	
 	void Terminate( int arg );
+	
+#ifdef WIN32
+	BOOL WindowsInit( void );
+#endif
 }
 
 
@@ -126,20 +131,18 @@ void RaptorGame::Initialize( int argc, char **argv )
 	
 	Console.Initialize();
 	
-	ShaderMgr.Initialize();
-	std::string shader_file = Cfg.SettingAsString("g_shader_file");
-	ShaderMgr.LoadShaders( shader_file.empty() ? "model" : shader_file );
-	
 	Snd.Initialize( Cfg.SettingAsInt("s_channels",2), Cfg.SettingAsInt("s_rate",44100), Cfg.SettingAsInt("s_depth",16), Cfg.SettingAsInt("s_buffer",4096), Cfg.SettingAsInt("s_mix_channels",64) );
 	Snd.MasterVolume = Cfg.SettingAsDouble( "s_volume", 0.5 );
 	Snd.SoundVolume = Cfg.SettingAsDouble( "s_effect_volume", 0.5 );
 	Snd.MusicVolume = Cfg.SettingAsDouble( "s_music_volume", 1. );
 	
+	ShaderMgr.Initialize();
+	
 	Joy.Initialize();
 	
 	Net.Initialize( 30.0 );
 	
-	Mouse.SetCursor( Res.GetAnimation("cursor_mac.ani"), 16, 1, 1 );
+	Mouse.SetCursor( Res.GetAnimation("cursor.ani"), 16, 1, 1 );
 	
 	
 	// Configure callback for SIGTERM.
@@ -301,6 +304,12 @@ void RaptorGame::Update( double dt )
 
 
 bool RaptorGame::HandleEvent( SDL_Event *event )
+{
+	return false;
+}
+
+
+bool RaptorGame::HandleCommand( std::string cmd, std::vector<std::string> *elements )
 {
 	return false;
 }
@@ -644,3 +653,49 @@ void Raptor::Terminate( int arg )
 {
 	Raptor::Game->Quit();
 }
+
+
+// ---------------------------------------------------------------------------
+
+
+#ifdef WIN32
+#include <tchar.h>
+#include <sys/stat.h>
+
+BOOL Raptor::WindowsInit( void )
+{
+	BOOL result = 0;
+	TCHAR path[MAX_PATH+20] = L"";
+	TCHAR *path_append = path;
+	
+#ifndef _DEBUG
+	// Get the path to the executable.
+	GetModuleFileName( 0, path, MAX_PATH+20 );
+	path_append = _tcsrchr( path, L'\\' );
+	if( path_append )
+		path_append ++;
+	else
+		path_append = path;
+	path_append[ 0 ] = L'\0';
+	
+	// Set executable path as the working directory (fixes drag-and-drop).
+	SetCurrentDirectory( path );
+#endif
+	
+	// Set the DLL directory to Bin32/Bin64 (or ..\BinXX if that exists instead).
+	TCHAR bin_dir[ 16 ] = L"Bin32";
+	_stprintf( bin_dir, L"Bin%i", sizeof(void*) * 8 );
+	_stprintf( path_append, L"%ls", bin_dir );
+	struct _stat stat_buffer;
+	if( (_tstat( path, &stat_buffer ) == 0) && (stat_buffer.st_mode & S_IFDIR) )
+		result = SetDllDirectory( path );
+	else
+	{
+		_stprintf( path_append, L"..\\%ls", bin_dir );
+		if( (_tstat( path, &stat_buffer ) == 0) && (stat_buffer.st_mode & S_IFDIR) )
+			result = SetDllDirectory( path );
+	}
+	
+	return result;
+}
+#endif

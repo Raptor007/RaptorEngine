@@ -11,5 +11,6 @@
 
 namespace File
 {
+	bool Exists( const char *filename );
 	std::string AsString( const char *filename );
 }

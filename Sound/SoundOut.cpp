@@ -493,7 +493,7 @@ void SoundOut::PlayMusicSubdirNext( std::string dir )
 
 void SoundOut::QueueMusicSubdir( std::string dir )
 {
-	if( DIR *dir_p = opendir( (Raptor::Game->Res.MusicDir + "/" + dir).c_str() ) )
+	if( DIR *dir_p = opendir( Raptor::Game->Res.Find(dir).c_str() ) )
 	{
 		while( struct dirent *dir_entry_p = readdir(dir_p) )
 		{

@@ -8,6 +8,7 @@ class ResourceManager;
 #include "PlatformSpecific.h"
 
 #include <map>
+#include <deque>
 #include <string>
 #include "RaptorGL.h"
 #include <SDL/SDL.h>
@@ -25,6 +26,7 @@ class ResourceManager;
 #include "Animation.h"
 #include "Model.h"
 #include "Font.h"
+#include "Shader.h"
 #include "Clock.h"
 #include "Mutex.h"
 
@@ -33,23 +35,22 @@ class ResourceManager
 {
 public:
 	Clock ResetTime;
-	std::string TextureDir;
-	std::string ModelDir;
-	std::string SoundDir;
-	std::string MusicDir;
-	std::string FontDir;
+	std::deque<std::string> SearchPath;
 	Mutex Lock;
 	
 	ResourceManager( void );
 	virtual ~ResourceManager();
 	
-	GLuint GetTexture( std::string name );
-	Framebuffer *GetFramebuffer( std::string name, int x = 0, int y = 0 );
-	Animation *GetAnimation( std::string name );
-	Model *GetModel( std::string name );
-	Mix_Chunk *GetSound( std::string name );
-	Mix_Music *GetMusic( std::string name );
-	Font *GetFont( std::string name, int point_size );
+	std::string Find( const std::string &name ) const;
+	
+	GLuint GetTexture( const std::string &name );
+	Framebuffer *GetFramebuffer( const std::string &name, int x = 0, int y = 0 );
+	Animation *GetAnimation( const std::string &name );
+	Model *GetModel( const std::string &name );
+	Mix_Chunk *GetSound( const std::string &name );
+	Mix_Music *GetMusic( const std::string &name );
+	Font *GetFont( const std::string &name, int point_size );
+	Shader *GetShader( const std::string &name );
 	
 	void DeleteGraphics( void );
 	void ReloadGraphics( void );
@@ -60,6 +61,7 @@ public:
 	void DeleteAnimations( void );
 	void DeleteSounds( void );
 	void DeleteMusic( void );
+	void DeleteShaders( void );
 
 private:
 	std::map<std::string, GLuint> Textures;
@@ -69,12 +71,14 @@ private:
 	std::map<std::string, Mix_Chunk*> Sounds;
 	std::map<std::string, Mix_Music*> Music;
 	std::map<FontID, Font*> Fonts;
+	std::map<std::string, Shader*> Shaders;
 	
-	GLuint LoadTexture( std::string name );
-	Framebuffer *CreateFramebuffer( std::string name, int x, int y );
-	Animation *LoadAnimation( std::string name );
-	Model *LoadModel( std::string name );
-	Mix_Chunk *LoadSound( std::string name );
-	Mix_Music *LoadMusic( std::string name );
-	Font *LoadFont( std::string name, int point_size );
+	GLuint LoadTexture( const std::string &name );
+	Framebuffer *CreateFramebuffer( const std::string &name, int x, int y );
+	Animation *LoadAnimation( const std::string &name );
+	Model *LoadModel( const std::string &name );
+	Mix_Chunk *LoadSound( const std::string &name );
+	Mix_Music *LoadMusic( const std::string &name );
+	Font *LoadFont( const std::string &name, int point_size );
+	Shader *LoadShader( const std::string &name );
 };

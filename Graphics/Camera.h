@@ -20,5 +20,8 @@ public:
 	Camera( const Camera &other );
 	virtual ~Camera();
 	
-	void SetupGraphics( Graphics *gfx );
+	double FOVW( void ) const;
+	double FOVH( void ) const;
+	
+	void SetupGraphics( Graphics *gfx ) const;
 };
