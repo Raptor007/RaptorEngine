@@ -267,7 +267,7 @@ std::list<std::string> CStr::ParseCommand( const char *cmd, const char *original
 	if( cmd )
 	{
 		char *buffer = CStr::Copy(cmd);
-		const char DELIMITERS[] = "; \t";
+		const char *DELIMITERS = "; \t";
 		std::string item;
 		
 		// Ignore comments.
