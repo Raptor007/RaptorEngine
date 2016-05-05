@@ -68,7 +68,9 @@ void GameData::RemoveObject( uint32_t id )
 		GameObjects.erase( obj_iter );
 	}
 	
-	GameObjectIDs.Remove( id );
+	// Make this ID available again, unless it is lower than the range we're using for new objects.
+	if( id <= GameObjectIDs.Initial )
+		GameObjectIDs.Remove( id );
 }
 
 

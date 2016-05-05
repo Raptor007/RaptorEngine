@@ -49,7 +49,7 @@ public:
 	uint16_t PlayerID;
 	
 	
-	ConnectedClient( TCPsocket socket, bool use_out_thread = false, double net_rate = 30., int8_t precision = 0 );
+	ConnectedClient( TCPsocket socket, bool use_out_thread = true, double net_rate = 30., int8_t precision = 0 );
 	virtual ~ConnectedClient();
 	
 	void DisconnectNice( const char *message = NULL );

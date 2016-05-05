@@ -801,11 +801,10 @@ GLuint Graphics::LoadTexture( SDL_Surface *surface, GLfloat *texcoord, GLint tex
 	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, image->pixels );
 	if( mipmap )
 	{
-		#ifndef LEGACY_MIPMAP
+		if( ! Raptor::Game->Cfg.SettingAsBool("g_legacy_mipmap") )
 			glGenerateMipmap( GL_TEXTURE_2D );
-		#else
+		else
 			gluBuild2DMipmaps( GL_TEXTURE_2D, GL_RGBA, w, h, GL_RGBA, GL_UNSIGNED_BYTE, image->pixels );
-		#endif
 	}
 	SDL_FreeSurface( image );
 	

@@ -119,6 +119,11 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 			buffer[ 0 ] = '\0';
 			input.getline( buffer, 1024 );
 			
+			// Stop parsing at # for comments.
+			char *comment = strchr( buffer, '#' );
+			if( comment )
+				comment[ 0 ] = '\0';
+			
 			// Skip whitespace at the start of a line.
 			char *buffer_start = buffer;
 			while( strchr( " \t", buffer_start[0] ) )
@@ -184,6 +189,10 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 						{
 							if( vertex_num < 0 )
 								vertex_num += vertices.size() + 1;
+							else if( ! vertex_num )
+								continue;
+							if( (size_t)vertex_num > vertices.size() )
+								continue;
 							
 							face_vertices.push_back( vertices[ vertex_num - 1 ] );
 							
@@ -193,7 +202,7 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 								if( tex_coord_num < 0 )
 									tex_coord_num += tex_coords.size() + 1;
 								
-								if( tex_coord_num )
+								if( tex_coord_num && ((size_t)tex_coord_num <= tex_coords.size()) )
 									face_tex_coords.push_back( tex_coords[ tex_coord_num - 1 ] );
 								else
 									face_tex_coords.push_back( Vec2D( 0.5, 0.5 ) );
@@ -207,7 +216,7 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 								if( normal_num < 0 )
 									normal_num += normals.size() + 1;
 								
-								if( normal_num )
+								if( normal_num && ((size_t)normal_num <= normals.size()) )
 									face_normals.push_back( normals[ normal_num - 1 ] );
 								else
 									face_normals.push_back( Vec3D( 0., 0., 0. ) );
@@ -378,14 +387,29 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 						Materials[ mtl ].Diffuse.Blue = atof( elements.at( 3 ).c_str() );
 					}
 				}
+				else if( elements.at( 0 ) == "Ks" )
+				{
+					if( elements.size() >= 4 )
+					{
+						Materials[ mtl ].Specular.Red = atof( elements.at( 1 ).c_str() );
+						Materials[ mtl ].Specular.Green = atof( elements.at( 2 ).c_str() );
+						Materials[ mtl ].Specular.Blue = atof( elements.at( 3 ).c_str() );
+					}
+				}
 				else if( elements.at( 0 ) == "d" )
 				{
 					if( elements.size() >= 2 )
 					{
 						float alpha = atof( elements.at( 1 ).c_str() );
+						// NOTE: Currently, only Ambient.Alpha is passed to the shaders.
 						Materials[ mtl ].Ambient.Alpha = alpha;
 						Materials[ mtl ].Diffuse.Alpha = alpha;
 					}
+				}
+				else if( elements.at( 0 ) == "Ns" )
+				{
+					if( elements.size() >= 2 )
+						Materials[ mtl ].Shininess = atof( elements.at( 1 ).c_str() );
 				}
 			}
 			
@@ -505,7 +529,9 @@ void Model::DrawAt( const Pos3D *pos, double scale, double fwd_scale, double up_
 				{
 					Raptor::Game->ShaderMgr.Set3f( "AmbientColor", mtl_iter->second.Ambient.Red, mtl_iter->second.Ambient.Green, mtl_iter->second.Ambient.Blue );
 					Raptor::Game->ShaderMgr.Set3f( "DiffuseColor", mtl_iter->second.Diffuse.Red, mtl_iter->second.Diffuse.Green, mtl_iter->second.Diffuse.Blue );
+					Raptor::Game->ShaderMgr.Set3f( "SpecularColor", mtl_iter->second.Specular.Red, mtl_iter->second.Specular.Green, mtl_iter->second.Specular.Blue );
 					Raptor::Game->ShaderMgr.Set1f( "Alpha", mtl_iter->second.Ambient.Alpha );
+					Raptor::Game->ShaderMgr.Set1f( "Shininess", mtl_iter->second.Shininess );
 					
 					glActiveTexture( GL_TEXTURE0 + 0 );
 					Raptor::Game->ShaderMgr.Set1i( "Texture", 0 );
@@ -577,7 +603,9 @@ void Model::DrawAt( const Pos3D *pos, double scale, double fwd_scale, double up_
 					{
 						Raptor::Game->ShaderMgr.Set3f( "AmbientColor", Materials[ array_iter->first ].Ambient.Red, Materials[ array_iter->first ].Ambient.Green, Materials[ array_iter->first ].Ambient.Blue );
 						Raptor::Game->ShaderMgr.Set3f( "DiffuseColor", Materials[ array_iter->first ].Diffuse.Red, Materials[ array_iter->first ].Diffuse.Green, Materials[ array_iter->first ].Diffuse.Blue );
+						Raptor::Game->ShaderMgr.Set3f( "SpecularColor", Materials[ array_iter->first ].Specular.Red, Materials[ array_iter->first ].Specular.Green, Materials[ array_iter->first ].Specular.Blue );
 						Raptor::Game->ShaderMgr.Set1f( "Alpha", Materials[ array_iter->first ].Ambient.Alpha );
+						Raptor::Game->ShaderMgr.Set1f( "Shininess", Materials[ array_iter->first ].Shininess );
 						
 						glActiveTexture( GL_TEXTURE0 + 0 );
 						Raptor::Game->ShaderMgr.Set1i( "Texture", 0 );
@@ -616,7 +644,9 @@ void Model::DrawAt( const Pos3D *pos, double scale, double fwd_scale, double up_
 		Raptor::Game->ShaderMgr.Set3f( "ZVec", 0., 0., 1. );
 		Raptor::Game->ShaderMgr.Set3f( "AmbientColor", 1., 1., 1. );
 		Raptor::Game->ShaderMgr.Set3f( "DiffuseColor", 0., 0., 0. );
+		Raptor::Game->ShaderMgr.Set3f( "SpecularColor", 0., 0., 0. );
 		Raptor::Game->ShaderMgr.Set1f( "Alpha", 1. );
+		Raptor::Game->ShaderMgr.Set1f( "Shininess", 0. );
 	}
 }
 
@@ -685,7 +715,9 @@ void Model::DrawObjectsAt( const std::list<std::string> *object_names, const Pos
 				{
 					Raptor::Game->ShaderMgr.Set3f( "AmbientColor", Materials[ array_iter->first ].Ambient.Red, Materials[ array_iter->first ].Ambient.Green, Materials[ array_iter->first ].Ambient.Blue );
 					Raptor::Game->ShaderMgr.Set3f( "DiffuseColor", Materials[ array_iter->first ].Diffuse.Red, Materials[ array_iter->first ].Diffuse.Green, Materials[ array_iter->first ].Diffuse.Blue );
+					Raptor::Game->ShaderMgr.Set3f( "SpecularColor", Materials[ array_iter->first ].Specular.Red, Materials[ array_iter->first ].Specular.Green, Materials[ array_iter->first ].Specular.Blue );
 					Raptor::Game->ShaderMgr.Set1f( "Alpha", Materials[ array_iter->first ].Ambient.Alpha );
+					Raptor::Game->ShaderMgr.Set1f( "Shininess", Materials[ array_iter->first ].Shininess );
 					
 					glActiveTexture( GL_TEXTURE0 + 0 );
 					Raptor::Game->ShaderMgr.Set1i( "Texture", 0 );
@@ -723,7 +755,9 @@ void Model::DrawObjectsAt( const std::list<std::string> *object_names, const Pos
 		Raptor::Game->ShaderMgr.Set3f( "ZVec", 0., 0., 1. );
 		Raptor::Game->ShaderMgr.Set3f( "AmbientColor", 1., 1., 1. );
 		Raptor::Game->ShaderMgr.Set3f( "DiffuseColor", 0., 0., 0. );
+		Raptor::Game->ShaderMgr.Set3f( "SpecularColor", 0., 0., 0. );
 		Raptor::Game->ShaderMgr.Set1f( "Alpha", 1. );
+		Raptor::Game->ShaderMgr.Set1f( "Shininess", 1. );
 	}
 }
 
@@ -840,7 +874,9 @@ void Model::DrawWireframeAt( const Pos3D *pos, Color color, double scale, double
 				{
 					Raptor::Game->ShaderMgr.Set3f( "AmbientColor", color.Red, color.Green, color.Blue );
 					Raptor::Game->ShaderMgr.Set3f( "DiffuseColor", 0., 0., 0. );
+					Raptor::Game->ShaderMgr.Set3f( "SpecularColor", 0., 0., 0. );
 					Raptor::Game->ShaderMgr.Set1f( "Alpha", color.Alpha );
+					Raptor::Game->ShaderMgr.Set1f( "Shininess", 0. );
 					
 					glVertexPointer( 3, GL_DOUBLE, 0, mtl_iter->second.Arrays.VertexArray );
 				}
@@ -906,7 +942,9 @@ void Model::DrawWireframeAt( const Pos3D *pos, Color color, double scale, double
 					{
 						Raptor::Game->ShaderMgr.Set3f( "AmbientColor", color.Red, color.Green, color.Blue );
 						Raptor::Game->ShaderMgr.Set3f( "DiffuseColor", 0., 0., 0. );
+						Raptor::Game->ShaderMgr.Set3f( "SpecularColor", 0., 0., 0. );
 						Raptor::Game->ShaderMgr.Set1f( "Alpha", color.Alpha );
+						Raptor::Game->ShaderMgr.Set1f( "Shininess", 0. );
 						
 						glVertexPointer( 3, GL_DOUBLE, 0, array_iter->second.VertexArray );
 					}
@@ -939,7 +977,9 @@ void Model::DrawWireframeAt( const Pos3D *pos, Color color, double scale, double
 		Raptor::Game->ShaderMgr.Set3f( "ZVec", 0., 0., 1. );
 		Raptor::Game->ShaderMgr.Set3f( "AmbientColor", 1., 1., 1. );
 		Raptor::Game->ShaderMgr.Set3f( "DiffuseColor", 0., 0., 0. );
+		Raptor::Game->ShaderMgr.Set3f( "SpecularColor", 0., 0., 0. );
 		Raptor::Game->ShaderMgr.Set1f( "Alpha", 1. );
+		Raptor::Game->ShaderMgr.Set1f( "Shininess", 0. );
 	}
 }
 
@@ -1835,6 +1875,8 @@ ModelMaterial::ModelMaterial( std::string name )
 	Name = name;
 	Ambient.Set( 0.2f, 0.2f, 0.2f, 1.f );
 	Diffuse.Set( 0.8f, 0.8f, 0.8f, 1.f );
+	Specular.Set( 0.2f, 0.2f, 0.2f, 1.f );
+	Shininess = 1.f;
 }
 
 
@@ -1844,6 +1886,8 @@ ModelMaterial::ModelMaterial( const ModelMaterial &other )
 	Texture.BecomeInstance( &(other.Texture) );
 	Ambient = other.Ambient;
 	Diffuse = other.Diffuse;
+	Specular = other.Specular;
+	Shininess = other.Shininess;
 	Arrays = other.Arrays;
 }
 
@@ -1860,6 +1904,8 @@ void ModelMaterial::BecomeInstance( const ModelMaterial *other )
 	Texture.BecomeInstance( &(other->Texture) );
 	Ambient = other->Ambient;
 	Diffuse = other->Diffuse;
+	Specular = other->Specular;
+	Shininess = other->Shininess;
 	Arrays.BecomeInstance( &(other->Arrays) );
 }
 

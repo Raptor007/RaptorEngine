@@ -48,6 +48,9 @@ void Shader::Load( std::string filename, std::map<std::string,std::string> defs 
 	
 	Clear();
 	
+	if( ! Raptor::Game->Cfg.SettingAsBool( "g_shader_enable", true ) )
+		return;
+	
 	ProgramHandle = glCreateProgram();
 	
 	if( ProgramHandle )

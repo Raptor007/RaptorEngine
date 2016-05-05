@@ -19,6 +19,7 @@ public:
 	double LEDRateLimit;
 	
 	SaitekDevice( void *device_handle, GUID guid );
+	virtual ~SaitekDevice();
 	
 	virtual const char *TypeString( void );
 	std::string GuidString( void );

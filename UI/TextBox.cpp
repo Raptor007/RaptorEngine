@@ -124,7 +124,7 @@ void TextBox::Draw( void )
 			{
 				UpdateCursor();
 				
-				SDL_Rect size;
+				SDL_Rect size = {0,0,0,0};
 				TextFont->TextSize( Text.substr( 0, Cursor ), &size );
 				int x = size.w, y = 0;
 				
@@ -245,7 +245,7 @@ bool TextBox::KeyDown( SDLKey key )
 		}
 		else if( key == SDLK_RIGHT )
 		{
-			if( Cursor < (int) Text.length() )
+			if( (size_t) Cursor < Text.length() )
 				Cursor ++;
 		}
 		else if( (key == SDLK_UP) || (key == SDLK_HOME) )
@@ -267,6 +267,16 @@ bool TextBox::KeyDown( SDLKey key )
 			InsertAtCursor( ((char) key) + '0'-SDLK_KP0 );
 		else if( key == SDLK_KP_PERIOD )
 			InsertAtCursor( '.' );
+		else if( key == SDLK_KP_MINUS )
+			InsertAtCursor( '-' );
+		else if( key == SDLK_KP_PLUS )
+			InsertAtCursor( '+' );
+		else if( key == SDLK_KP_MULTIPLY )
+			InsertAtCursor( '*' );
+		else if( key == SDLK_KP_DIVIDE )
+			InsertAtCursor( '/' );
+		else if( key == SDLK_KP_EQUALS )
+			InsertAtCursor( '=' );
 		else if( ShiftIsDown && (key >= 'a') && (key <= 'z') )
 			InsertAtCursor( ((char) key) + 'A'-'a' );
 		else if( ShiftIsDown && (key == '`') )
@@ -370,7 +380,7 @@ void TextBox::UpdateCursor( void )
 {
 	if( Cursor < 0 )
 		Cursor = 0;
-	else if( Cursor > (int) Text.length() )
+	else if( (size_t) Cursor > Text.length() )
 		Cursor = Text.length();
 }
 

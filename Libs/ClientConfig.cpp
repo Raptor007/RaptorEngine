@@ -216,7 +216,11 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "g_znear" ] = Num::ToString(Z_NEAR);
 	Settings[ "g_zfar" ] = Num::ToString(Z_FAR);
 	Settings[ "g_fov" ] = "auto";
+	Settings[ "g_framebuffers" ] = "true";
+	Settings[ "g_framebuffers_anyres" ] = "true";
+	Settings[ "g_legacy_mipmap" ] = "false";
 	Settings[ "g_shader_enable" ] = "true";
+	Settings[ "g_shader_light_quality" ] = "2";
 	
 	Settings[ "s_channels" ] = "2";
 	Settings[ "s_rate" ] = "44100";
@@ -225,7 +229,7 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "s_mix_channels" ] = "64";
 	Settings[ "s_volume" ] = "0.5";
 	Settings[ "s_effect_volume" ] = "0.5";
-	Settings[ "s_music_volume" ] = "1.0";
+	Settings[ "s_music_volume" ] = "1";
 	
 	#ifdef WIN32
 		Settings[ "saitek_enable" ] = "true";
@@ -247,7 +251,6 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "sv_port" ] = "7000";
 	Settings[ "sv_netrate" ] = "30";
 	Settings[ "sv_maxfps" ] = "60";
-	Settings[ "sv_use_out_threads" ] = "true";
 	
 	Settings[ "password" ] = "";
 }

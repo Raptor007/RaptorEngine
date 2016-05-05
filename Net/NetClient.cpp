@@ -409,7 +409,7 @@ void NetClient::SendUpdates( void )
 	temp_netrate /= ((int) LatestPing() / 100) + 1;
 	
 	// Send an update if it's time to do so.
-	if( Connected && (NetClock.ElapsedSeconds() >= (1.0 / temp_netrate)) )
+	if( Connected && Raptor::Game->PlayerID && (NetClock.ElapsedSeconds() >= (1.0 / temp_netrate)) )
 	{
 		NetClock.Reset();
 		
@@ -496,7 +496,11 @@ double NetClient::MedianPing( void )
 std::string NetClient::Status( void )
 {
 	char cstr[ 1024 ] = "";
-	snprintf( cstr, 1024, "Bytes sent as client: %llu\nBytes received as client: %llu\nPing: %.0f", (unsigned long long) BytesSent, (unsigned long long) BytesReceived, MedianPing() );
+	#ifdef WIN32
+		snprintf( cstr, 1024, "Bytes sent as client: %I64u\nBytes received as client: %I64u\nPing: %.0f", (unsigned long long) BytesSent, (unsigned long long) BytesReceived, MedianPing() );
+	#else
+		snprintf( cstr, 1024, "Bytes sent as client: %llu\nBytes received as client: %llu\nPing: %.0f", (unsigned long long) BytesSent, (unsigned long long) BytesReceived, MedianPing() );
+	#endif
 	return std::string(cstr);
 }
 

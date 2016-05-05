@@ -113,6 +113,12 @@ void RaptorGame::Initialize( int argc, char **argv )
 		{
 			host = true;
 		}
+		else if( strcmp( argv[ i ], "-safe" ) == 0 )
+		{
+			Cfg.Settings[ "g_framebuffers" ] = "false";
+			Cfg.Settings[ "g_shader_enable" ] = "false";
+			Cfg.Settings[ "g_legacy_mipmap" ] = "true";
+		}
 		else if( strcmp( argv[ i ], "-screensaver" ) == 0 )
 		{
 			screensaver = true;
@@ -661,41 +667,78 @@ void Raptor::Terminate( int arg )
 #ifdef WIN32
 #include <tchar.h>
 #include <sys/stat.h>
+#endif
 
-BOOL Raptor::WindowsInit( void )
+#if defined(__APPLE__) && (__GNUC__ >= 4) && ((__GNUC__ > 4) || (__GNUC_MINOR__ > 0))
+#include <libproc.h>
+#include <unistd.h>
+#endif
+
+bool Raptor::PreMain( void )
 {
-	BOOL result = 0;
-	TCHAR path[MAX_PATH+20] = L"";
-	TCHAR *path_append = path;
-	
-#ifndef _DEBUG
-	// Get the path to the executable.
-	GetModuleFileName( 0, path, MAX_PATH+20 );
-	path_append = _tcsrchr( path, L'\\' );
-	if( path_append )
-		path_append ++;
-	else
-		path_append = path;
-	path_append[ 0 ] = L'\0';
-	
-	// Set executable path as the working directory (fixes drag-and-drop).
-	SetCurrentDirectory( path );
-#endif
-	
-	// Set the DLL directory to Bin32/Bin64 (or ..\BinXX if that exists instead).
-	TCHAR bin_dir[ 16 ] = L"Bin32";
-	_stprintf( bin_dir, L"Bin%i", sizeof(void*) * 8 );
-	_stprintf( path_append, L"%ls", bin_dir );
-	struct _stat stat_buffer;
-	if( (_tstat( path, &stat_buffer ) == 0) && (stat_buffer.st_mode & S_IFDIR) )
-		result = SetDllDirectory( path );
-	else
-	{
-		_stprintf( path_append, L"..\\%ls", bin_dir );
+	#ifdef WIN32
+		TCHAR path[MAX_PATH+20] = L"";
+		TCHAR *path_append = path;
+		
+		#ifndef _DEBUG
+			// Get the path to the executable.
+			GetModuleFileName( 0, path, MAX_PATH+20 );
+			path_append = _tcsrchr( path, L'\\' );
+			if( path_append )
+				path_append ++;
+			else
+				path_append = path;
+			path_append[ 0 ] = L'\0';
+			
+			// Set executable path as the working directory (fixes drag-and-drop).
+			SetCurrentDirectory( path );
+		#endif
+		
+		// Set the DLL directory to Bin32/Bin64 (or ..\BinXX if that exists instead).
+		TCHAR bin_dir[ 16 ] = L"Bin32";
+		_stprintf( bin_dir, L"Bin%i", sizeof(void*) * 8 );
+		_stprintf( path_append, L"%ls", bin_dir );
+		struct _stat stat_buffer;
 		if( (_tstat( path, &stat_buffer ) == 0) && (stat_buffer.st_mode & S_IFDIR) )
-			result = SetDllDirectory( path );
-	}
+			SetDllDirectory( path );
+		else
+		{
+			_stprintf( path_append, L"..\\%ls", bin_dir );
+			if( (_tstat( path, &stat_buffer ) == 0) && (stat_buffer.st_mode & S_IFDIR) )
+				SetDllDirectory( path );
+		}
+	#endif
 	
-	return result;
+	#if defined(__APPLE__) && defined(PROC_PIDPATHINFO_MAXSIZE) && !defined(_DEBUG)
+		// Fix the working directory for Mac OS X Intel64.
+		char exe_path[ PROC_PIDPATHINFO_MAXSIZE ] = "";
+		pid_t pid = getpid();
+		if( proc_pidpath( pid, exe_path, sizeof(exe_path) ) > 0 )
+		{
+			char *real_path = realpath( exe_path, NULL );
+			std::string path;
+			if( real_path )
+			{
+				path = real_path;
+				free( real_path );
+				real_path = NULL;
+			}
+			else
+				path = exe_path;
+			
+			size_t index = path.rfind( ".app/Contents/MacOS/" );
+			if( index != std::string::npos )
+			{
+				path = path.substr( 0, index );
+				index = path.rfind( "/" );
+				if( index != std::string::npos )
+				{
+					path = path.substr( 0, index );
+					chdir( path.c_str() );
+				}
+			}
+		}
+	#endif
+	
+	return true;
 }
-#endif

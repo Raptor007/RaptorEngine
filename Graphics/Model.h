@@ -145,7 +145,8 @@ class ModelMaterial
 public:
 	std::string Name;
 	Animation Texture;
-	Color Ambient, Diffuse;
+	Color Ambient, Diffuse, Specular;
+	float Shininess;
 	ModelArrays Arrays;
 	
 	ModelMaterial( std::string name = "" );

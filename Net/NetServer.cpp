@@ -311,7 +311,7 @@ void NetServer::SendUpdates( void )
 		temp_netrate /= ((int) client->LatestPing() / 100) + 1;
 		
 		// Send an update if it's time to do so.
-		if( client->Connected && ( client->NetClock.ElapsedSeconds() >= (1.0 / temp_netrate) ) )
+		if( client->Connected && client->PlayerID && ( client->NetClock.ElapsedSeconds() >= (1.0 / temp_netrate) ) )
 		{
 			client->NetClock.Reset();
 			

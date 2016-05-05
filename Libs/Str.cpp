@@ -6,6 +6,9 @@
 #include <cstdlib>
 #include <cstring>
 #include <algorithm>
+#ifdef WIN32
+#include "strtok_r.h"
+#endif
 
 
 char *CStr::Copy( const char *str )

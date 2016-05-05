@@ -22,6 +22,8 @@ ClientConsole::ClientConsole( void ) : Layer( &Rect )
 	Alpha = 0.5f;
 	
 	Scroll = -1;
+	
+	HistoryIndex = 0;
 }
 
 
@@ -171,8 +173,11 @@ bool ClientConsole::HandleEvent( SDL_Event *event )
 			{
 				std::string cmd = Input->Text;
 				Input->Text = "";
+				Input->Cursor = 0;
 				Raptor::Game->Cfg.Command( cmd, true );
-				History.push_back( cmd );
+				if( History.empty() || (History.back() != cmd) )
+					History.push_back( cmd );
+				HistoryIndex = History.size();
 			}
 			
 			return true;
@@ -182,10 +187,20 @@ bool ClientConsole::HandleEvent( SDL_Event *event )
 		{
 			if( event->type == SDL_KEYDOWN )
 			{
-				if( History.size() )
+				if( HistoryIndex )
+					HistoryIndex --;
+				else
+					HistoryIndex = History.size();
+				
+				if( HistoryIndex < History.size() )
 				{
-					Input->Text = History.back();
+					Input->Text = History[ HistoryIndex ];
 					Input->Cursor = Input->Text.length();
+				}
+				else
+				{
+					Input->Text = "";
+					Input->Cursor = 0;
 				}
 			}
 			
@@ -195,7 +210,23 @@ bool ClientConsole::HandleEvent( SDL_Event *event )
 		else if( ((event->type == SDL_KEYDOWN) || (event->type == SDL_KEYUP)) && (event->key.keysym.sym == SDLK_DOWN) )
 		{
 			if( event->type == SDL_KEYDOWN )
-				Input->Text = "";
+			{
+				if( HistoryIndex < History.size() )
+					HistoryIndex ++;
+				else
+					HistoryIndex = 0;
+				
+				if( HistoryIndex < History.size() )
+				{
+					Input->Text = History[ HistoryIndex ];
+					Input->Cursor = Input->Text.length();
+				}
+				else
+				{
+					Input->Text = "";
+					Input->Cursor = 0;
+				}
+			}
 			
 			return true;
 		}
@@ -259,7 +290,7 @@ void ClientConsole::ScrollDown( int lines )
 	{
 		Scroll += lines;
 		
-		if( Scroll > (int) Messages.size() )
+		if( (size_t) Scroll > Messages.size() )
 			Scroll = -1;
 	}
 }

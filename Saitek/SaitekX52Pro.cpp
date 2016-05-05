@@ -4,6 +4,10 @@
 #include <fstream>
 #include "SaitekManager.h"
 
+#ifndef _MSC_VER
+#define swprintf_s snwprintf
+#endif
+
 
 SaitekX52Pro::SaitekX52Pro( void *device_handle ) : SaitekDevice( device_handle, DeviceType_X52Pro )
 {

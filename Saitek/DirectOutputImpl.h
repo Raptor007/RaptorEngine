@@ -1,7 +1,9 @@
 #pragma once
 #ifdef WIN32
 
+#ifdef _MSC_VER
 #pragma comment( lib, "advapi32.lib" )
+#endif
 
 class CDirectOutput;
 

@@ -107,7 +107,5 @@ namespace Raptor
 #ifndef RAPTORGAME_CPP
 	extern RaptorGame *Game;
 #endif
-#ifdef WIN32
-	BOOL WindowsInit( void );
-#endif
+	bool PreMain( void );
 }

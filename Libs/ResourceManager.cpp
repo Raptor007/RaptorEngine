@@ -5,10 +5,26 @@
 #include "ResourceManager.h"
 
 #include <cstddef>
+#include <fstream>
+#include <SDL/SDL_rwops.h>
 #include "Str.h"
 #include "File.h"
 #include "Endian.h"
 #include "RaptorGame.h"
+
+
+// Used for decoding data as it is read by RWops.
+static int (*RWFileRead)( SDL_RWops *context, void *ptr, int size, int maxnum ) = NULL;
+static int RWDatFileRead( SDL_RWops *context, void *ptr, int size, int maxnum )
+{
+	int bytes = RWFileRead( context, ptr, size, maxnum );
+	for( int i = 0; i < bytes; i ++ )
+	{
+		unsigned char c = ((const unsigned char*) ptr )[ i ];
+		((unsigned char*) ptr )[ i ] = ( ((c & 0x0F) << 4) | ((c & 0xF0) >> 4) ) ^ 0xAA;
+	}
+	return bytes;
+}
 
 
 ResourceManager::ResourceManager( void )
@@ -418,11 +434,10 @@ GLuint ResourceManager::LoadTexture( const std::string &name )
 		glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, surface->pixels );
 		
 		// Generate mipmaps.
-		#ifndef LEGACY_MIPMAP
+		if( ! Raptor::Game->Cfg.SettingAsBool("g_legacy_mipmap") )
 			glGenerateMipmap( GL_TEXTURE_2D );
-		#else
+		else
 			gluBuild2DMipmaps( GL_TEXTURE_2D, GL_RGBA, surface->w, surface->h, GL_RGBA, GL_UNSIGNED_BYTE, surface->pixels );
-		#endif
 		
 		// Free the SDL_Surface only if it was successfully created.
 		SDL_FreeSurface( surface );
@@ -512,8 +527,23 @@ Mix_Music *ResourceManager::LoadMusic( const std::string &name )
 	
 	std::string filename = Find( name );
 	
-	// This loads any supported sound format (not just WAV).
-	Mix_Music *music = Mix_LoadMUS( filename.c_str() );
+	Mix_Music *music = NULL;
+	
+	if( (filename.length() >= 4) && (strcasecmp( filename.c_str() + filename.length() - 4, ".dat" ) == 0) )
+	{
+		// Set up on-the-fly decoder to load music.
+		SDL_RWops *rw = SDL_RWFromFile( filename.c_str(), "rb" );
+		if( rw )
+		{
+			RWFileRead = rw->read;
+			rw->read = RWDatFileRead;
+			music = Mix_LoadMUS_RW( rw );
+		}
+	}
+	else
+		// Load music file.
+		music = Mix_LoadMUS( filename.c_str() );
+	
 	if( ! music )
 		fprintf( stderr, "Couldn't load %s: %s\n", filename.c_str(), Mix_GetError() );
 	
@@ -543,6 +573,7 @@ Shader *ResourceManager::LoadShader( const std::string &name )
 	if( name.empty() )
 		return NULL;
 	
+	// Find the full path to the .frag file, and then remove the file extension.
 	std::string filename = Find( name + std::string(".frag") );
 	filename = filename.substr( 0, filename.find_last_of(".") );
 	
@@ -563,9 +594,12 @@ Shader *ResourceManager::LoadShader( const std::string &name )
 
 std::string ResourceManager::Find( const std::string &name ) const
 {
+	// Leading slash specifies an absolute path within game directory (ignore SearchPath).
+	// Double-leading slash specifies an absolute path in file system.
 	if( name[ 0 ] == '/' )
 		return name.substr( 1 );
 	
+	// Search for all possible occurances in SearchPath order, and return the first found.
 	for( std::deque<std::string>::const_iterator path_iter = SearchPath.begin(); path_iter != SearchPath.end(); path_iter ++ )
 	{
 		std::string path = *path_iter + "/" + name;
@@ -573,5 +607,6 @@ std::string ResourceManager::Find( const std::string &name ) const
 			return path;
 	}
 	
+	// If not found, just return the name again.
 	return name;
 }

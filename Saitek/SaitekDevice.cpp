@@ -5,6 +5,10 @@
 #include <fstream>
 #include "SaitekManager.h"
 
+#ifndef _MSC_VER
+#define sprintf_s snprintf
+#endif
+
 
 SaitekDevice::SaitekDevice( void *device_handle, GUID guid )
 {
@@ -12,6 +16,10 @@ SaitekDevice::SaitekDevice( void *device_handle, GUID guid )
 	DeviceHandle = device_handle;
 	LEDRateLimit = 0.;
 	memset( LEDs, 0, sizeof(LEDs) );
+}
+
+SaitekDevice::~SaitekDevice()
+{
 }
 
 const char *SaitekDevice::TypeString( void )
@@ -22,7 +30,7 @@ const char *SaitekDevice::TypeString( void )
 std::string SaitekDevice::GuidString( void )
 {
 	char guid_string[ 128 ] = "";
-	sprintf_s( guid_string, 128, "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X", Guid.Data1, Guid.Data2, Guid.Data3, Guid.Data4[ 0 ], Guid.Data4[ 1 ], Guid.Data4[ 2 ], Guid.Data4[ 3 ], Guid.Data4[ 4 ], Guid.Data4[ 5 ], Guid.Data4[ 6 ], Guid.Data4[ 7 ] );
+	sprintf_s( guid_string, 128, "%08lX-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X", Guid.Data1, Guid.Data2, Guid.Data3, Guid.Data4[ 0 ], Guid.Data4[ 1 ], Guid.Data4[ 2 ], Guid.Data4[ 3 ], Guid.Data4[ 4 ], Guid.Data4[ 5 ], Guid.Data4[ 6 ], Guid.Data4[ 7 ] );
 	return std::string( guid_string );
 }
 

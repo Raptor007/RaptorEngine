@@ -30,6 +30,7 @@ public:
 	void Deinitialize( void );
 	void RestartService( void );
 	
+	static bool IsEqualGUID( const GUID guid1, const GUID guid2 );
 	static void __stdcall EnumerateCallback( void *device_handle, void *ctxt );
 	static void __stdcall SaitekDeviceChange( void *device_handle, bool added, void *ctxt );
 	static void __stdcall PageChange( void *device_handle, DWORD page_num, bool active, void *device_ptr );

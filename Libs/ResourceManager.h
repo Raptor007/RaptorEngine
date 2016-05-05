@@ -4,6 +4,7 @@
 
 #pragma once
 class ResourceManager;
+class DecryptedResource;
 
 #include "PlatformSpecific.h"
 

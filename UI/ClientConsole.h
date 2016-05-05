@@ -21,8 +21,9 @@ public:
 	SDLKey ToggleKey;
 	Font *MessageFont;
 	TextBox *Input;
-	std::deque<std::string> History;
 	int Scroll;
+	std::vector<std::string> History;
+	size_t HistoryIndex;
 	
 	ClientConsole( void );
 	virtual ~ClientConsole();

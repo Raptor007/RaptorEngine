@@ -30,7 +30,7 @@ void GroupBox::Draw( void )
 {
 	if( TitleFont )
 	{
-		SDL_Rect text_rect;
+		SDL_Rect text_rect = {0,0,0,0};
 		TitleFont->TextSize( TitleText, &text_rect );
 		
 		int x = 0, y = 0;

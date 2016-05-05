@@ -308,7 +308,7 @@ void SoundOut::Update( const Pos3D *cam )
 				}
 				
 				// If we hit the end of the playlist, start again at the beginning.
-				if( next_track >= (int) MusicList.size() )
+				if( (size_t) next_track >= MusicList.size() )
 					next_track = 0;
 				
 				try

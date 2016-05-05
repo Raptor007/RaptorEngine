@@ -10,7 +10,9 @@
 #include <windows.h>
 #include <winsock.h>
 #include <iphlpapi.h>
+#ifdef _MSC_VER
 #pragma comment( lib, "iphlpapi.lib" )
+#endif
 #endif
 
 

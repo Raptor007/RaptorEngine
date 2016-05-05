@@ -33,7 +33,7 @@ Framebuffer::Framebuffer( int x, int y, GLint texture_filter )
 	AspectRatio = ((float)( W )) / ((float)( H ));
 
 	#if GL_ARB_texture_non_power_of_two
-		ForcePowerOfTwo = false;
+		ForcePowerOfTwo = ! Raptor::Game->Cfg.SettingAsBool( "g_framebuffers_anyres", true );
 	#else
 		ForcePowerOfTwo = true;
 	#endif
@@ -69,7 +69,7 @@ void Framebuffer::Clear( void )
 void Framebuffer::Initialize( void )
 {
 	// Don't attempt to reload if we've already tried to (unless we use Clear first).
-	if( FramebufferHandle || Texture || Depthbuffer )
+	if( FramebufferHandle || Texture || Depthbuffer || ! Raptor::Game->Cfg.SettingAsBool( "g_framebuffers", true ) )
 		return;
 	
 	// Some systems require power-of-two dimensions.

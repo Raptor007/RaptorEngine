@@ -79,6 +79,25 @@ void SaitekManager::RestartService( void )
 }
 
 
+bool SaitekManager::IsEqualGUID( const GUID guid1, const GUID guid2 )
+{
+	return
+	(
+		(guid1.Data1 == guid2.Data1) &&
+		(guid1.Data2 == guid2.Data2) &&
+		(guid1.Data3 == guid2.Data3) &&
+		(guid1.Data4[0] == guid2.Data4[0]) &&
+		(guid1.Data4[1] == guid2.Data4[1]) &&
+		(guid1.Data4[2] == guid2.Data4[2]) &&
+		(guid1.Data4[3] == guid2.Data4[3]) &&
+		(guid1.Data4[4] == guid2.Data4[4]) &&
+		(guid1.Data4[5] == guid2.Data4[5]) &&
+		(guid1.Data4[6] == guid2.Data4[6]) &&
+		(guid1.Data4[7] == guid2.Data4[7])
+	);
+}
+
+
 void __stdcall SaitekManager::EnumerateCallback( void *device_handle, void *ctxt )
 {
 	SaitekDeviceChange( device_handle, true, ctxt );
@@ -106,9 +125,9 @@ void __stdcall SaitekManager::SaitekDeviceChange( void *device_handle, bool adde
 			GUID guid;
 			Saitek::Global->DO.GetDeviceType( device_handle, &guid );
 			
-			if( guid == DeviceType_X52Pro )
+			if( IsEqualGUID( guid, DeviceType_X52Pro ) )
 				dev_inst = new SaitekX52Pro( device_handle );
-			else if( guid == DeviceType_Fip )
+			else if( IsEqualGUID( guid, DeviceType_Fip ) )
 				dev_inst = new SaitekFIP( device_handle );
 			else
 				dev_inst = new SaitekDevice( device_handle, guid );
@@ -156,7 +175,7 @@ int SaitekManager::SetFIPImage( Framebuffer *fb, int fip_num )
 	int num = 0;
 	for( std::vector<SaitekDevice*>::iterator device_iter = Devices.begin(); device_iter != Devices.end(); device_iter ++ )
 	{
-		if( (*device_iter)->Guid == DeviceType_Fip )
+		if( IsEqualGUID( (*device_iter)->Guid, DeviceType_Fip ) )
 		{
 			SaitekFIP *fip = (SaitekFIP*) *device_iter;
 			
@@ -181,7 +200,7 @@ int SaitekManager::ClearFIPImage( int fip_num )
 	int num = 0;
 	for( std::vector<SaitekDevice*>::iterator device_iter = Devices.begin(); device_iter != Devices.end(); device_iter ++ )
 	{
-		if( (*device_iter)->Guid == DeviceType_Fip )
+		if( IsEqualGUID( (*device_iter)->Guid, DeviceType_Fip ) )
 		{
 			SaitekFIP *fip = (SaitekFIP*) *device_iter;
 			
@@ -206,7 +225,7 @@ int SaitekManager::SetFIPLED( int led, bool value, int fip_num )
 	int num = 0;
 	for( std::vector<SaitekDevice*>::iterator device_iter = Devices.begin(); device_iter != Devices.end(); device_iter ++ )
 	{
-		if( (*device_iter)->Guid == DeviceType_Fip )
+		if( IsEqualGUID( (*device_iter)->Guid, DeviceType_Fip ) )
 		{
 			SaitekFIP *fip = (SaitekFIP*) *device_iter;
 			
@@ -231,7 +250,7 @@ int SaitekManager::SetX52ProLED( int led, bool value, int x52pro_num )
 	int num = 0;
 	for( std::vector<SaitekDevice*>::iterator device_iter = Devices.begin(); device_iter != Devices.end(); device_iter ++ )
 	{
-		if( (*device_iter)->Guid == DeviceType_X52Pro )
+		if( IsEqualGUID( (*device_iter)->Guid, DeviceType_X52Pro ) )
 		{
 			SaitekX52Pro *x52pro = (SaitekX52Pro*) *device_iter;
 			
@@ -256,7 +275,7 @@ int SaitekManager::SetX52ProMFD( int line, const char *text, int x52pro_num )
 	int num = 0;
 	for( std::vector<SaitekDevice*>::iterator device_iter = Devices.begin(); device_iter != Devices.end(); device_iter ++ )
 	{
-		if( (*device_iter)->Guid == DeviceType_X52Pro )
+		if( IsEqualGUID( (*device_iter)->Guid, DeviceType_X52Pro ) )
 		{
 			SaitekX52Pro *x52pro = (SaitekX52Pro*) *device_iter;
 			
