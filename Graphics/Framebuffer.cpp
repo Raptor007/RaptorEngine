@@ -20,13 +20,10 @@ Framebuffer::Framebuffer( int x, int y, GLint texture_filter )
 	Depthbuffer = 0;
 	AllocW = 0;
 	AllocH = 0;
+	OffsetX = 0;
 	
-	W = FRAMEBUFFER_DEFAULT_RES;
-	if( x )
-		W = x;
-	H = W;
-	if( y )
-		H = y;
+	W = x ? x : FRAMEBUFFER_DEFAULT_RES;
+	H = y ? y : W;
 	
 	TextureFilter = texture_filter;
 	
@@ -50,6 +47,14 @@ Framebuffer::~Framebuffer()
 
 void Framebuffer::Clear( void )
 {
+	if( Initialized && (LoadedTime.ElapsedSeconds() > Raptor::Game->Res.ResetTime.ElapsedSeconds()) )
+	{
+		// No OpenGL cleanup if we already lost the context.
+		FramebufferHandle = 0;
+		Texture = 0;
+		Depthbuffer = 0;
+	}
+	
 	Initialized = false;
 	
 	if( FramebufferHandle )
@@ -69,25 +74,51 @@ void Framebuffer::Clear( void )
 void Framebuffer::Initialize( void )
 {
 	// Don't attempt to reload if we've already tried to (unless we use Clear first).
-	if( FramebufferHandle || Texture || Depthbuffer || ! Raptor::Game->Cfg.SettingAsBool( "g_framebuffers", true ) )
+	if( FramebufferHandle || Texture || Depthbuffer )
 		return;
+	
+	// If framebuffers are disabled, create a blank 2x2 texture instead.
+	if( ! Raptor::Game->Cfg.SettingAsBool( "g_framebuffers", true ) )
+	{
+		glGenTextures( 1, &Texture );
+		glBindTexture( GL_TEXTURE_2D, Texture );
+		glEnable( GL_TEXTURE_2D );
+		unsigned char raw[ 16 ] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+		glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, raw );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, TextureFilter );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+		glBindTexture( GL_TEXTURE_2D, 0 );
+		LoadedTime.Reset();
+		return;
+	}
 	
 	// Some systems require power-of-two dimensions.
 	if( ForcePowerOfTwo )
 	{
 		AllocW = Num::NextPowerOfTwo(W);
 		AllocH = Num::NextPowerOfTwo(H);
-		
-		// If this system doesn't support non-power-of-two, scale down instead of up.
-		if( (AllocW != W) && (AllocW > 2) )
-			AllocW /= 2;
-		if( (AllocH != H) && (AllocH > 2) )
-			AllocH /= 2;
 	}
 	else
 	{
 		AllocW = W;
 		AllocH = H;
+	}
+	
+	// Limit framebuffers to maximum texture resolution.
+	GLint tex_max = Raptor::Game->Cfg.SettingAsInt( "g_texture_maxres", 0 );
+	if( ! tex_max )
+		glGetIntegerv( GL_MAX_TEXTURE_SIZE, &tex_max );
+	if( tex_max > 0 )
+	{
+		if( ForcePowerOfTwo )
+		{
+			int tex_max_pow2 = Num::NextPowerOfTwo(tex_max);
+			tex_max = (tex_max_pow2 > tex_max) ? (tex_max_pow2 / 2) : tex_max_pow2;
+		}
+		if( AllocW > tex_max )
+			AllocW = tex_max;
+		if( AllocH > tex_max )
+			AllocH = tex_max;
 	}
 	
 	// Framebuffer
@@ -97,10 +128,13 @@ void Framebuffer::Initialize( void )
 	// Renderbuffer
 	glGenTextures( 1, &Texture );
 	glBindTexture( GL_TEXTURE_2D, Texture );
+	void *raw = malloc( AllocW * AllocH * 4 );
+	memset( raw, 0, AllocW * AllocH * 4 );
+	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, AllocW, AllocH, 0, GL_RGBA, GL_UNSIGNED_BYTE, raw );
+	free( raw );
+	raw = NULL;
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, TextureFilter );
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-	glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, Raptor::Game->Gfx.AF );
-	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, AllocW, AllocH, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL );
 	glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Texture, 0 );
 	GLenum draw_buffers[ 1 ] = { GL_COLOR_ATTACHMENT0 };
 	glDrawBuffers( 1, draw_buffers );
@@ -114,14 +148,7 @@ void Framebuffer::Initialize( void )
 	// Make sure everything worked.
 	GLenum framebuffer_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 	if( framebuffer_status == GL_FRAMEBUFFER_COMPLETE )
-	{
 		Initialized = true;
-		
-		// Just to be tidy, make the framebuffer transparent initially.
-		// NOTE: This may not clear the entire thing if the framebuffer is larger than the currently selected viewport.
-		glClearColor( 0.f, 0.f, 0.f, 0.f );
-		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-	}
 #ifdef GL_FRAMEBUFFER_UNSUPPORTED
 	else if( (framebuffer_status == GL_FRAMEBUFFER_UNSUPPORTED) && ! ForcePowerOfTwo )
 	{
@@ -200,11 +227,40 @@ bool Framebuffer::Select( void )
 	if( Initialized )
 	{
 		glBindFramebuffer( GL_FRAMEBUFFER, FramebufferHandle );
-		glViewport( 0, 0, AllocW, AllocH );
+		SetViewport();
 		return true;
 	}
 	
 	return false;
+}
+
+
+void Framebuffer::SetViewport( void )
+{
+	// Correct for VR offset.
+	if( OffsetX >= 0 )
+		glViewport( 0, 0, W + OffsetX, H );
+	else
+		glViewport( OffsetX, 0, W - OffsetX, H );
+}
+
+
+void Framebuffer::SetViewport( int x, int y, int w, int h )
+{
+	// Correct for forced power-of-two framebuffers.
+	if( W != AllocW )
+	{
+		x = (x / (float) W) * AllocW + 0.5f;
+		w = (w / (float) W) * AllocW + 0.5f;
+	}
+	if( H != AllocH )
+	{
+		y = (y / (float) H) * AllocH + 0.5f;
+		h = (h / (float) H) * AllocH + 0.5f;
+	}
+	
+	// Correct for VR offset.
+	glViewport( x + OffsetX / 2, y, w, h );
 }
 
 
@@ -257,17 +313,19 @@ void Framebuffer::Setup3D( double fov_w, double cam_x, double cam_y, double cam_
 
 void Framebuffer::Setup3D( double fov_w, double cam_x, double cam_y, double cam_z, double cam_look_x, double cam_look_y, double cam_look_z, double cam_up_x, double cam_up_y, double cam_up_z )
 {
+	float aspect_ratio = (W + abs(OffsetX)) / (float) H;
+	
 	// If we pass FOV=0, calculate a good default.  4:3 is FOV 80, widescreen is scaled appropriately.
 	if( fov_w == 0. )
-		fov_w = 60. * AspectRatio;
+		fov_w = 60. * aspect_ratio;
 	// If we pass FOV<0, treat its absolute value as fov_h.
 	else if( fov_w < 0. )
-		fov_w *= -AspectRatio;
+		fov_w *= -aspect_ratio;
 	
 	glEnable( GL_DEPTH_TEST );
 	glMatrixMode( GL_PROJECTION );
 	glLoadIdentity();
-	gluPerspective( fov_w / AspectRatio, AspectRatio, Raptor::Game->Gfx.ZNear, Raptor::Game->Gfx.ZFar );
+	gluPerspective( fov_w / aspect_ratio, aspect_ratio, Raptor::Game->Gfx.ZNear, Raptor::Game->Gfx.ZFar );
 	glMatrixMode( GL_MODELVIEW );
 	glLoadIdentity();
 	gluLookAt( cam_x, cam_y, cam_z,  cam_look_x, cam_look_y, cam_look_z,  cam_up_x, cam_up_y, cam_up_z );

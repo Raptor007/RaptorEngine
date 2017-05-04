@@ -19,6 +19,9 @@ Font::Font( std::string name, int point_size )
 	Name = name;
 	PointSize = point_size;
 	
+	for( int i = 0; i < 256; i ++ )
+		Glyphs[ i ].Pic = NULL;
+	
 	InitFont();
 }
 
@@ -54,10 +57,7 @@ void Font::InitFont( void )
 	LineSkip = TTF_FontLineSkip( TTFont );
 	
 	for( int i = 0; i < 256; i ++ )
-	{
-		Glyphs[ i ].Pic = NULL;
 		Glyphs[ i ].Tex = 0;
-	}
 	
 	LoadedTime.Reset();
 	
@@ -67,38 +67,27 @@ void Font::InitFont( void )
 
 void Font::LoadChar( char c )
 {
-	GLfloat texcoord[ 4 ] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	char letter[ 2 ] = { 0, 0 };
-
 	if( ! Glyphs[ (unsigned char) c ].Pic )
 	{
-		SDL_Surface *g0 = NULL;
-		SDL_Surface *g1 = NULL;
-
-		letter[ 0 ] = c;
+		char letter[ 2 ] = { c, 0 };
+		
 		TTF_GlyphMetrics( TTFont, (Uint16) c,
-		  		&Glyphs[ (unsigned char) c ].MinX, &Glyphs[ (unsigned char) c ].MaxX,
-		  		&Glyphs[ (unsigned char) c ].MinY, &Glyphs[ (unsigned char) c ].MaxY, 
-		  		&Glyphs[ (unsigned char) c ].Advance );
+			&(Glyphs[ (unsigned char) c ].MinX), &(Glyphs[ (unsigned char) c ].MaxX),
+			&(Glyphs[ (unsigned char) c ].MinY), &(Glyphs[ (unsigned char) c ].MaxY), 
+			&(Glyphs[ (unsigned char) c ].Advance) );
 		
 		SDL_Color foreground = { 255, 255, 255, 255 };
-		g0 = TTF_RenderText_Blended( TTFont, letter, foreground );
-
-		if( g0 )
-		{
-			g1 = SDL_DisplayFormatAlpha( g0 );
-			SDL_FreeSurface( g0 );
-		}
-
-		if( g1 )
-		{
-			Glyphs[ (unsigned char) c ].Pic = g1;
-			Glyphs[ (unsigned char) c ].Tex = Raptor::Game->Gfx.LoadTexture( g1, texcoord );  // FIXME?
-			Glyphs[ (unsigned char) c ].TexMinX = texcoord[ 0 ];
-			Glyphs[ (unsigned char) c ].TexMinY = texcoord[ 1 ];
-			Glyphs[ (unsigned char) c ].TexMaxX = texcoord[ 2 ];
-			Glyphs[ (unsigned char) c ].TexMaxY = texcoord[ 3 ];
-		}
+		Glyphs[ (unsigned char) c ].Pic = TTF_RenderText_Blended( TTFont, letter, foreground );
+	}
+	
+	if( (! Glyphs[ (unsigned char) c ].Tex ) && Glyphs[ (unsigned char) c ].Pic )
+	{
+		GLfloat texcoord[ 4 ] = { 0.0f, 0.0f, 0.0f, 0.0f };
+		Glyphs[ (unsigned char) c ].Tex = Raptor::Game->Gfx.MakeTexture( Glyphs[ (unsigned char) c ].Pic, GL_LINEAR, GL_CLAMP, texcoord );
+		Glyphs[ (unsigned char) c ].TexMinX = texcoord[ 0 ];
+		Glyphs[ (unsigned char) c ].TexMinY = texcoord[ 1 ];
+		Glyphs[ (unsigned char) c ].TexMaxX = texcoord[ 2 ];
+		Glyphs[ (unsigned char) c ].TexMaxY = texcoord[ 3 ];
 	}
 }
 

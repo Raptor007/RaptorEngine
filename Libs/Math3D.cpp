@@ -156,8 +156,8 @@ double Math3D::LineSegToLineSegDist( const Pos3D *line1end1, const Pos3D *line1e
 	}
 	
 	// finally do the division to get sc and tc
-	sc = (abs(sN) < EPSILON ? 0. : sN / sD);
-	tc = (abs(tN) < EPSILON ? 0. : tN / tD);
+	sc = (fabs(sN) < EPSILON ? 0. : sN / sD);
+	tc = (fabs(tN) < EPSILON ? 0. : tN / tD);
 	
 	// get the difference of the two closest points
 	Vec3D dP = w + (u * sc) - (v * tc);  // = S1(sc) - S2(tc)

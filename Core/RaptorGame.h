@@ -29,6 +29,7 @@ class RaptorGame;
 #include "MouseState.h"
 #include "KeyboardState.h"
 #include "JoystickManager.h"
+#include "HeadState.h"
 
 #ifdef WIN32
 #include "SaitekManager.h"
@@ -59,6 +60,7 @@ public:
 	MouseState Mouse;
 	KeyboardState Keys;
 	JoystickManager Joy;
+	HeadState Head;
 	
 	#ifdef WIN32
 	SaitekManager Saitek;

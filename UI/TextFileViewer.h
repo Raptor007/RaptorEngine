@@ -21,12 +21,15 @@ public:
 	std::string Title;
 	Font *TitleFont;
 	ListBox *Contents;
+	TextFileViewerCloseButton *CloseButton;
+	bool AutoPosition;
 	
 	TextFileViewer( SDL_Rect *window_rect, const char *filename, Font *font = NULL, const char *title = NULL );
 	virtual ~TextFileViewer();
 	
 	bool KeyUp( SDLKey key );
 	
+	void UpdateRects( void );
 	void Draw( void );
 };
 

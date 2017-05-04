@@ -20,6 +20,8 @@ Graphics::Graphics( void )
 	
 	W = 640;
 	H = 480;
+	RealW = W;
+	RealH = H;
 	AspectRatio = ((float)( W )) / ((float)( H ));
 	ZNear = Z_NEAR;
 	ZFar = Z_FAR;
@@ -28,6 +30,7 @@ Graphics::Graphics( void )
 	AF = 16;
 	
 	Screen = NULL;
+	DrawTo = NULL;
 }
 
 
@@ -67,11 +70,11 @@ void Graphics::Initialize( void )
 
 void Graphics::SetMode( int x, int y )
 {
-	SetMode( x, y, Fullscreen, FSAA, AF, ZNear, ZFar );
+	SetMode( x, y, BPP, Fullscreen, FSAA, AF, ZNear, ZFar );
 }
 
 
-void Graphics::SetMode( int x, int y, bool fullscreen, int fsaa, int af, double z_near, double z_far )
+void Graphics::SetMode( int x, int y, int bpp, bool fullscreen, int fsaa, int af, double z_near, double z_far )
 {
 	// Make sure we've initialized SDL.
 	if( ! Initialized )
@@ -82,6 +85,7 @@ void Graphics::SetMode( int x, int y, bool fullscreen, int fsaa, int af, double 
 	// Set up the video properties.
 	W = x;
 	H = y;
+	BPP = bpp;
 	AspectRatio = (W && H) ? ((float)( W )) / ((float)( H )) : 1.f;
 	Fullscreen = fullscreen;
 	FSAA = fsaa;
@@ -93,10 +97,10 @@ void Graphics::SetMode( int x, int y, bool fullscreen, int fsaa, int af, double 
 	SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
 	SDL_GL_SetAttribute( SDL_GL_SWAP_CONTROL, 1 );
 	
-	// 24-bit minimum depth buffer.
-	SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, 24 );
+	// Set minimum depth buffer.
+	SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, Z_BITS );
 	
-	// Enable anti-aliasing.
+	// Enable multi-sample anti-aliasing.
 	if( FSAA > 1 )
 	{
 		SDL_GL_SetAttribute( SDL_GL_MULTISAMPLEBUFFERS, 1 );
@@ -104,6 +108,7 @@ void Graphics::SetMode( int x, int y, bool fullscreen, int fsaa, int af, double 
 	}
 	else
 	{
+		FSAA = 0;
 		SDL_GL_SetAttribute( SDL_GL_MULTISAMPLEBUFFERS, 0 );
 		SDL_GL_SetAttribute( SDL_GL_MULTISAMPLESAMPLES, 1 );
 	}
@@ -129,18 +134,20 @@ void Graphics::SetMode( int x, int y, bool fullscreen, int fsaa, int af, double 
 	#endif
 	
 	// Create a new screen.
-	Screen = SDL_SetVideoMode( x, y, 32, SDL_OPENGL | SDL_ANYFORMAT | (Fullscreen ? SDL_FULLSCREEN : SDL_RESIZABLE) );
+	Screen = SDL_SetVideoMode( x, y, bpp, SDL_OPENGL | SDL_ANYFORMAT | (Fullscreen ? SDL_FULLSCREEN : SDL_RESIZABLE) );
 	
 	if( ! Screen )
 	{
-		// We couldn't set that video mode, so try a few windowed modes.
-		if( (x > 1024) || (y > 768) || fullscreen || (fsaa > 0) )
-			SetMode( 1024, 768, false, 0, 1, z_near, z_far );
-		else if( (x != 640) || (y != 480) || fullscreen || (fsaa > 0) )
-			SetMode( 640, 480, false, 0, 1, z_near, z_far );
+		fprintf( stderr, "Unable to set %s video mode %ix%ix%i: %s\n", (fullscreen ? "fullscreen" : "windowed"), x, y, bpp, SDL_GetError() );
+		
+		// We couldn't set that video mode, so try 640x480, then windowed 640x480.
+		if( fullscreen && ((x != 640) || (y != 480)) )
+			SetMode( 640, 480, bpp, fullscreen, fsaa, af, z_near, z_far );
+		else if( fullscreen )
+			SetMode( 640, 480, bpp, false, fsaa, af, z_near, z_far );
 		else
 		{
-			fprintf( stderr, "Unable to set video mode: %s\n", SDL_GetError() );
+			fflush( stderr );
 			exit( -1 );
 		}
 		return;
@@ -149,9 +156,24 @@ void Graphics::SetMode( int x, int y, bool fullscreen, int fsaa, int af, double 
 	// We successfully set the video mode, so pull the resolution from the SDL_Screen.
 	W = Screen->w;
 	H = Screen->h;
+	RealW = W;
+	RealH = H;
 	AspectRatio = (W && H) ? ((float)( W )) / ((float)( H )) : 1.f;
+	BPP = Screen->format->BitsPerPixel;
 	
-	// Determine maximum AF.
+	if( Fullscreen )
+	{
+		// If we weren't able to use the level of multi-sample anti-aliasing requested,
+		// update the setting to reflect this.  Ignored for windowed mode because it lies.
+		int max_fsaa = 0;
+		SDL_GL_GetAttribute( SDL_GL_MULTISAMPLESAMPLES, &max_fsaa );
+		if( FSAA > max_fsaa )
+			FSAA = max_fsaa;
+		if( FSAA == 1 )
+			FSAA = 0;
+	}
+	
+	// Determine maximum anisotropic filtering.
 	if( AF < 1 )
 		AF = 1;
 	GLint max_af = 1;
@@ -190,7 +212,6 @@ void Graphics::SetMode( int x, int y, bool fullscreen, int fsaa, int af, double 
 	// Disable the system cursor.
 	SDL_ShowCursor( SDL_DISABLE );
 	
-	
 	// Update the client config.
 	if( Fullscreen )
 	{
@@ -208,40 +229,53 @@ void Graphics::SetMode( int x, int y, bool fullscreen, int fsaa, int af, double 
 		Raptor::Game->Cfg.Settings[ "g_res_windowed_x" ] = Num::ToString(x);
 		Raptor::Game->Cfg.Settings[ "g_res_windowed_y" ] = Num::ToString(y);
 	}
-	Raptor::Game->Cfg.Settings[ "g_znear" ] = Num::ToString(ZNear);
-	Raptor::Game->Cfg.Settings[ "g_zfar" ] = Num::ToString(ZFar);
 	Raptor::Game->Cfg.Settings[ "g_fsaa" ] = Num::ToString(FSAA);
 	Raptor::Game->Cfg.Settings[ "g_af" ] = Num::ToString(AF);
+	Raptor::Game->Cfg.Settings[ "g_znear" ] = Num::ToString(ZNear);
+	Raptor::Game->Cfg.Settings[ "g_zfar" ] = Num::ToString(ZFar);
 }
 
 
 void Graphics::Restart( void )
 {
 	int x = 1024, y = 768;
-	bool fullscreen = Raptor::Game->Cfg.SettingAsBool( "g_fullscreen" );
-	int fsaa = Raptor::Game->Cfg.SettingAsInt( "g_fsaa" );
-	int af = Raptor::Game->Cfg.SettingAsInt( "g_af" );
+	int bpp = Raptor::Game->Cfg.SettingAsInt( "g_bpp", 32 );
+	bool fullscreen = Raptor::Game->Cfg.SettingAsBool( "g_fullscreen", true );
+	int fsaa = Raptor::Game->Cfg.SettingAsInt( "g_fsaa", 0 );
+	int af = Raptor::Game->Cfg.SettingAsInt( "g_af", 1 );
 	if( fullscreen )
 	{
-		x = Raptor::Game->Cfg.SettingAsInt( "g_res_fullscreen_x" );
-		y = Raptor::Game->Cfg.SettingAsInt( "g_res_fullscreen_y" );
+		x = Raptor::Game->Cfg.SettingAsInt( "g_res_fullscreen_x", 640 );
+		y = Raptor::Game->Cfg.SettingAsInt( "g_res_fullscreen_y", 480 );
 	}
 	else
 	{
-		x = Raptor::Game->Cfg.SettingAsInt( "g_res_windowed_x" );
-		y = Raptor::Game->Cfg.SettingAsInt( "g_res_windowed_y" );
+		x = Raptor::Game->Cfg.SettingAsInt( "g_res_windowed_x", 640 );
+		y = Raptor::Game->Cfg.SettingAsInt( "g_res_windowed_y", 480 );
 	}
 	double z_near = Raptor::Game->Cfg.SettingAsDouble( "g_znear", Z_NEAR );
 	double z_far = Raptor::Game->Cfg.SettingAsDouble( "g_zfar", Z_FAR );
 	
-	SetMode( x, y, fullscreen, fsaa, af, z_near, z_far );
+	SetMode( x, y, bpp, fullscreen, fsaa, af, z_near, z_far );
 }
 
 
 bool Graphics::SelectDefaultFramebuffer( void )
 {
-	glBindFramebuffer( GL_FRAMEBUFFER, 0 );
-	glViewport( 0, 0, W, H );
+	if( DrawTo && DrawTo->Select() )
+	{
+		W = DrawTo->W;
+		H = DrawTo->H;
+		AspectRatio = DrawTo->AspectRatio;
+	}
+	else
+	{
+		glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+		W = RealW;
+		H = RealH;
+		AspectRatio = (W && H) ? ((float)( W )) / ((float)( H )) : 1.f;
+		glViewport( 0, 0, W, H );
+	}
 	return true;
 }
 
@@ -281,6 +315,24 @@ void Graphics::SwapBuffers( void )
 }
 
 
+void Graphics::SetViewport( void )
+{
+	if( DrawTo )
+		DrawTo->SetViewport();
+	else
+		glViewport( 0, 0, W, H );
+}
+
+
+void Graphics::SetViewport( int x, int y, int w, int h )
+{
+	if( DrawTo )
+		DrawTo->SetViewport( x, y, w, h );
+	else
+		glViewport( x, y, w, h );
+}
+
+
 void Graphics::Setup2D( void )
 {
 	Setup2D( 0, 0, W, H );
@@ -301,6 +353,12 @@ void Graphics::Setup2D( double y1, double y2 )
 
 void Graphics::Setup2D( double x1, double y1, double x2, double y2 )
 {
+	if( DrawTo )
+	{
+		DrawTo->Setup2D( x1, y1, x2, y2 );
+		return;
+	}
+	
 	glDisable( GL_DEPTH_TEST );
 	glMatrixMode( GL_PROJECTION );
 	glLoadIdentity();
@@ -330,6 +388,12 @@ void Graphics::Setup3D( double fov_w, double cam_x, double cam_y, double cam_z, 
 
 void Graphics::Setup3D( double fov_w, double cam_x, double cam_y, double cam_z, double cam_look_x, double cam_look_y, double cam_look_z, double cam_up_x, double cam_up_y, double cam_up_z )
 {
+	if( DrawTo )
+	{
+		DrawTo->Setup3D( fov_w, cam_x, cam_y, cam_z, cam_look_x, cam_look_y, cam_look_z, cam_up_x, cam_up_y, cam_up_z );
+		return;
+	}
+	
 	// If we pass FOV=0, calculate a good default.  4:3 is FOV 80, widescreen is scaled appropriately.
 	if( fov_w == 0. )
 		fov_w = 60. * AspectRatio;
@@ -726,87 +790,128 @@ void Graphics::DrawBox3D( const Pos3D *corner, const Vec3D *fwd, const Vec3D *up
 // ---------------------------------------------------------------------------
 
 
-GLuint Graphics::LoadTexture( SDL_Surface *surface, GLfloat *texcoord, GLint texture_mode )
+GLuint Graphics::MakeTexture( SDL_Surface *surface, GLint texture_filter, GLint texture_wrap, GLfloat *texcoord )
 {
-	// Use the surface width and height expanded to powers of 2
-	int w = Num::NextPowerOfTwo( surface->w );
-	int h = Num::NextPowerOfTwo( surface->h );
-	texcoord[0] = 0.f;                                          // Min X
-	texcoord[1] = 0.f;                                          // Min Y
-	texcoord[2] = ((GLfloat)( surface->w )) / ((GLfloat)( w )); // Max X
-	texcoord[3] = ((GLfloat)( surface->h )) / ((GLfloat)( h ));	// Max Y
+	int w = surface->w;
+	int h = surface->h;
 	
-	SDL_Surface *image = SDL_CreateRGBSurface(
-	        SDL_SWSURFACE,
-	        w, h,
-	        32,
-#ifdef ENDIAN_BIG
-	        // RGBA
-	        0xFF000000,
-	        0x00FF0000,
-	        0x0000FF00,
-	        0x000000FF
-#else
-	        // ABGR
-	        0x000000FF,
-	        0x0000FF00,
-	        0x00FF0000,
-	        0xFF000000
-#endif
-       		);
-	if( ! image )
-		return 0;
+	// If the caller (ex: Font) wants to know the texture coordinates of the in-use area, pass that back.
+	if( texcoord )
+	{
+		w = Num::NextPowerOfTwo(w);
+		h = Num::NextPowerOfTwo(h);
+		texcoord[0] = 0.f;                                          // Min X
+		texcoord[1] = 0.f;                                          // Min Y
+		texcoord[2] = ((GLfloat)( surface->w )) / ((GLfloat)( w )); // Max X
+		texcoord[3] = ((GLfloat)( surface->h )) / ((GLfloat)( h ));	// Max Y
+	}
+	else if( ! Raptor::Game->Cfg.SettingAsBool( "g_texture_anyres", true ) )
+	{
+		w = Num::NextPowerOfTwo(w);
+		h = Num::NextPowerOfTwo(h);
+	}
 	
-	// Save the alpha blending attributes.
-	Uint32 saved_flags = surface->flags & ( SDL_SRCALPHA | SDL_RLEACCELOK );
-	Uint8 saved_alpha = surface->format->alpha;
-	if( saved_flags & SDL_SRCALPHA )
-		SDL_SetAlpha( surface, 0, 0 );
+	std::vector<SDL_Surface*> allocated;
 	
-	// Copy the surface into the GL texture image.
-	SDL_Rect area;
-	area.x = 0;
-	area.y = 0;
-	area.w = surface->w;
-	area.h = surface->h;
-	SDL_BlitSurface( surface, &area, image, &area );
+	// Convert to RGBA pixel format (required for SDL_image 1.2.8+).
+	if( (surface->format->BitsPerPixel != 32) || (surface->format->Rshift > surface->format->Bshift) )
+	{
+		#ifdef ENDIAN_BIG
+			SDL_PixelFormat format = { NULL, 32, 4, 0, 0, 0, 0, 0, 8, 16, 24, 0xFF000000, 0x00FF0000, 0x0000FF00, 0x000000FF, 0, 255 };
+		#else
+			SDL_PixelFormat format = { NULL, 32, 4, 0, 0, 0, 0, 0, 8, 16, 24, 0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000, 0, 255 };
+		#endif
+		SDL_Surface *temp = SDL_ConvertSurface( surface, &format, SDL_SWSURFACE );
+		if( temp )
+		{
+			allocated.push_back( temp );
+			surface = temp;
+		}
+	}
 	
-	// Restore the alpha blending attributes.
-	if( saved_flags & SDL_SRCALPHA )
-		SDL_SetAlpha( surface, saved_flags, saved_alpha );
+	// See if we have a texture dimension limit.
+	GLint tex_max = Raptor::Game->Cfg.SettingAsInt( "g_texture_maxres", 0 );
+	if( ! tex_max )
+		glGetIntegerv( GL_MAX_TEXTURE_SIZE, &tex_max );
+	if( tex_max > 0 )
+	{
+		if( w > tex_max )
+			w = tex_max;
+		if( h > tex_max )
+			h = tex_max;
+	}
+	
+	// Create a new image of the final size to be used for OpenGL (power of 2 no greater than maxres).
+	if( (surface->w != w) || (surface->h != h) )
+	{
+		SDL_Surface *temp = SDL_CreateRGBSurface( surface->flags, w, h, surface->format->BitsPerPixel, surface->format->Rmask, surface->format->Gmask, surface->format->Bmask, surface->format->Amask );
+		if( temp )
+		{
+			// Resample with nearest-neighbor algorithm.
+			memset( temp->pixels, 0, w*h*4 );
+			int w_reduce = Num::NextPowerOfTwo(surface->w) / w;
+			int h_reduce = Num::NextPowerOfTwo(surface->h) / h;
+			int x_max = (surface->w + w_reduce - 1) / w_reduce;
+			int y_max = (surface->h + h_reduce - 1) / h_reduce;
+			for( int x = 0; x < x_max; x ++ )
+				for( int y = 0; y < y_max; y ++ )
+					((uint32_t*)( temp->pixels ))[ y*w + x ] = ((const uint32_t*)( surface->pixels ))[ y*h_reduce * surface->w + x*w_reduce ];
+			
+			allocated.push_back( temp );
+			surface = temp;
+		}
+	}
 	
 	// Determine best texture modes and if we need to generate mipmaps.
-	GLint texture_mode_mag = texture_mode;
-	GLint texture_mode_min = texture_mode;
-	bool mipmap = false;
-	if( (texture_mode == GL_LINEAR_MIPMAP_LINEAR) || (texture_mode == GL_LINEAR_MIPMAP_NEAREST) )
+	GLint texture_filter_mag = texture_filter;
+	GLint texture_filter_min = texture_filter;
+	bool mipmap = Raptor::Game->Cfg.SettingAsBool( "g_mipmap", true );;
+	if( (texture_filter == GL_LINEAR_MIPMAP_LINEAR) || (texture_filter == GL_LINEAR_MIPMAP_NEAREST) )
 	{
-		texture_mode_mag = GL_LINEAR;
-		mipmap = true;
+		texture_filter_mag = GL_LINEAR;
+		if( ! mipmap )
+			texture_filter_min = GL_LINEAR;
 	}
-	else if( (texture_mode == GL_NEAREST_MIPMAP_LINEAR) || (texture_mode == GL_NEAREST_MIPMAP_NEAREST) )
+	else if( (texture_filter == GL_NEAREST_MIPMAP_LINEAR) || (texture_filter == GL_NEAREST_MIPMAP_NEAREST) )
 	{
-		texture_mode_mag = GL_NEAREST;
-		mipmap = true;
+		texture_filter_mag = GL_NEAREST;
+		if( ! mipmap )
+			texture_filter_min = GL_LINEAR;
 	}
-	else if( texture_mode == GL_NEAREST )
-		texture_mode_min = GL_LINEAR;
+	else
+	{
+		mipmap = false;
+		if( texture_filter == GL_NEAREST )
+			texture_filter_min = GL_LINEAR;
+	}
 	
-	// Create an OpenGL texture for the image.
+	// Create an OpenGL texture handle.
 	GLuint texture = 0;
 	glGenTextures( 1, &texture );
 	glBindTexture( GL_TEXTURE_2D, texture );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, texture_mode_mag );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, texture_mode_min );
-	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, image->pixels );
+	glEnable( GL_TEXTURE_2D );
+	
+	// Set the texture's wrapping option (repeat/clamp).
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, texture_wrap );
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, texture_wrap );
+	
+	// Set the texture's stretching properties.
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, texture_filter_mag );
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, texture_filter_min );
+	
+	// Enable anisotropic filtering.
+	glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, Raptor::Game->Gfx.AF );
+	
+	// Create an OpenGL texture from the surface.
+	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, surface->pixels );
+	
 	if( mipmap )
-	{
-		if( ! Raptor::Game->Cfg.SettingAsBool("g_legacy_mipmap") )
-			glGenerateMipmap( GL_TEXTURE_2D );
-		else
-			gluBuild2DMipmaps( GL_TEXTURE_2D, GL_RGBA, w, h, GL_RGBA, GL_UNSIGNED_BYTE, image->pixels );
-	}
-	SDL_FreeSurface( image );
+		// This is the most compatible mipmap mode and seems to have no downsides.
+		gluBuild2DMipmaps( GL_TEXTURE_2D, GL_RGBA, surface->w, surface->h, GL_RGBA, GL_UNSIGNED_BYTE, surface->pixels );
+	
+	// Free any temporary surfaces we had to create.
+	for( std::vector<SDL_Surface*>::iterator surf_iter = allocated.begin(); surf_iter != allocated.end(); surf_iter ++ )
+		SDL_FreeSurface( *surf_iter );
 	
 	return texture;
 }

@@ -371,73 +371,12 @@ GLuint ResourceManager::LoadTexture( const std::string &name )
 	
 	if( (surface = IMG_Load( filename.c_str() )) )
 	{
-		// Check that the image's width is a power of 2.
-		if( (surface->w & (surface->w - 1)) != 0 )
-			fprintf( stderr, "%s: width is not a power of 2.\n", name.c_str() );
+		// Check that the image dimensions are powers of 2.
+		if( ((surface->w & (surface->w - 1)) != 0) || ((surface->h & (surface->h - 1)) != 0) )
+			fprintf( stderr, "%s: dimensions are %ix%i but should both be powers of 2.\n", name.c_str(), surface->w, surface->h );
 		
-		// Also check if the height is a power of 2.
-		if( (surface->h & (surface->h - 1)) != 0 )
-			fprintf( stderr, "%s: height is not a power of 2.\n", name.c_str() );
-		
-		// Convert to RGBA pixel format (required for SDL_image 1.2.8+).
-		switch( surface->format->BitsPerPixel )
-		{
-			case 8:
-				// It's 8 bit, so always convert to RGBA.
-			case 16:
-				// It's 16 bit, so always convert to RGBA.
-			case 24:
-				// It's 24 bit, so always convert to RGBA.
-				{
-					#ifdef ENDIAN_BIG
-						SDL_PixelFormat format = { NULL, 32, 4, 0, 0, 0, 0, 0, 8, 16, 24, 0xFF000000, 0x00FF0000, 0x0000FF00, 0x000000FF, 0, 255 };
-					#else
-						SDL_PixelFormat format = { NULL, 32, 4, 0, 0, 0, 0, 0, 8, 16, 24, 0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000, 0, 255 };
-					#endif
-					SDL_Surface *temp = SDL_ConvertSurface( surface, &format, SDL_SWSURFACE );
-					SDL_FreeSurface( surface );
-					surface = temp;
-				}
-				break;
-			case 32:
-				// It's 32 bit, so convert to RGBA only if it's ABGR.
-				if( surface->format->Rshift > surface->format->Bshift )
-				{
-					#ifdef ENDIAN_BIG
-						SDL_PixelFormat format = { NULL, 32, 4, 0, 0, 0, 0, 0, 8, 16, 24, 0xFF000000, 0x00FF0000, 0x0000FF00, 0x000000FF, 0, 255 };
-					#else
-						SDL_PixelFormat format = { NULL, 32, 4, 0, 0, 0, 0, 0, 8, 16, 24, 0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000, 0, 255 };
-					#endif
-					SDL_Surface *temp = SDL_ConvertSurface( surface, &format, SDL_SWSURFACE );
-					SDL_FreeSurface( surface );
-					surface = temp;
-				}
-				break;
-			default:
-				fprintf( stderr, "%s: unknown pixel format.\n", name.c_str() );
-		}
-		
-		// Have OpenGL generate a texture object handle for us.
-		glGenTextures( 1, &texture );
-		
-		// Bind the texture object.
-		glBindTexture( GL_TEXTURE_2D, texture );
-		
-		// Set the texture's stretching properties.
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-		
-		// Enable anisotropic filtering.
-		glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, Raptor::Game->Gfx.AF );
-		
-		// Edit the texture object's image data using the information SDL_Surface gives us.
-		glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, surface->pixels );
-		
-		// Generate mipmaps.
-		if( ! Raptor::Game->Cfg.SettingAsBool("g_legacy_mipmap") )
-			glGenerateMipmap( GL_TEXTURE_2D );
-		else
-			gluBuild2DMipmaps( GL_TEXTURE_2D, GL_RGBA, surface->w, surface->h, GL_RGBA, GL_UNSIGNED_BYTE, surface->pixels );
+		// Create the OpenGL texture.
+		texture = Raptor::Game->Gfx.MakeTexture( surface, GL_LINEAR_MIPMAP_LINEAR, GL_REPEAT, NULL );
 		
 		// Free the SDL_Surface only if it was successfully created.
 		SDL_FreeSurface( surface );

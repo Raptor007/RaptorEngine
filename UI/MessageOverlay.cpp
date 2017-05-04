@@ -37,6 +37,18 @@ void MessageOverlay::UpdateRects( void )
 	Rect.w = Raptor::Game->Gfx.W;
 	Rect.h = Raptor::Game->Gfx.H;
 	
+	if( Raptor::Game->Head.VR && Raptor::Game->Gfx.DrawTo )
+	{
+		Rect.h = 360;
+		if( Container )
+		{
+			Rect.w = Container->Rect.w;
+			Rect.y = Container->Rect.h/2 - Rect.h/2;
+		}
+		else
+			Rect.y = Raptor::Game->Gfx.H/2 - Rect.h/2;
+	}
+	
 	// Let the Layer code clean things up.
 	UpdateCalcRects();
 }
@@ -48,8 +60,9 @@ void MessageOverlay::Draw( void )
 	
 	UpdateRects();
 	DrawSetup();
-		
-	int x = 5;
+	
+	bool vr = Raptor::Game->Head.VR && Raptor::Game->Gfx.DrawTo;
+	int x = vr ? (Rect.w / 2) : 5;
 	int y = Rect.h - 5;
 	
 	if( Raptor::Game->Msg.Lock )
@@ -97,8 +110,9 @@ void MessageOverlay::Draw( void )
 		y -= MessageFont->TextHeight( (*message_iter)->Text );
 		count ++;
 		
-		MessageFont->DrawText( (*message_iter)->Text, x+1, y+1, Font::ALIGN_TOP_LEFT, 0.f, 0.f, 0.f, a * 0.8f );
-		MessageFont->DrawText( (*message_iter)->Text, x, y, Font::ALIGN_TOP_LEFT, r, g, b, a );
+		uint8_t align = vr ? Font::ALIGN_TOP_CENTER : Font::ALIGN_TOP_LEFT;
+		MessageFont->DrawText( (*message_iter)->Text, x+1, y+1, align, 0.f, 0.f, 0.f, a * 0.8f );
+		MessageFont->DrawText( (*message_iter)->Text, x, y, align, r, g, b, a );
 		
 		if( y < 0 )
 			break;

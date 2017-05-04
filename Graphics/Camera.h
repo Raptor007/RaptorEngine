@@ -15,6 +15,7 @@ class Camera : public Pos3D
 {
 public:
 	double FOV;
+	Pos3D Offset;
 	
 	Camera( void );
 	Camera( const Camera &other );
@@ -24,4 +25,6 @@ public:
 	double FOVH( void ) const;
 	
 	void SetupGraphics( Graphics *gfx ) const;
+	
+	void Copy( const Pos3D *pos );
 };

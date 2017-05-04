@@ -157,6 +157,11 @@ DropDownListBox::DropDownListBox( DropDown *dropdown )
 		Rect.y -= selected_index * LineScroll();
 	
 	Rect.h = Items.size() * LineScroll();
+	
+	// FIXME: This dirty hack is needed because DropDown::Clicked happens when the dimensions are not the VR eye.
+	if( Raptor::Game->Head.VR && Raptor::Game->Cfg.SettingAsBool("vr_enable") )
+		return;
+	
 	if( Rect.h > max_h )
 		Rect.h = max_h;
 	

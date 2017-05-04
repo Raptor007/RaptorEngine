@@ -212,13 +212,14 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "g_res_windowed_y" ] = "720";
 	Settings[ "g_fullscreen" ] = "true";
 	Settings[ "g_fsaa" ] = "4";
+	Settings[ "g_mipmap" ] = "true";
 	Settings[ "g_af" ] = "16";
+	Settings[ "g_texture_maxres" ] = "0";
 	Settings[ "g_znear" ] = Num::ToString(Z_NEAR);
 	Settings[ "g_zfar" ] = Num::ToString(Z_FAR);
 	Settings[ "g_fov" ] = "auto";
 	Settings[ "g_framebuffers" ] = "true";
 	Settings[ "g_framebuffers_anyres" ] = "true";
-	Settings[ "g_legacy_mipmap" ] = "false";
 	Settings[ "g_shader_enable" ] = "true";
 	Settings[ "g_shader_light_quality" ] = "2";
 	
@@ -230,6 +231,11 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "s_volume" ] = "0.5";
 	Settings[ "s_effect_volume" ] = "0.5";
 	Settings[ "s_music_volume" ] = "1";
+	
+	Settings[ "vr_enable" ] = "false";
+	Settings[ "vr_fov" ] = "-113";
+	Settings[ "vr_separation" ] = "0.0625";
+	Settings[ "vr_offset" ] = "87";
 	
 	#ifdef WIN32
 		Settings[ "saitek_enable" ] = "true";
@@ -243,6 +249,7 @@ void ClientConfig::SetDefaults( void )
 	#ifdef APPLE_POWERPC
 		Settings[ "g_fsaa" ] = "2";
 		Settings[ "g_af" ] = "2";
+		Settings[ "g_framebuffers_anyres" ] = "false";
 	#endif
 	
 	
@@ -428,6 +435,16 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 					Raptor::Game->Res.DeleteSounds();
 				}
 				
+				else if( cmd == "vr_restart" )
+				{
+					Raptor::Game->Head.RestartVR();
+				}
+				
+				else if( cmd == "vr_recenter" )
+				{
+					Raptor::Game->Head.Recenter();
+				}
+				
 				else if( cmd == "music" )
 				{
 					if( elements.size() >= 2 )
@@ -503,7 +520,9 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 					Raptor::Game->Console.Print( cstr );
 					snprintf( cstr, 1024, "Objects: %i", (int) Raptor::Game->Data.GameObjects.size() );
 					Raptor::Game->Console.Print( cstr );
-					snprintf( cstr, 1024, "Shaders: %s", Raptor::Game->ShaderMgr.Ready() ? "OK" : "FAILED" );
+					snprintf( cstr, 1024, "Shaders: %s", Raptor::Game->ShaderMgr.Ready() ? "OK" : "Failed" );
+					Raptor::Game->Console.Print( cstr );
+					snprintf( cstr, 1024, "VR: %s", Raptor::Game->Head.Initialized ? (Raptor::Game->Head.VR ? "Available" : "Unavailable") : "Disabled" );
 					Raptor::Game->Console.Print( cstr );
 					snprintf( cstr, 1024, "Camera Facing: %f %f %f", Raptor::Game->Cam.Fwd.X, Raptor::Game->Cam.Fwd.Y, Raptor::Game->Cam.Fwd.Z );
 					Raptor::Game->Console.Print( cstr );

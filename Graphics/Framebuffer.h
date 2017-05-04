@@ -21,7 +21,7 @@ public:
 	GLuint FramebufferHandle;
 	GLuint Texture;
 	GLuint Depthbuffer;
-	int W, H, AllocW, AllocH;
+	int W, H, AllocW, AllocH, OffsetX;
 	GLint TextureFilter;
 	float AspectRatio;
 	bool ForcePowerOfTwo;
@@ -35,6 +35,9 @@ public:
 	void Reload( void );
 	
 	bool Select( void );
+	
+	void SetViewport( void );
+	void SetViewport( int x, int y, int w, int h );
 	
 	void Setup2D( void );
 	void Setup2D( double y1, double y2 );

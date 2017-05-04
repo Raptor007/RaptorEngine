@@ -17,6 +17,7 @@ TextFileViewer::TextFileViewer( SDL_Rect *window_rect, const char *filename, Fon
 		Rect.y = window_rect->y;
 		Rect.w = window_rect->w;
 		Rect.h = window_rect->h;
+		AutoPosition = false;
 	}
 	else
 	{
@@ -24,6 +25,7 @@ TextFileViewer::TextFileViewer( SDL_Rect *window_rect, const char *filename, Fon
 		Rect.h = Raptor::Game->Gfx.H - 20;
 		Rect.x = (Raptor::Game->Gfx.W - Rect.w) / 2;
 		Rect.y = (Raptor::Game->Gfx.H - Rect.h) / 2;
+		AutoPosition = true;
 	}
 	
 	Red = 0.0f;
@@ -44,7 +46,8 @@ TextFileViewer::TextFileViewer( SDL_Rect *window_rect, const char *filename, Fon
 	rect.h = 50;
 	rect.x = Rect.w - rect.w - 10;
 	rect.y = Rect.h - rect.h - 10;
-	AddElement( new TextFileViewerCloseButton( &rect, Raptor::Game->Res.GetFont( "Verdana.ttf", 30 ) ) );
+	CloseButton = new TextFileViewerCloseButton( &rect, Raptor::Game->Res.GetFont( "Verdana.ttf", 30 ) );
+	AddElement( CloseButton );
 	
 	rect.w = Rect.w - 20;
 	rect.h = rect.y - 70;
@@ -117,8 +120,25 @@ bool TextFileViewer::KeyUp( SDLKey key )
 }
 
 
+void TextFileViewer::UpdateRects( void )
+{
+	if( AutoPosition )
+	{
+		Rect.h = (Raptor::Game->Head.VR && Raptor::Game->Gfx.DrawTo) ? 576 : (Raptor::Game->Gfx.H - 20);
+		Rect.x = Raptor::Game->Gfx.W / 2 - Rect.w / 2;
+		Rect.y = Raptor::Game->Gfx.H / 2 - Rect.h / 2;
+		
+		CloseButton->Rect.y = Rect.h - 60;
+		Contents->Rect.h = Rect.h - 130;
+		
+		UpdateCalcRects();
+	}
+}
+
+
 void TextFileViewer::Draw( void )
 {
+	UpdateRects();
 	Window::Draw();
 	TitleFont->DrawText( Title, Rect.w/2 + 2, 12, Font::ALIGN_TOP_CENTER, 0,0,0,0.8f );
 	TitleFont->DrawText( Title, Rect.w/2, 10, Font::ALIGN_TOP_CENTER );

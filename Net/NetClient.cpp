@@ -337,16 +337,6 @@ bool NetClient::ProcessPacket( Packet *packet )
 		Raptor::Game->ChangeState( state );
 	}
 	
-	else if( type == Raptor::Packet::MESSAGE )
-	{
-		std::string message = packet->NextString();
-		uint32_t msg_type = 0;
-		if( packet->Remaining() )
-			msg_type = packet->NextUInt();
-		Raptor::Game->Console.Print( message, msg_type );
-		Raptor::Game->Msg.Print( message, msg_type );
-	}
-	
 	else if( type == Raptor::Packet::LOGIN )
 	{
 		Raptor::Game->PlayerID = packet->NextUShort();

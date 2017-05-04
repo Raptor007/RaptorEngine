@@ -119,22 +119,27 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 			buffer[ 0 ] = '\0';
 			input.getline( buffer, 1024 );
 			
-			// Stop parsing at # for comments.
-			char *comment = strchr( buffer, '#' );
-			if( comment )
-				comment[ 0 ] = '\0';
+			// Stop parsing at # for comments, and remove the linefeed chars.
+			char *remove = strchr( buffer, '#' );
+			if( remove )
+				remove[ 0 ] = '\0';
+			remove = strchr( buffer, '\n' );
+			if( remove )
+				remove[ 0 ] = '\0';
+			remove = strchr( buffer, '\r' );
+			if( remove )
+				remove[ 0 ] = '\0';
 			
 			// Skip whitespace at the start of a line.
 			char *buffer_start = buffer;
-			while( strchr( " \t", buffer_start[0] ) )
+			while( buffer_start[ 0 ] && strchr( " \t", buffer_start[ 0 ] ) )
 				buffer_start ++;
 			
-			// Remove unnecessary characters from the buffer and skip empty lines.
-			snprintf( buffer, 1024, "%s", Str::Join( CStr::SplitToList( buffer_start, "\r\n" ), "" ).c_str() );
-			if( ! strlen(buffer) )
+			// Don't parse empty/comment lines.
+			if( ! buffer_start[ 0 ] )
 				continue;
 			
-			std::vector<std::string> elements = CStr::SplitToVector( buffer, " " );
+			std::vector<std::string> elements = CStr::SplitToVector( buffer_start, " " );
 			
 			if( elements.size() )
 			{

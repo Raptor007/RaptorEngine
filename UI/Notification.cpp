@@ -34,6 +34,7 @@ void Notification::Draw( void )
 		text_alpha = 1.f - (seconds - 2.f);
 	}
 	
+	UpdateRects();
 	Window::Draw();
 	TextFont->DrawText( Text, Rect.w / 2, Rect.h / 2, Font::ALIGN_MIDDLE_CENTER, 1.f, 1.f, 1.f, text_alpha );
 }

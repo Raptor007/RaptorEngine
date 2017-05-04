@@ -60,6 +60,14 @@ void ClientConsole::UpdateRects( void )
 	Rect.w = Raptor::Game->Gfx.W;
 	Rect.h = Raptor::Game->Gfx.H / 2;
 	
+	if( Raptor::Game->Head.VR && Raptor::Game->Gfx.DrawTo )
+	{
+		Rect.w = 512;
+		Rect.h = 512;
+		Rect.x = Raptor::Game->Gfx.W/2 - Rect.w/2;
+		Rect.y = Raptor::Game->Gfx.H/2 - Rect.h;
+	}
+	
 	// Set up the input text box size.
 	Input->Rect.w = Rect.w - 4;
 	Input->Rect.h = Input->TextFont->GetHeight();
@@ -120,7 +128,7 @@ void ClientConsole::Draw( void )
 					b = 0.f;
 					break;
 				}
-				case( TextConsole::MSG_CHAT ):
+				case( MSG_CHAT ):
 				{
 					r = 1.f;
 					g = 1.f;

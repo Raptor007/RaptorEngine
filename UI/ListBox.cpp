@@ -213,8 +213,9 @@ void ListBox::Draw( void )
 	}
 	
 	glPushMatrix();
+	glPushAttrib( GL_VIEWPORT_BIT );
 	Raptor::Game->Gfx.Setup2D( 0, 0, Rect.w - ScrollBarSize, Rect.h );
-	glViewport( CalcRect.x, Raptor::Game->Gfx.H - CalcRect.y - Rect.h, Rect.w - ScrollBarSize, Rect.h );
+	Raptor::Game->Gfx.SetViewport( CalcRect.x, Raptor::Game->Gfx.H - CalcRect.y - Rect.h, Rect.w - ScrollBarSize, Rect.h );
 	
 	if( TextFont )
 	{
@@ -233,8 +234,8 @@ void ListBox::Draw( void )
 		}
 	}
 	
+	glPopAttrib();
 	glPopMatrix();
-	glViewport( 0, 0, Raptor::Game->Gfx.W, Raptor::Game->Gfx.H );
 	glColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
 }
 

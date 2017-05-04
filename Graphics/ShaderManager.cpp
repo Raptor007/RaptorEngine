@@ -103,7 +103,7 @@ bool ShaderManager::Set1f( const char *name, double value )
 bool ShaderManager::Set3f( const char *name, double x, double y, double z )
 {
 	if( Selected )
-		Selected->Set3f( name, x, y, z );
+		return Selected->Set3f( name, x, y, z );
 	
 	return false;
 }
@@ -112,7 +112,7 @@ bool ShaderManager::Set3f( const char *name, double x, double y, double z )
 bool ShaderManager::Set4f( const char *name, double x, double y, double z, double w )
 {
 	if( Selected )
-		Selected->Set4f( name, x, y, z, w );
+		return Selected->Set4f( name, x, y, z, w );
 	
 	return false;
 }

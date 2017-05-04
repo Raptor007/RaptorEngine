@@ -17,10 +17,6 @@ namespace Raptor
 	RaptorGame *Game = NULL;
 	
 	void Terminate( int arg );
-	
-#ifdef WIN32
-	BOOL WindowsInit( void );
-#endif
 }
 
 
@@ -117,7 +113,13 @@ void RaptorGame::Initialize( int argc, char **argv )
 		{
 			Cfg.Settings[ "g_framebuffers" ] = "false";
 			Cfg.Settings[ "g_shader_enable" ] = "false";
-			Cfg.Settings[ "g_legacy_mipmap" ] = "true";
+			Cfg.Settings[ "g_texture_maxres" ] = "128";
+			Cfg.Settings[ "g_res_fullscreen_x" ] = "640";
+			Cfg.Settings[ "g_res_fullscreen_y" ] = "480";
+			Cfg.Settings[ "vr_enable" ] = "false";
+			#ifdef WIN32
+				Cfg.Settings[ "saitek_enable" ] = "false";
+			#endif
 		}
 		else if( strcmp( argv[ i ], "-screensaver" ) == 0 )
 		{
@@ -127,6 +129,7 @@ void RaptorGame::Initialize( int argc, char **argv )
 			Cfg.Settings[ "g_res_fullscreen_x" ] = "0";
 			Cfg.Settings[ "g_res_fullscreen_y" ] = "0";
 			Cfg.Settings[ "s_volume" ] = "0";
+			Cfg.Settings[ "vr_enable" ] = "false";
 		}
 	}
 	
@@ -257,8 +260,60 @@ void RaptorGame::Run( void )
 			if( (Net.ReconnectTime > 0) && (Net.ReconnectClock.ElapsedSeconds() > Net.ReconnectTime) )
 				Net.Reconnect( Cfg.SettingAsString("name").c_str(), Cfg.SettingAsString("password").c_str() );
 			
-			// Draw and swap buffers.
-			Draw();
+			// Draw to all viewports.
+			bool vr_enable = Cfg.SettingAsBool("vr_enable");
+			if( vr_enable && ! Head.Initialized )
+				Head.Initialize();
+			if( Head.VR && vr_enable )
+			{
+				// If the VR viewport is larger than the window, center the mouse.
+				int x = (Head.EyeR->W - Raptor::Game->Gfx.RealW) / 2;
+				int y = (Head.EyeR->H - Raptor::Game->Gfx.RealH) / 2;
+				Mouse.SetOffset( std::max<int>(0,x), std::max<int>(0,y) );
+				
+				Head.Draw();
+				
+				// Mirror the right eye to the screen.
+				Gfx.Setup2D();
+				Gfx.Clear();
+				float x1 = x / (float) Head.EyeR->W;
+				float y1 = y / (float) Head.EyeR->H;
+				float x2 = (Head.EyeR->W - x) / (float) Head.EyeR->W;
+				float y2 = (Head.EyeR->H - y) / (float) Head.EyeR->H;
+				glColor4f( 1.f, 1.f, 1.f, 1.f );
+				glEnable( GL_TEXTURE_2D );
+				glBindTexture( GL_TEXTURE_2D, Head.EyeR->Texture );
+				glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP );
+				glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
+				glBegin( GL_QUADS );
+					
+					// Top-left
+					glTexCoord2f( x1, y2 );
+					glVertex2d( 0, 0 );
+					
+					// Bottom-left
+					glTexCoord2f( x1, y1 );
+					glVertex2d( 0, Gfx.RealH );
+					
+					// Bottom-right
+					glTexCoord2f( x2, y1 );
+					glVertex2d( Gfx.RealW, Gfx.RealH );
+					
+					// Top-right
+					glTexCoord2f( x2, y2 );
+					glVertex2d( Gfx.RealW, 0 );
+					
+				glEnd();
+				glDisable( GL_TEXTURE_2D );
+			}
+			else
+			{
+				Mouse.SetOffset(0,0);
+				Draw();
+			}
+			
+			// Swap front and back framebuffers to update the screen.
+			Gfx.SwapBuffers();
 		}
 		
 		// Let the thread rest a bit.
@@ -292,9 +347,6 @@ void RaptorGame::Draw( void )
 	Layers.Draw();
 	Console.Draw();
 	Mouse.Draw();
-	
-	// Swap front and back framebuffers to update the screen.
-	Gfx.SwapBuffers();
 }
 
 
@@ -502,6 +554,16 @@ bool RaptorGame::ProcessPacket( Packet *packet )
 		}
 		
 		return true;
+	}
+	
+	else if( type == Raptor::Packet::MESSAGE )
+	{
+		std::string message = packet->NextString();
+		uint32_t msg_type = 0;
+		if( packet->Remaining() )
+			msg_type = packet->NextUInt();
+		Raptor::Game->Console.Print( message, msg_type );
+		Raptor::Game->Msg.Print( message, msg_type );
 	}
 	
 	else if( type == Raptor::Packet::PLAY_SOUND )

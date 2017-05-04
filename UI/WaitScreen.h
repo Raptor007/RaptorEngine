@@ -17,9 +17,11 @@ class WaitScreen : public Window
 public:
 	Font *TextFont;
 	std::string Text;
+	bool AutoPosition;
 	
 	WaitScreen( std::string text, Font *font = NULL, SDL_Rect *rect = NULL, Color *color = NULL );
 	virtual ~WaitScreen();
 	
+	void UpdateRects( void );
 	virtual void Draw( void );
 };

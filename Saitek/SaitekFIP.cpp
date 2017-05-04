@@ -12,6 +12,8 @@ SaitekFIP::SaitekFIP( void *device_handle ) : SaitekDevice( device_handle, Devic
 	Thread = NULL;
 	Running = false;
 	Drawing = false;
+	IntermediateSize = 0;
+	IntermediateBuffer = NULL;
 	memset( Buffer, 0, 320*240*3 );
 }
 
@@ -56,14 +58,59 @@ bool SaitekFIP::SetImage( Framebuffer *fb )
 {
 	if( ! Drawing )
 	{
-		// Read the bottom-left 320x240 of the framebuffer.
-		if( fb )
-			fb->Select();
-		glReadPixels( 0, 0, 320, 240, GL_BGR, GL_UNSIGNED_BYTE, Buffer );
+		int w = 320, h = 240;
 		
-		// Let the thread update the device so we don't lag the game.
-		Drawing = true;
-		return true;
+		// If a framebuffer was passed, select it for copying.
+		if( fb )
+		{
+			if( fb->Select() )
+			{
+				w = fb->AllocW;
+				h = fb->AllocH;
+			}
+			else
+			{
+				w = 0;
+				h = 0;
+			}
+		}
+		
+		if( w && h )
+		{
+			// If the source is 320x240, don't use the intermediate buffer.
+			if( (w == 320) && (h = 240) )
+				glReadPixels( 0, 0, 320, 240, GL_BGR, GL_UNSIGNED_BYTE, Buffer );
+			else if( w && h )
+			{
+				// Make sure the intermediate buffer exists and is the right size.
+				if( ((size_t) w ) * ((size_t) h ) * 3 != IntermediateSize )
+				{
+					IntermediateSize = w * h * 3;
+					free( IntermediateBuffer );
+					IntermediateBuffer = (unsigned char*) malloc( IntermediateSize );
+				}
+				
+				if( IntermediateBuffer )
+				{
+					// Copy to the intermediate buffer and resample to 320x240.
+					glReadPixels( 0, 0, w, h, GL_BGR, GL_UNSIGNED_BYTE, IntermediateBuffer );
+					double x_scale = w / 320., y_scale = h / 240.;
+					for( int x = 0; x < 320; x ++ )
+						for( int y = 0; y < 240; y ++ )
+						{
+							size_t dst = y * 320 + x;
+							size_t src = (size_t)(y * y_scale) * w + (size_t)(x * x_scale);
+							Buffer[ 3 * dst     ] = IntermediateBuffer[ 3 * src     ];
+							Buffer[ 3 * dst + 1 ] = IntermediateBuffer[ 3 * src + 1 ];
+							Buffer[ 3 * dst + 2 ] = IntermediateBuffer[ 3 * src + 2 ];
+						}
+				}
+			}
+			
+			// Let the thread update the device so we don't lag the game.
+			Drawing = true;
+			return true;
+		}
 	}
 	
 	return false;

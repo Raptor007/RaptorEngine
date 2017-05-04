@@ -15,6 +15,8 @@ MouseState::MouseState( void )
 	PointX = 0;
 	PointY = 0;
 	Size = 0;
+	OffsetX = 0;
+	OffsetY = 0;
 }
 
 
@@ -25,6 +27,8 @@ MouseState::MouseState( Animation *cursor, int size )
 	Y = 0;
 	PointX = 0;
 	PointY = 0;
+	OffsetX = 0;
+	OffsetY = 0;
 	SetCursor( cursor, size );
 }
 
@@ -40,19 +44,19 @@ void MouseState::TrackEvent( SDL_Event *event )
 	
 	if( event->type == SDL_MOUSEMOTION )
 	{
-		X = event->motion.x;
-		Y = event->motion.y;
+		X = (event->motion.x += OffsetX);
+		Y = (event->motion.y += OffsetY);
 	}
 	else if( event->type == SDL_MOUSEBUTTONDOWN )
 	{
-		X = event->button.x;
-		Y = event->button.y;
+		X = (event->button.x += OffsetX);
+		Y = (event->button.y += OffsetY);
 		ButtonsDown[ event->button.button ] = true;
 	}
 	else if( event->type == SDL_MOUSEBUTTONUP )
 	{
-		X = event->button.x;
-		Y = event->button.y;
+		X = (event->button.x += OffsetX);
+		Y = (event->button.y += OffsetY);
 		ButtonsDown[ event->button.button ] = false;
 	}
 }
@@ -68,6 +72,13 @@ bool MouseState::ButtonDown( Uint8 button )
 		return button_iter->second;
 	else
 		return false;
+}
+
+
+void MouseState::SetOffset( int x, int y )
+{
+	OffsetX = x;
+	OffsetY = y;
 }
 
 
@@ -95,8 +106,14 @@ void MouseState::Draw( void )
 		// Set up UI rendering output.
 		Raptor::Game->Gfx.Setup2D();
 		
+		// Clamp the cursor texture.
+		GLuint texture = Cursor.CurrentFrame();
+		glBindTexture( GL_TEXTURE_2D, texture );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
+		
 		// Draw the cursor.
-		Raptor::Game->Gfx.DrawRect2D( X - PointX, Y - PointY, X + Size - PointX, Y + Size - PointY, Cursor.CurrentFrame(), 1.f, 1.f, 1.f, 1.f );
+		Raptor::Game->Gfx.DrawRect2D( X - PointX, Y - PointY, X + Size - PointX, Y + Size - PointY, texture, 1.f, 1.f, 1.f, 1.f );
 		
 		glPopMatrix();
 	}
