@@ -215,8 +215,8 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "g_mipmap" ] = "true";
 	Settings[ "g_af" ] = "16";
 	Settings[ "g_texture_maxres" ] = "0";
-	Settings[ "g_znear" ] = Num::ToString(Z_NEAR);
-	Settings[ "g_zfar" ] = Num::ToString(Z_FAR);
+	Settings[ "g_znear" ] = "0.01";
+	Settings[ "g_zfar" ] = "100000";
 	Settings[ "g_fov" ] = "auto";
 	Settings[ "g_framebuffers" ] = "true";
 	Settings[ "g_framebuffers_anyres" ] = "true";

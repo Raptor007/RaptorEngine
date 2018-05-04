@@ -23,8 +23,8 @@ Graphics::Graphics( void )
 	RealW = W;
 	RealH = H;
 	AspectRatio = ((float)( W )) / ((float)( H ));
-	ZNear = Z_NEAR;
-	ZFar = Z_FAR;
+	ZNear = 0.01;
+	ZFar = 100000.;
 	Fullscreen = false;
 	FSAA = 0;
 	AF = 16;
@@ -253,8 +253,8 @@ void Graphics::Restart( void )
 		x = Raptor::Game->Cfg.SettingAsInt( "g_res_windowed_x", 640 );
 		y = Raptor::Game->Cfg.SettingAsInt( "g_res_windowed_y", 480 );
 	}
-	double z_near = Raptor::Game->Cfg.SettingAsDouble( "g_znear", Z_NEAR );
-	double z_far = Raptor::Game->Cfg.SettingAsDouble( "g_zfar", Z_FAR );
+	double z_near = Raptor::Game->Cfg.SettingAsDouble( "g_znear", 0.01 );
+	double z_far = Raptor::Game->Cfg.SettingAsDouble( "g_zfar", 100000 );
 	
 	SetMode( x, y, bpp, fullscreen, fsaa, af, z_near, z_far );
 }

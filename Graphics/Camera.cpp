@@ -27,6 +27,7 @@ Camera::Camera( void )
 Camera::Camera( const Camera &other ) : Pos3D( other )
 {
 	FOV = other.FOV;
+	Offset.Copy( &other.Offset );
 }
 
 

@@ -42,7 +42,6 @@
 #undef DrawText
 #undef SearchPath
 
-#define Z_NEAR (0.125)
 #define Z_BITS (32)
 #define GLEW_STATIC true
 
@@ -57,7 +56,6 @@
 #define NO_GLEW true
 #endif
 
-#define Z_NEAR (1.)
 #define Z_BITS (24)
 
 #endif
@@ -70,6 +68,3 @@
 #define nullptr NULL
 #endif
 #endif
-
-// This doesn't actually vary by platform, but Z_NEAR does so they are both defined here.
-#define Z_FAR (100000.)

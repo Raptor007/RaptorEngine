@@ -20,7 +20,7 @@ public:
 	T Initial, Next;
 	
 	
-	Identifier( T initial = 0 )
+	Identifier( T initial = 1 )
 	{
 		Initial = initial;
 		Next = Initial;
@@ -52,7 +52,9 @@ public:
 	
 	void Remove( T value )
 	{
-		if( value == Next - 1 )
+		if( value < Initial )
+			;
+		else if( value == Next - 1 )
 			Next --;
 		else if( value < Next )
 			Available.insert( value );

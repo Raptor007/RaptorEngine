@@ -367,12 +367,15 @@ void SoundOut::UpdateVolumes( void )
 			MusicAttenuate = 0.f;
 	}
 	
-	Mix_Volume( -1, MasterVolume * SoundVolume * SoundAttenuate * MIX_MAX_VOLUME + 0.25f );
-	Mix_VolumeMusic( MasterVolume * MusicVolume * MusicAttenuate * MIX_MAX_VOLUME + 0.25f );
-	
-	// If we're reducing other volumes to hear something better, don't reduce it too!
-	if( AttenuateFor >= 0 )
-		Mix_Volume( AttenuateFor, MasterVolume * MIX_MAX_VOLUME + 0.25f );
+	if( Initialized )
+	{
+		Mix_Volume( -1, MasterVolume * SoundVolume * SoundAttenuate * MIX_MAX_VOLUME + 0.25f );
+		Mix_VolumeMusic( MasterVolume * MusicVolume * MusicAttenuate * MIX_MAX_VOLUME + 0.25f );
+		
+		// If we're reducing other volumes to hear something better, don't reduce it too!
+		if( AttenuateFor >= 0 )
+			Mix_Volume( AttenuateFor, MasterVolume * MIX_MAX_VOLUME + 0.25f );
+	}
 }
 
 
