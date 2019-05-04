@@ -28,7 +28,7 @@ WaitScreen::WaitScreen( std::string text, Font *font, SDL_Rect *rect, Color *col
 	{
 		TextFont->TextSize( Text, &Rect );
 		Rect.w += 60;
-		Rect.h += 50;
+		Rect.h += 40;
 		AutoPosition = true;
 	}
 	

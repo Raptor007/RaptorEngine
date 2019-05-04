@@ -9,6 +9,7 @@ class ClientConfig;
 #include <cstddef>
 #include <map>
 #include <string>
+#include <vector>
 #include <SDL/SDL.h>
 
 
@@ -39,6 +40,7 @@ public:
 	double SettingAsDouble( std::string name, double ifndef = 0. );
 	int SettingAsInt( std::string name, int ifndef = 0 );
 	bool SettingAsBool( std::string name, bool ifndef = false );
+	std::vector<int> SettingAsInts( std::string name );
 	
 	bool Bind( SDL_Event *event, uint8_t control );
 	void Unbind( uint8_t control );

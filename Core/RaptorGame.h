@@ -70,6 +70,9 @@ public:
 	GameData Data;
 	uint16_t PlayerID;
 	
+	std::string WaitText;
+	Font *WaitFont;
+	
 	RaptorServer *Server;
 	
 	
@@ -92,6 +95,10 @@ public:
 	virtual void SendUpdate( int8_t precision = 0 );
 	
 	virtual void ChangeState( int state );
+	virtual void Disconnected( void );
+	virtual void Connecting( void );
+	virtual void Connected( void );
+	
 	virtual void AddedObject( GameObject *obj );
 	virtual void RemovedObject( GameObject *obj );
 	

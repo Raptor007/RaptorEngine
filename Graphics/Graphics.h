@@ -29,7 +29,7 @@ public:
 	int W, H, RealW, RealH, BPP;
 	float AspectRatio;
 	bool Fullscreen;
-	int FSAA, AF;
+	int FSAA, AF, ZBits;
 	double ZNear, ZFar;
 	Framebuffer *DrawTo;
 	
@@ -38,7 +38,7 @@ public:
 	
 	void Initialize( void );
 	void SetMode( int x, int y );
-	void SetMode( int x, int y, int bpp, bool fullscreen, int fsaa, int af, double z_near, double z_far );
+	void SetMode( int x, int y, int bpp, bool fullscreen, int fsaa, int af, int z_bits, double z_near, double z_far );
 	void Restart( void );
 	
 	bool SelectDefaultFramebuffer( void );

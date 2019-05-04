@@ -123,6 +123,7 @@ int NetClient::Connect( const char *hostname, int port, const char *name, const 
 	// Clean up old data and socket.
 	SDL_Delay( 1 );
 	Cleanup();
+	DisconnectMessage.clear();
 	
 	// Show the wait screen.
 	char cstr[ 1024 ] = "";
@@ -216,6 +217,7 @@ void NetClient::DisconnectNice( const char *message )
 	}
 	
 	// Disconnect from the server.
+	DisconnectMessage.clear();
 	Disconnect();
 }
 
@@ -223,7 +225,12 @@ void NetClient::DisconnectNice( const char *message )
 void NetClient::Disconnect( void )
 {
 	if( Connected )
-		Raptor::Game->Console.Print( "Disconnected from server." );
+	{
+		if( DisconnectMessage.length() )
+			Raptor::Game->Console.Print( std::string("Disconnected from server: ") + DisconnectMessage );
+		else
+			Raptor::Game->Console.Print( "Disconnected from server." );
+	}
 	
 	// Set disconnected state.
 	Connected = false;
@@ -348,8 +355,7 @@ bool NetClient::ProcessPacket( Packet *packet )
 	
 	else if( type == Raptor::Packet::DISCONNECT )
 	{
-		std::string message = packet->NextString();
-		
+		DisconnectMessage = packet->NextString();
 		Disconnect();
 	}
 	
@@ -357,6 +363,7 @@ bool NetClient::ProcessPacket( Packet *packet )
 	{
 		uint8_t time = packet->NextUChar();
 		
+		DisconnectMessage.clear();
 		Disconnect();
 		
 		ReconnectTime = time;
@@ -381,7 +388,7 @@ int NetClient::Send( Packet *packet )
 	
 	if( SDLNet_TCP_Send( Socket, (void *) packet->Data, packet->Size() ) < (int) packet->Size() )
 	{
-		//fprintf( stderr, "SDLNet_TCP_Send: %s\n", SDLNet_GetError() );
+		DisconnectMessage = std::string("SDLNet_TCP_Send: ") + std::string(SDLNet_GetError());
 		Disconnect();
 		return -1;
 	}
@@ -526,6 +533,8 @@ int NetClientThread( void *client )
 		else
 		{
 			// If 0 (disconnect) or -1 (error), stop listening.
+			if( size < 0 )
+				net_client->DisconnectMessage = std::string("SDLNet_TCP_Recv: ") + std::string(SDLNet_GetError());
 			net_client->Disconnect();
 			break;
 		}

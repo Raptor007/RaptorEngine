@@ -46,6 +46,7 @@ public:
 	Clock ReconnectClock;
 	std::string Host;
 	int Port;
+	std::string DisconnectMessage;
 	
 	
 	NetClient( void );

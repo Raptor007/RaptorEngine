@@ -70,11 +70,11 @@ void Graphics::Initialize( void )
 
 void Graphics::SetMode( int x, int y )
 {
-	SetMode( x, y, BPP, Fullscreen, FSAA, AF, ZNear, ZFar );
+	SetMode( x, y, BPP, Fullscreen, FSAA, AF, ZBits, ZNear, ZFar );
 }
 
 
-void Graphics::SetMode( int x, int y, int bpp, bool fullscreen, int fsaa, int af, double z_near, double z_far )
+void Graphics::SetMode( int x, int y, int bpp, bool fullscreen, int fsaa, int af, int z_bits, double z_near, double z_far )
 {
 	// Make sure we've initialized SDL.
 	if( ! Initialized )
@@ -90,6 +90,7 @@ void Graphics::SetMode( int x, int y, int bpp, bool fullscreen, int fsaa, int af
 	Fullscreen = fullscreen;
 	FSAA = fsaa;
 	AF = af;
+	ZBits = z_bits;
 	ZNear = z_near;
 	ZFar = z_far;
 	
@@ -98,7 +99,8 @@ void Graphics::SetMode( int x, int y, int bpp, bool fullscreen, int fsaa, int af
 	SDL_GL_SetAttribute( SDL_GL_SWAP_CONTROL, 1 );
 	
 	// Set minimum depth buffer.
-	SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, Z_BITS );
+	if( z_bits )
+		SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, z_bits );
 	
 	// Enable multi-sample anti-aliasing.
 	if( FSAA > 1 )
@@ -140,11 +142,13 @@ void Graphics::SetMode( int x, int y, int bpp, bool fullscreen, int fsaa, int af
 	{
 		fprintf( stderr, "Unable to set %s video mode %ix%ix%i: %s\n", (fullscreen ? "fullscreen" : "windowed"), x, y, bpp, SDL_GetError() );
 		
-		// We couldn't set that video mode, so try 640x480, then windowed 640x480.
-		if( fullscreen && ((x != 640) || (y != 480)) )
-			SetMode( 640, 480, bpp, fullscreen, fsaa, af, z_near, z_far );
+		// We couldn't set that video mode, so try unspecified Z-depth, then 640x480, then windowed.
+		if( z_bits )
+			SetMode( x, y, bpp, fullscreen, fsaa, af, 0, z_near, z_far );
+		else if( fullscreen && ((x != 640) || (y != 480)) )
+			SetMode( 640, 480, bpp, fullscreen, fsaa, af, z_bits, z_near, z_far );
 		else if( fullscreen )
-			SetMode( 640, 480, bpp, false, fsaa, af, z_near, z_far );
+			SetMode( 640, 480, bpp, false, fsaa, af, z_bits, z_near, z_far );
 		else
 		{
 			fflush( stderr );
@@ -253,10 +257,11 @@ void Graphics::Restart( void )
 		x = Raptor::Game->Cfg.SettingAsInt( "g_res_windowed_x", 640 );
 		y = Raptor::Game->Cfg.SettingAsInt( "g_res_windowed_y", 480 );
 	}
+	int z_bits = Raptor::Game->Cfg.SettingAsInt( "g_zbits", Z_BITS );
 	double z_near = Raptor::Game->Cfg.SettingAsDouble( "g_znear", 0.01 );
 	double z_far = Raptor::Game->Cfg.SettingAsDouble( "g_zfar", 100000 );
 	
-	SetMode( x, y, bpp, fullscreen, fsaa, af, z_near, z_far );
+	SetMode( x, y, bpp, fullscreen, fsaa, af, z_bits, z_near, z_far );
 }
 
 

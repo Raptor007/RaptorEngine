@@ -87,7 +87,7 @@ void ConnectedClient::DisconnectNice( const char *message )
 		else
 			packet.AddString( "" );
 		
-		Send( &packet );
+		SendNow( &packet );  // FIXME: This could hang if they lost connection.
 	}
 	
 	Disconnect();
@@ -231,7 +231,7 @@ bool ConnectedClient::ProcessPacket( Packet *packet )
 				DisconnectNice( "Version mismatch.  Make sure all players have the latest build." );
 		}
 		else
-			Disconnect();
+			DisconnectNice( "Wrong game or application." );
 	}
 	
 	else if( type == Raptor::Packet::DISCONNECT )
@@ -272,7 +272,7 @@ void ConnectedClient::Login( std::string name, std::string password )
 		Raptor::Server->AcceptedClient( this );
 	}
 	else
-		Disconnect();
+		DisconnectNice( "Login failed." );
 }
 
 

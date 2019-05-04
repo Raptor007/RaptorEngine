@@ -9,6 +9,7 @@
 #include "RaptorDefs.h"
 #include "Rand.h"
 #include "Num.h"
+#include "Notification.h"
 
 
 namespace Raptor
@@ -34,6 +35,7 @@ RaptorGame::RaptorGame( std::string game, std::string version, RaptorServer *ser
 	FrameTime = 0.;
 	State = Raptor::State::DISCONNECTED;
 	PlayerID = 0;
+	WaitFont = NULL;
 }
 
 
@@ -347,6 +349,19 @@ void RaptorGame::Draw( void )
 	Layers.Draw();
 	Console.Draw();
 	Mouse.Draw();
+	
+	// Draw text overlay.
+	if( WaitText.length() )
+	{
+		if( ! WaitFont )
+			WaitFont = Raptor::Game->Res.GetFont( "Verdana.ttf", 16 );
+		
+		SDL_Rect rect = {0,0,0,0};
+		WaitFont->TextSize( WaitText, &rect );
+		Gfx.DrawRect2D( Gfx.W/2 - rect.w/2 - 30, Gfx.H/2 - rect.h/2 - 20, Gfx.W/2 + rect.w/2 + 30, Gfx.H/2 + rect.h/2 + 20, 0, 0.f,0.f,0.f,0.75f );
+		
+		WaitFont->DrawText( WaitText, Gfx.W/2, Gfx.H/2, Font::ALIGN_MIDDLE_CENTER );
+	}
 }
 
 
@@ -644,7 +659,14 @@ void RaptorGame::SendUpdate( int8_t precision )
 
 void RaptorGame::ChangeState( int state )
 {
-	State = state;
+	WaitText.clear();
+	
+	if( state == Raptor::State::DISCONNECTED )
+		Disconnected();
+	else if( state == Raptor::State::CONNECTING )
+		Connecting();
+	else if( state == Raptor::State::CONNECTED )
+		Connected();
 	
 	if( state < Raptor::State::CONNECTED )
 	{
@@ -654,6 +676,39 @@ void RaptorGame::ChangeState( int state )
 		// Clear the message list, since it's session-specific; copies remain in the console.
 		Raptor::Game->Msg.Clear();
 	}
+	
+	State = state;
+}
+
+
+void RaptorGame::Disconnected( void )
+{
+	if( State >= Raptor::State::CONNECTED )
+	{
+		if( Net.DisconnectMessage.length() )
+			Layers.Add( new Notification( std::string("Disconnected from server:\n\n") + Net.DisconnectMessage ) );
+		else
+			Layers.Add( new Notification( "Disconnected from server." ) );
+	}
+	else if( State == Raptor::State::CONNECTING )
+	{
+		if( Net.DisconnectMessage.length() )
+			Layers.Add( new Notification( std::string("Failed to connect:\n\n") + Net.DisconnectMessage ) );
+		else
+			Layers.Add( new Notification( std::string("Failed to connect to ") + Net.Host + std::string(":") + Num::ToString(Net.Port) + std::string(".") ) );
+	}
+}
+
+
+void RaptorGame::Connecting( void )
+{
+	WaitText = std::string("Connecting to ") + Net.Host + std::string(":") + Num::ToString(Net.Port) + std::string("...");
+	Draw();
+}
+
+
+void RaptorGame::Connected( void )
+{
 }
 
 

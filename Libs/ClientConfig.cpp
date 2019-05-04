@@ -215,6 +215,7 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "g_mipmap" ] = "true";
 	Settings[ "g_af" ] = "16";
 	Settings[ "g_texture_maxres" ] = "0";
+	Settings[ "g_zbits" ] = Num::ToString(Z_BITS);
 	Settings[ "g_znear" ] = "0.01";
 	Settings[ "g_zfar" ] = "100000";
 	Settings[ "g_fov" ] = "auto";
@@ -230,10 +231,10 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "s_mix_channels" ] = "64";
 	Settings[ "s_volume" ] = "0.5";
 	Settings[ "s_effect_volume" ] = "0.5";
-	Settings[ "s_music_volume" ] = "1";
+	Settings[ "s_music_volume" ] = "0.75";
 	
 	Settings[ "vr_enable" ] = "false";
-	Settings[ "vr_fov" ] = "-113";
+	Settings[ "vr_fov" ] = "-111";
 	Settings[ "vr_separation" ] = "0.0625";
 	Settings[ "vr_offset" ] = "87";
 	
@@ -947,6 +948,31 @@ bool ClientConfig::SettingAsBool( std::string name, bool ifndef )
 	if( found != Settings.end() )
 		return Str::AsBool( found->second );
 	return ifndef;
+}
+
+
+std::vector<int> ClientConfig::SettingAsInts( std::string name )
+{
+	std::vector<int> results;
+	
+	std::map<std::string, std::string>::iterator found = Settings.find( name );
+	if( found != Settings.end() )
+	{
+		bool seeking = true;
+		for( const char *buffer_ptr = found->second.c_str(); *buffer_ptr; buffer_ptr ++ )
+		{
+			bool numeric_char = strchr( "0123456789.", *buffer_ptr );
+			if( seeking && numeric_char )
+			{
+				results.push_back( atoi(buffer_ptr) );
+				seeking = false;
+			}
+			else if( ! numeric_char )
+				seeking = true;
+		}
+	}
+	
+	return results;
 }
 
 
