@@ -25,6 +25,8 @@ public:
 	bool Initialize( void );
 	
 	void Select( Shader *shader );
+	void SelectAndCopyVars( Shader *shader );
+	
 	void StopShaders( void );
 	void ResumeShaders( void );
 	

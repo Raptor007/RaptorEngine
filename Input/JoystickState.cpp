@@ -94,7 +94,7 @@ double JoystickState::AxisScaled( Uint8 axis, double low, double high, double de
 {
 	// Scale output to (low,high) range.
 	// This can also be used to invert an axis with low>high.
-
+	
 	return low + (high - low) * (Axis( axis, deadzone, deadzone_at_ends ) + 1.) / 2.;
 }
 
@@ -119,7 +119,7 @@ Uint8 JoystickState::Hat( Uint8 hat )
 	std::map<Uint8, Uint8>::iterator hat_iter = Hats.find( hat );
 	if( hat_iter != Hats.end() )
 		return hat_iter->second;
-
+	
 	return 0;
 }
 
@@ -128,7 +128,7 @@ bool JoystickState::HatDir( Uint8 hat, Uint8 dir )
 {
 	// See if the hat switch is in this cardinal direction.
 	// This matches straight directions even if the hat is being pushed diagonally.
-
+	
 	return Hat( hat ) & dir;
 }
 
@@ -139,10 +139,10 @@ std::string JoystickState::Status( void )
 	
 	std::string return_string;
 	char cstr[ 1024 ] = "";
-
+	
 	snprintf( cstr, 1024, "Joystick %i: %s\n", ID, Name.c_str() );
 	return_string += cstr;
-
+	
 	return_string += "Joy axes:";
 	bool first_axis = true;
 	for( std::map<Uint8, double>::iterator axis_iter = Axes.begin(); axis_iter != Axes.end(); axis_iter ++ )
@@ -151,12 +151,12 @@ std::string JoystickState::Status( void )
 			first_axis = false;
 		else
 			return_string += ",";
-
+		
 		snprintf( cstr, 1024, " %i=%.4f", axis_iter->first, axis_iter->second );
 		return_string += cstr;
 	}
 	return_string += "\n";
-
+	
 	return_string += "Joy buttons down:";
 	for( std::map<Uint8, bool>::iterator button_iter = ButtonsDown.begin(); button_iter != ButtonsDown.end(); button_iter ++ )
 	{
@@ -167,7 +167,7 @@ std::string JoystickState::Status( void )
 		}
 	}
 	return_string += "\n";
-
+	
 	return_string += "Joy hats:";
 	bool first_hat = true;
 	for( std::map<Uint8, Uint8>::iterator hat_iter = Hats.begin(); hat_iter != Hats.end(); hat_iter ++ )
@@ -176,7 +176,7 @@ std::string JoystickState::Status( void )
 			first_hat = false;
 		else
 			return_string += ",";
-
+		
 		snprintf( cstr, 1024, " %i=%i%s%s%s%s%s%s", hat_iter->first, hat_iter->second,
 		          hat_iter->second ? "(" : "",
 		          hat_iter->second & SDL_HAT_UP ? "U" : "",

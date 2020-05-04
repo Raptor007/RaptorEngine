@@ -115,7 +115,7 @@ Animation *ResourceManager::GetAnimation( const std::string &name )
 }
 
 
-Model *ResourceManager::GetModel( const std::string &name )
+Model *ResourceManager::GetModel( const std::string &name, double scale )
 {
 	Model *model = NULL;
 	
@@ -128,7 +128,7 @@ Model *ResourceManager::GetModel( const std::string &name )
 			model = it->second;
 		else
 			// If the texture wasn't already loaded, load it now.
-			model = LoadModel( name );
+			model = LoadModel( name, scale );
 		
 		Lock.Unlock();
 	}
@@ -419,7 +419,7 @@ Animation *ResourceManager::LoadAnimation( const std::string &name )
 }
 
 
-Model *ResourceManager::LoadModel( const std::string &name )
+Model *ResourceManager::LoadModel( const std::string &name, double scale )
 {
 	if( name.empty() )
 		return NULL;
@@ -434,6 +434,9 @@ Model *ResourceManager::LoadModel( const std::string &name )
 		snprintf( cstr, 1024, "Couldn't load %s: %s", filename.c_str(), "File not found" );
 		Raptor::Game->Console.Print( cstr, TextConsole::MSG_ERROR );
 	}
+	
+	if( scale != 1. )
+		model->ScaleBy( scale );
 	
 	// Even if it's empty (file not found), we'll add it to prevent multiple lookups.
 	Models[ name ] = model;

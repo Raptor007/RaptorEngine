@@ -216,20 +216,21 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "g_af" ] = "16";
 	Settings[ "g_texture_maxres" ] = "0";
 	Settings[ "g_zbits" ] = Num::ToString(Z_BITS);
-	Settings[ "g_znear" ] = "0.01";
-	Settings[ "g_zfar" ] = "100000";
+	Settings[ "g_znear" ] = "0.125";
+	Settings[ "g_zfar" ] = "15000";
 	Settings[ "g_fov" ] = "auto";
 	Settings[ "g_framebuffers" ] = "true";
 	Settings[ "g_framebuffers_anyres" ] = "true";
 	Settings[ "g_shader_enable" ] = "true";
 	Settings[ "g_shader_light_quality" ] = "2";
+	Settings[ "g_shader_point_lights" ] = "4";
 	
 	Settings[ "s_channels" ] = "2";
 	Settings[ "s_rate" ] = "44100";
 	Settings[ "s_depth" ] = "16";
 	Settings[ "s_buffer" ] = "4096";
 	Settings[ "s_mix_channels" ] = "64";
-	Settings[ "s_volume" ] = "0.5";
+	Settings[ "s_volume" ] = "0.25";
 	Settings[ "s_effect_volume" ] = "0.5";
 	Settings[ "s_music_volume" ] = "0.75";
 	
@@ -245,7 +246,7 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "name" ] = "Name";
 	
 	Settings[ "netrate" ] = "30";
-	Settings[ "maxfps" ] = "120";
+	Settings[ "maxfps" ] = "60";
 	
 	#ifdef APPLE_POWERPC
 		Settings[ "g_fsaa" ] = "2";
@@ -509,7 +510,7 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 					char cstr[ 1024 ] = "";
 					
 					Raptor::Game->Console.Print( Raptor::Game->Game + " " + Raptor::Game->Version );
-					snprintf( cstr, 1024, "Architecture: %i-bit %s Endian", (int) sizeof(void*) * 8, Endian::Big() ? "Big" : "Little" );
+					snprintf( cstr, sizeof(cstr), "Architecture: %i-bit %s Endian", (int) sizeof(void*) * 8, Endian::Big() ? "Big" : "Little" );
 					Raptor::Game->Console.Print( cstr );
 					
 					Raptor::Game->Console.Print( Raptor::Game->Keys.Status() );
@@ -517,22 +518,22 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 					Raptor::Game->Console.Print( Raptor::Game->Joy.Status() );
 					Raptor::Game->Console.Print( Raptor::Game->Net.Status() );
 					
-					snprintf( cstr, 1024, "Players: %i", (int) Raptor::Game->Data.Players.size() );
+					snprintf( cstr, sizeof(cstr), "Players: %i", (int) Raptor::Game->Data.Players.size() );
 					Raptor::Game->Console.Print( cstr );
-					snprintf( cstr, 1024, "Objects: %i", (int) Raptor::Game->Data.GameObjects.size() );
+					snprintf( cstr, sizeof(cstr), "Objects: %i", (int) Raptor::Game->Data.GameObjects.size() );
 					Raptor::Game->Console.Print( cstr );
-					snprintf( cstr, 1024, "Shaders: %s", Raptor::Game->ShaderMgr.Ready() ? "OK" : "Failed" );
+					snprintf( cstr, sizeof(cstr), "Shaders: %s", Raptor::Game->ShaderMgr.Ready() ? "OK" : "Failed" );
 					Raptor::Game->Console.Print( cstr );
-					snprintf( cstr, 1024, "VR: %s", Raptor::Game->Head.Initialized ? (Raptor::Game->Head.VR ? "Available" : "Unavailable") : "Disabled" );
+					snprintf( cstr, sizeof(cstr), "VR: %s", Raptor::Game->Head.Initialized ? (Raptor::Game->Head.VR ? "Available" : "Unavailable") : "Disabled" );
 					Raptor::Game->Console.Print( cstr );
-					snprintf( cstr, 1024, "Camera Facing: %f %f %f", Raptor::Game->Cam.Fwd.X, Raptor::Game->Cam.Fwd.Y, Raptor::Game->Cam.Fwd.Z );
+					snprintf( cstr, sizeof(cstr), "Camera Facing: %f %f %f", Raptor::Game->Cam.Fwd.X, Raptor::Game->Cam.Fwd.Y, Raptor::Game->Cam.Fwd.Z );
 					Raptor::Game->Console.Print( cstr );
-					snprintf( cstr, 1024, "FPS: %.0f", 1. / Raptor::Game->FrameTime );
+					snprintf( cstr, sizeof(cstr), "FPS: %.0f", 1. / Raptor::Game->FrameTime );
 					Raptor::Game->Console.Print( cstr );
 					
 					if( Raptor::Server->IsRunning() )
 					{
-						snprintf( cstr, 1024, "Server FPS: %.0f", 1. / Raptor::Server->FrameTime );
+						snprintf( cstr, sizeof(cstr), "Server FPS: %.0f", 1. / Raptor::Server->FrameTime );
 						Raptor::Game->Console.Print( cstr );
 					}
 				}
@@ -543,7 +544,7 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 					{
 						Model *model = Raptor::Game->Res.GetModel(elements.at(1));
 						char cstr[ 1024 ] = "";
-						snprintf( cstr, 1024, "%s: %i materials, %i objects, %i arrays, %i triangles, %.3f x %.3f x %.3f, radius %.3f", elements.at(1).c_str(), (int) model->Materials.size(), (int) model->Objects.size(), model->ArrayCount(), model->TriangleCount(), model->GetLength(), model->GetWidth(), model->GetHeight(), model->GetMaxRadius() );
+						snprintf( cstr, sizeof(cstr), "%s: %i materials, %i objects, %i arrays, %i triangles, %.3f x %.3f x %.3f, radius %.3f", elements.at(1).c_str(), (int) model->Materials.size(), (int) model->Objects.size(), (int) model->ArrayCount(), (int) model->TriangleCount(), model->GetLength(), model->GetWidth(), model->GetHeight(), model->GetMaxRadius() );
 						Raptor::Game->Console.Print( cstr );
 					}
 					else
@@ -676,6 +677,26 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 							else
 								Raptor::Game->Console.Print( "Usage: sv set <variable> <value>", TextConsole::MSG_ERROR );
 						}
+						else if( sv_cmd == "unset" )
+						{
+							if( elements.size() >= 3 )
+							{
+								// FIXME: Remove the variable on clients instead of just setting to an empty string.
+								Packet info = Packet( Raptor::Packet::INFO );
+								info.AddUShort( 1 );
+								info.AddString( elements.at(2) );
+								info.AddString( "" );
+								Raptor::Server->Net.SendAll( &info );
+								
+								std::map<std::string, std::string>::iterator setting_iter = Raptor::Server->Data.Properties.find( elements.at(2) );
+								if( setting_iter != Raptor::Server->Data.Properties.end() )
+									Raptor::Server->Data.Properties.erase( setting_iter );
+								else
+									Raptor::Game->Console.Print( elements.at(2) + " is not defined." );
+							}
+							else
+								Raptor::Game->Console.Print( "Usage: sv unset <variable>", TextConsole::MSG_ERROR );
+						}
 						else if( sv_cmd == "show" )
 						{
 							if( elements.size() >= 3 )
@@ -733,23 +754,11 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 							else
 								Raptor::Game->Console.Print( std::string("Server maxfps: ") + Num::ToString( (int)( Raptor::Game->Server->MaxFPS + 0.5 ) ) );
 						}
-						else if( sv_cmd == "use_out_threads" )
-						{
-							if( elements.size() >= 3 )
-							{
-								Settings["sv_use_out_threads"] = elements.at(2);
-								Raptor::Server->UseOutThreads = SettingAsBool( "use_out_threads", true );
-								Raptor::Server->Net.UseOutThreads = Raptor::Server->UseOutThreads;
-							}
-							else
-								Raptor::Game->Console.Print( std::string("Server use_out_threads: ") + (Raptor::Game->Server->Net.UseOutThreads ? "true" : "false") );
-						}
 						else if( sv_cmd == "restart" )
 						{
 							Raptor::Server->Port = Raptor::Game->Cfg.SettingAsInt( "sv_port", 7000 );
 							Raptor::Server->NetRate = Raptor::Game->Cfg.SettingAsDouble( "sv_netrate", 30. );
 							Raptor::Server->MaxFPS = Raptor::Game->Cfg.SettingAsDouble( "sv_maxfps", 60. );
-							Raptor::Server->UseOutThreads = Raptor::Game->Cfg.SettingAsBool( "sv_out_threads", true );
 							
 							Raptor::Server->Start( Raptor::Game->Cfg.SettingAsString("name") );
 						}
@@ -758,14 +767,14 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 							char cstr[ 1024 ] = "";
 							
 							Raptor::Game->Console.Print( Raptor::Game->Game + " " + Raptor::Game->Version );
-							snprintf( cstr, 1024, "Architecture: %i-bit %s Endian", (int) sizeof(void*) * 8, Endian::Big() ? "Big" : "Little" );
+							snprintf( cstr, sizeof(cstr), "Architecture: %i-bit %s Endian", (int) sizeof(void*) * 8, Endian::Big() ? "Big" : "Little" );
 							Raptor::Game->Console.Print( cstr );
 							
-							snprintf( cstr, 1024, "Players: %i", (int) Raptor::Server->Data.Players.size() );
+							snprintf( cstr, sizeof(cstr), "Players: %i", (int) Raptor::Server->Data.Players.size() );
 							Raptor::Game->Console.Print( cstr );
-							snprintf( cstr, 1024, "Objects: %i", (int) Raptor::Server->Data.GameObjects.size() );
+							snprintf( cstr, sizeof(cstr), "Objects: %i", (int) Raptor::Server->Data.GameObjects.size() );
 							Raptor::Game->Console.Print( cstr );
-							snprintf( cstr, 1024, "Server FPS: %.0f", 1. / Raptor::Server->FrameTime );
+							snprintf( cstr, sizeof(cstr), "Server FPS: %.0f", 1. / Raptor::Server->FrameTime );
 							Raptor::Game->Console.Print( cstr );
 						}
 						else if( sv_cmd == "say" )
@@ -802,7 +811,7 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 									new_state = atoi( elements.at(2).c_str() );
 								
 								char cstr[ 1024 ] = "";
-								snprintf( cstr, 1024, "Changing server from state %i to %i.", Raptor::Server->State, new_state );
+								snprintf( cstr, sizeof(cstr), "Changing server from state %i to %i.", Raptor::Server->State, new_state );
 								Raptor::Game->Console.Print( cstr );
 								
 								Raptor::Server->ChangeState( new_state );
@@ -810,7 +819,7 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 							else
 							{
 								char cstr[ 1024 ] = "";
-								snprintf( cstr, 1024, "Current server state: %i", Raptor::Server->State );
+								snprintf( cstr, sizeof(cstr), "Current server state: %i", Raptor::Server->State );
 								Raptor::Game->Console.Print( cstr );
 							}
 						}
@@ -872,7 +881,7 @@ void ClientConfig::Load( std::string filename )
 		while( ! input.eof() )
 		{
 			buffer[ 0 ] = '\0';
-			input.getline( buffer, 1024 );
+			input.getline( buffer, sizeof(buffer) );
 			Command( std::string(buffer) );
 		}
 		
@@ -1066,7 +1075,7 @@ std::string ClientConfig::ControlName( uint8_t control )
 		return iter->second;
 	
 	char control_string[ 32 ] = "";
-	snprintf( control_string, 32, "Control%i", control );
+	snprintf( control_string, sizeof(control_string), "Control%i", control );
 	return std::string( control_string );
 }
 
@@ -1078,7 +1087,7 @@ std::string ClientConfig::KeyName( SDLKey key )
 		return iter->second;
 	
 	char key_string[ 32 ] = "";
-	snprintf( key_string, 32, "Key%i", key );
+	snprintf( key_string, sizeof(key_string), "Key%i", key );
 	return std::string( key_string );
 }
 
@@ -1091,9 +1100,9 @@ std::string ClientConfig::MouseName( Uint8 mouse )
 	
 	char mouse_string[ 32 ] = "";
 	if( mouse > 5 )
-		snprintf( mouse_string, 32, "Mouse%i", mouse - 2 );
+		snprintf( mouse_string, sizeof(mouse_string), "Mouse%i", mouse - 2 );
 	else
-		snprintf( mouse_string, 32, "MouseUnknown" );
+		snprintf( mouse_string, sizeof(mouse_string), "MouseUnknown" );
 	return std::string( mouse_string );
 }
 

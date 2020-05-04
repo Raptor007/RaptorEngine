@@ -5,6 +5,7 @@
 #include "Clock.h"
 
 #include <cstddef>
+#include <cmath>
 
 
 Clock::Clock( void )
@@ -48,6 +49,20 @@ void Clock::Reset( double count_up_to_secs )
 {
 	gettimeofday( &TimeVal, NULL );
 	CountUpToSecs = count_up_to_secs;
+}
+
+
+void Clock::Advance( double secs )
+{
+	double s = 0.;
+	double us = modf( secs, &s );
+	TimeVal.tv_sec += s;
+	TimeVal.tv_usec += us * 1000000.0 + 0.5;
+	if( TimeVal.tv_usec > 1000000 )
+	{
+		TimeVal.tv_sec ++;
+		TimeVal.tv_usec -= 1000000;
+	}
 }
 
 

@@ -13,7 +13,7 @@
 #include "RaptorServer.h"
 
 
-ConnectedClient::ConnectedClient( TCPsocket socket, bool use_out_thread, double net_rate, int8_t precision )
+ConnectedClient::ConnectedClient( TCPsocket socket, double net_rate, int8_t precision )
 {
 	Connected = false;
 	
@@ -28,7 +28,6 @@ ConnectedClient::ConnectedClient( TCPsocket socket, bool use_out_thread, double 
 	BytesReceived = 0;
 	InThread = NULL;
 	OutThread = NULL;
-	UseOutThread = use_out_thread;
 	
 	Connected = true;
 	
@@ -39,15 +38,9 @@ ConnectedClient::ConnectedClient( TCPsocket socket, bool use_out_thread, double 
 		Connected = false;
 	}
 	
-	if( UseOutThread )
-	{
-		// Start the sender thread.
-		if( !( OutThread = SDL_CreateThread( ConnectedClientOutThread, this ) ) )
-		{
-			fprintf( stderr, "ConnectedClient::ConnectedClient: SDL_CreateThread(ConnectedClientOutThread): %s\n", SDLNet_GetError() );
-			UseOutThread = false;
-		}
-	}
+	// Start the sender thread.
+	if( !( OutThread = SDL_CreateThread( ConnectedClientOutThread, this ) ) )
+		fprintf( stderr, "ConnectedClient::ConnectedClient: SDL_CreateThread(ConnectedClientOutThread): %s\n", SDLNet_GetError() );
 }
 
 
@@ -278,7 +271,7 @@ void ConnectedClient::Login( std::string name, std::string password )
 
 bool ConnectedClient::Send( Packet *packet )
 {
-	if( UseOutThread )
+	if( OutThread )
 	{
 		SendToOutBuffer( packet );
 		return true;

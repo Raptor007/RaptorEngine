@@ -23,8 +23,8 @@ Graphics::Graphics( void )
 	RealW = W;
 	RealH = H;
 	AspectRatio = ((float)( W )) / ((float)( H ));
-	ZNear = 0.01;
-	ZFar = 100000.;
+	ZNear = 0.125;
+	ZFar = 15000.;
 	Fullscreen = false;
 	FSAA = 0;
 	AF = 16;
@@ -690,40 +690,50 @@ void Graphics::DrawSphere3D( double x, double y, double z, double r, int res, GL
 				double py[ 4 ] = { y + r1*y1, y + r2*y1, y + r2*y2, y + r1*y2 };
 				double pz[ 2 ] = { z + z1, z + z2 };
 				
-				/*
-				// Calculate per-vertex normals.
-				// Commented-out because OpenGL seems to only utilize per-face normals.
-				Vec3D normals[ 4 ] = { Vec3D(r1*x1,r1*y1,z1), Vec3D(r2*x1,r2*y1,z2), Vec3D(r2*x2,r2*y2,z2), Vec3D(r1*x2,r1*y2,z1) };
-				for( int k = 0; k < 4; k ++ )
-					normals[ k ].ScaleTo( 1. );
-				*/
-				
-				// Set face normal vector.
-				Vec3D normal = Vec3D( px[1] - px[0], py[1] - py[0], pz[1] - pz[0] ).Cross( Vec3D( px[3] - px[0], py[3] - py[0], 0. ) );
-				if( i == 0 )
-					normal = Vec3D( px[3] - px[2], py[3] - py[2], pz[1] - pz[0] ).Cross( Vec3D( px[1] - px[2], py[1] - py[2], 0. ) );
-				normal.ScaleTo( 1. );
-				glNormal3d( normal.X, normal.Y, normal.Z );
+				#define SMOOTH 1
+				#if SMOOTH
+					// Calculate per-vertex normals.
+					Vec3D normals[ 4 ] = { Vec3D(r1*x1,r1*y1,z1), Vec3D(r2*x1,r2*y1,z2), Vec3D(r2*x2,r2*y2,z2), Vec3D(r1*x2,r1*y2,z1) };
+					for( int k = 0; k < 4; k ++ )
+						normals[ k ].ScaleTo( 1. );
+				#else
+					// Set face normal vector.
+					Vec3D normal = Vec3D( px[1] - px[0], py[1] - py[0], pz[1] - pz[0] ).Cross( Vec3D( px[3] - px[0], py[3] - py[0], 0. ) );
+					if( i == 0 )
+						normal = Vec3D( px[3] - px[2], py[3] - py[2], pz[1] - pz[0] ).Cross( Vec3D( px[1] - px[2], py[1] - py[2], 0. ) );
+					normal.ScaleTo( 1. );
+					glNormal3d( normal.X, normal.Y, normal.Z );
+				#endif
 				
 				// Top-left
+				#if SMOOTH
+					glNormal3d( normals[ 0 ].X, normals[ 0 ].Y, normals[ 0 ].Z );
+				#endif
 				glTexCoord2d( tc[ 0 ][ 0 ], tc[ 0 ][ 1 ] );
 				glVertex3d( px[ 0 ], py[ 0 ], pz[ 0 ] );
-				//glNormal3d( normals[ 0 ].X, normals[ 0 ].Y, normals[ 0 ].Z );
 				
 				// Bottom-left
+				#if SMOOTH
+					glNormal3d( normals[ 1 ].X, normals[ 1 ].Y, normals[ 1 ].Z );
+				#endif
 				glTexCoord2d( tc[ 1 ][ 0 ], tc[ 1 ][ 1 ] );
 				glVertex3d( px[ 1 ], py[ 1 ], pz[ 1 ] );
-				//glNormal3d( normals[ 1 ].X, normals[ 1 ].Y, normals[ 1 ].Z );
 				
 				// Bottom-right
+				#if SMOOTH
+					glNormal3d( normals[ 2 ].X, normals[ 2 ].Y, normals[ 2 ].Z );
+				#endif
 				glTexCoord2d( tc[ 2 ][ 0 ], tc[ 2 ][ 1 ] );
 				glVertex3d( px[ 2 ], py[ 2 ], pz[ 1 ] );
-				//glNormal3d( normals[ 2 ].X, normals[ 2 ].Y, normals[ 2 ].Z );
 				
 				// Top-right
+				#if SMOOTH
+					glNormal3d( normals[ 3 ].X, normals[ 3 ].Y, normals[ 3 ].Z );
+				#endif
 				glTexCoord2d( tc[ 3 ][ 0 ], tc[ 3 ][ 1 ] );
 				glVertex3d( px[ 3 ], py[ 3 ], pz[ 0 ] );
-				//glNormal3d( normals[ 3 ].X, normals[ 3 ].Y, normals[ 3 ].Z );
+				
+				#undef SMOOTH
 			}
 		}
 		

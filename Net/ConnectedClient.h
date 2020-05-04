@@ -44,12 +44,11 @@ public:
 	uint64_t BytesReceived;
 	std::list<double> PingTimes;
 	std::map<uint8_t,Clock> SentPings;
-	bool UseOutThread;
 	
 	uint16_t PlayerID;
 	
 	
-	ConnectedClient( TCPsocket socket, bool use_out_thread = true, double net_rate = 30., int8_t precision = 0 );
+	ConnectedClient( TCPsocket socket, double net_rate = 30., int8_t precision = 0 );
 	virtual ~ConnectedClient();
 	
 	void DisconnectNice( const char *message = NULL );

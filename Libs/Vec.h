@@ -33,14 +33,15 @@ public:
 	virtual Vec2D Reflect( const Vec2D *normal ) const;
 	virtual Vec2D ReflectAnySide( const Vec2D *normal ) const;
 	
-	virtual Vec2D &operator +=( const Vec2D &other );
-	virtual Vec2D &operator -=( const Vec2D &other );
-	virtual Vec2D &operator *=( double scale );
-	virtual Vec2D &operator /=( double scale );
-	virtual const Vec2D operator+( const Vec2D &other ) const;
-	virtual const Vec2D operator-( const Vec2D &other ) const;
-	const Vec2D operator*( double scale ) const;
-	const Vec2D operator/( double scale ) const;
+	virtual Vec2D &operator += ( const Vec2D &other );
+	virtual Vec2D &operator -= ( const Vec2D &other );
+	virtual Vec2D &operator *= ( double scale );
+	virtual Vec2D &operator /= ( double scale );
+	virtual const Vec2D operator + ( const Vec2D &other ) const;
+	virtual const Vec2D operator - ( const Vec2D &other ) const;
+	const Vec2D operator * ( double scale ) const;
+	const Vec2D operator / ( double scale ) const;
+	bool operator < ( const Vec2D &other ) const;
 };
 
 
@@ -72,12 +73,13 @@ public:
 	virtual Vec3D Reflect( const Vec3D *normal ) const;
 	virtual Vec3D ReflectAnySide( const Vec3D *normal ) const;
 	
-	virtual Vec3D &operator +=( const Vec3D &other );
-	virtual Vec3D &operator -=( const Vec3D &other );
-	virtual Vec3D &operator *=( double scale );
-	virtual Vec3D &operator /=( double scale );
-	virtual const Vec3D operator+( const Vec3D &other ) const;
-	virtual const Vec3D operator-( const Vec3D &other ) const;
-	const Vec3D operator*( double scale ) const;
-	const Vec3D operator/( double scale ) const;
+	virtual Vec3D &operator += ( const Vec3D &other );
+	virtual Vec3D &operator -= ( const Vec3D &other );
+	virtual Vec3D &operator *= ( double scale );
+	virtual Vec3D &operator /= ( double scale );
+	virtual const Vec3D operator + ( const Vec3D &other ) const;
+	virtual const Vec3D operator - ( const Vec3D &other ) const;
+	const Vec3D operator * ( double scale ) const;
+	const Vec3D operator / ( double scale ) const;
+	bool operator < ( const Vec3D &other ) const;
 };

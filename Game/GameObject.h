@@ -31,13 +31,13 @@ public:
 	
 	Pos3D PrevPos;
 	bool SmoothPos;
-	double NextUpdateTimeTweak;
 	
 	
 	GameObject( uint32_t id = 0, uint32_t type_code = '    ', uint16_t player_id = 0 );
 	GameObject( const GameObject &other );
 	virtual ~GameObject();
 	
+	virtual bool ClientSide( void ) const;
 	virtual void ClientInit( void );
 	
 	virtual uint32_t Type( void ) const;

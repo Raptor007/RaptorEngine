@@ -401,22 +401,26 @@ int NetClient::Send( Packet *packet )
 
 void NetClient::SendUpdates( void )
 {
+	if( !( Connected && Raptor::Game->PlayerID ) )
+		return;
+	
 	// Reduce update rate temporarily in high-ping situations.
 	double temp_netrate = NetRate;
 	temp_netrate /= ((int) LatestPing() / 100) + 1;
 	
 	// Send an update if it's time to do so.
-	if( Connected && Raptor::Game->PlayerID && (NetClock.ElapsedSeconds() >= (1.0 / temp_netrate)) )
+	double elapsed = NetClock.ElapsedSeconds();
+	if( elapsed >= (1. / temp_netrate) )
 	{
-		NetClock.Reset();
+		NetClock.Advance( elapsed );
+		SendUpdate();
 		
-		if( PingClock.ElapsedSeconds() >= (1.0 / PingRate) )
+		double ping_elapsed = PingClock.ElapsedSeconds();
+		if( ping_elapsed >= (1. / PingRate) )
 		{
-			PingClock.Reset();
+			PingClock.Advance( ping_elapsed );
 			SendPing();
 		}
-		
-		SendUpdate();
 	}
 }
 

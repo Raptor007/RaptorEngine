@@ -94,7 +94,7 @@ Vec2D Vec2D::ReflectAnySide( const Vec2D *normal ) const
 }
 
 
-Vec2D &Vec2D::operator +=( const Vec2D &other )
+Vec2D &Vec2D::operator += ( const Vec2D &other )
 {
 	X += other.X;
 	Y += other.Y;
@@ -102,7 +102,7 @@ Vec2D &Vec2D::operator +=( const Vec2D &other )
 }
 
 
-Vec2D &Vec2D::operator -=( const Vec2D &other )
+Vec2D &Vec2D::operator -= ( const Vec2D &other )
 {
 	X -= other.X;
 	Y -= other.Y;
@@ -110,41 +110,51 @@ Vec2D &Vec2D::operator -=( const Vec2D &other )
 }
 
 
-Vec2D &Vec2D::operator *=( double scale )
+Vec2D &Vec2D::operator *= ( double scale )
 {
 	ScaleBy( scale );
 	return *this;
 }
 
 
-Vec2D &Vec2D::operator /=( double scale )
+Vec2D &Vec2D::operator /= ( double scale )
 {
 	ScaleBy( 1. / scale );
 	return *this;
 }
 
 
-const Vec2D Vec2D::operator+( const Vec2D &other ) const
+const Vec2D Vec2D::operator + ( const Vec2D &other ) const
 {
 	return Vec2D(this) += other;
 }
 
 
-const Vec2D Vec2D::operator-( const Vec2D &other ) const
+const Vec2D Vec2D::operator - ( const Vec2D &other ) const
 {
 	return Vec2D(this) -= other;
 }
 
 
-const Vec2D Vec2D::operator*( double scale ) const
+const Vec2D Vec2D::operator * ( double scale ) const
 {
 	return Vec2D(this) *= scale;
 }
 
 
-const Vec2D Vec2D::operator/( double scale ) const
+const Vec2D Vec2D::operator / ( double scale ) const
 {
 	return Vec2D(this) /= scale;
+}
+
+
+bool Vec2D::operator < ( const Vec2D &other ) const
+{
+	if( X != other.X )
+		return (X < other.X);
+	if( Y != other.Y )
+		return (Y < other.Y);
+	return false;
 }
 
 
@@ -303,7 +313,7 @@ Vec3D Vec3D::ReflectAnySide( const Vec3D *normal ) const
 }
 
 
-Vec3D &Vec3D::operator +=( const Vec3D &other )
+Vec3D &Vec3D::operator += ( const Vec3D &other )
 {
 	X += other.X;
 	Y += other.Y;
@@ -312,7 +322,7 @@ Vec3D &Vec3D::operator +=( const Vec3D &other )
 }
 
 
-Vec3D &Vec3D::operator -=( const Vec3D &other )
+Vec3D &Vec3D::operator -= ( const Vec3D &other )
 {
 	X -= other.X;
 	Y -= other.Y;
@@ -321,39 +331,51 @@ Vec3D &Vec3D::operator -=( const Vec3D &other )
 }
 
 
-Vec3D &Vec3D::operator *=( double scale )
+Vec3D &Vec3D::operator *= ( double scale )
 {
 	ScaleBy( scale );
 	return *this;
 }
 
 
-Vec3D &Vec3D::operator /=( double scale )
+Vec3D &Vec3D::operator /= ( double scale )
 {
 	ScaleBy( 1. / scale );
 	return *this;
 }
 
 
-const Vec3D Vec3D::operator+( const Vec3D &other ) const
+const Vec3D Vec3D::operator + ( const Vec3D &other ) const
 {
 	return Vec3D(this) += other;
 }
 
 
-const Vec3D Vec3D::operator-( const Vec3D &other ) const
+const Vec3D Vec3D::operator - ( const Vec3D &other ) const
 {
 	return Vec3D(this) -= other;
 }
 
 
-const Vec3D Vec3D::operator*( double scale ) const
+const Vec3D Vec3D::operator * ( double scale ) const
 {
 	return Vec3D(this) *= scale;
 }
 
 
-const Vec3D Vec3D::operator/( double scale ) const
+const Vec3D Vec3D::operator / ( double scale ) const
 {
 	return Vec3D(this) /= scale;
+}
+
+
+bool Vec3D::operator < ( const Vec3D &other ) const
+{
+	if( X != other.X )
+		return (X < other.X);
+	if( Y != other.Y )
+		return (Y < other.Y);
+	if( Z != other.Z )
+		return (Z < other.Z);
+	return false;
 }

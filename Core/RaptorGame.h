@@ -99,9 +99,6 @@ public:
 	virtual void Connecting( void );
 	virtual void Connected( void );
 	
-	virtual void AddedObject( GameObject *obj );
-	virtual void RemovedObject( GameObject *obj );
-	
 	virtual GameObject *NewObject( uint32_t id, uint32_t type );
 	virtual Player *NewPlayer( uint16_t id );
 	

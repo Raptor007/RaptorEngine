@@ -25,7 +25,6 @@ GameObject::GameObject( uint32_t id, uint32_t type_code, uint16_t player_id ) : 
 	RollRate = 0.;
 	PitchRate = 0.;
 	YawRate = 0.;
-	NextUpdateTimeTweak = 0.;
 	SmoothPos = true;
 }
 
@@ -41,13 +40,18 @@ GameObject::GameObject( const GameObject &other ) : Pos3D( other )
 	PitchRate = other.PitchRate;
 	YawRate = other.YawRate;
 	Lifetime = other.Lifetime;
-	NextUpdateTimeTweak = 0.;
 	SmoothPos = true;
 }
 
 
 GameObject::~GameObject()
 {
+}
+
+
+bool GameObject::ClientSide( void ) const
+{
+	return (Data == &(Raptor::Game->Data));
 }
 
 
@@ -196,25 +200,17 @@ void GameObject::ReadFromUpdatePacket( Packet *packet, int8_t precision )
 	MotionVector.X = packet->NextFloat();
 	MotionVector.Y = packet->NextFloat();
 	MotionVector.Z = packet->NextFloat();
-	
-	if( SmoothPos && (Dist(&PrevPos) < SMOOTH_RADIUS) )
-	{
-		// Average with the previously-calculated position to reduce jitter.
-		
-		X += PrevPos.X;
-		Y += PrevPos.Y;
-		Z += PrevPos.Z;
-		X /= 2.;
-		Y /= 2.;
-		Z /= 2.;
-		
-		Fwd += PrevPos.Fwd;
-		Fwd /= 2.;
-		Up += PrevPos.Up;
-		Up /= 2.;
-	}
-	
 	FixVectors();
+	
+	if( SmoothPos && (Dist(&PrevPos) < SMOOTH_RADIUS) && MotionVector.Length() )
+	{
+		// Remove jitter from delayed position updates.
+		Vec3D unit_motion = MotionVector;
+		unit_motion.ScaleTo( 1. );
+		double dist_behind = PrevPos.DistAlong( &unit_motion, this );
+		if( dist_behind > 0. )
+			MoveAlong( &unit_motion, dist_behind );
+	}
 }
 
 
@@ -227,12 +223,24 @@ void GameObject::AddToUpdatePacketFromServer( Packet *packet, int8_t precision )
 
 void GameObject::ReadFromUpdatePacketFromServer( Packet *packet, int8_t precision )
 {
-	// Client-side anti-lag.
-	NextUpdateTimeTweak -= Raptor::Game->FrameTime / 2.;
-	NextUpdateTimeTweak += Raptor::Game->Net.MedianPing() / 4000.;
-	
 	ReadFromUpdatePacket( packet, precision );
 	PlayerID = packet->NextUShort();
+	
+	if( SmoothPos && (Dist(&PrevPos) < SMOOTH_RADIUS) )
+	{
+		// Average received with calculated to reduce jitter.
+		X += PrevPos.X;
+		Y += PrevPos.Y;
+		Z += PrevPos.Z;
+		X /= 2.;
+		Y /= 2.;
+		Z /= 2.;
+		Fwd += PrevPos.Fwd;
+		Fwd /= 2.;
+		Up += PrevPos.Up;
+		Up /= 2.;
+		FixVectors();
+	}
 }
 
 
@@ -257,9 +265,6 @@ bool GameObject::WillCollide( const GameObject *other, double dt, std::string *t
 void GameObject::Update( double dt )
 {
 	PrevPos.Copy( this );
-	
-	dt += NextUpdateTimeTweak;
-	NextUpdateTimeTweak = 0.;
 	
 	Roll( dt * RollRate );
 	Pitch( dt * PitchRate );

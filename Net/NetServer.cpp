@@ -16,7 +16,6 @@ NetServer::NetServer( void )
 	Thread = NULL;
 	Socket = NULL;
 	NetRate = 30.0;
-	UseOutThreads = true;
 	Precision = 0;
 }
 
@@ -306,22 +305,26 @@ void NetServer::SendUpdates( void )
 		
 		ConnectedClient *client = *iter;
 		
-		// Reduce update rate temporarily in high-ping situations.
-		double temp_netrate = client->NetRate;
-		temp_netrate /= ((int) client->LatestPing() / 100) + 1;
-		
-		// Send an update if it's time to do so.
-		if( client->Connected && client->PlayerID && ( client->NetClock.ElapsedSeconds() >= (1.0 / temp_netrate) ) )
+		if( client->Connected && client->PlayerID )
 		{
-			client->NetClock.Reset();
+			// Reduce update rate temporarily in high-ping situations.
+			double temp_netrate = client->NetRate;
+			temp_netrate /= ((int) client->LatestPing() / 100) + 1;
 			
-			if( client->PingClock.ElapsedSeconds() >= (1.0 / client->PingRate) )
+			// Send an update if it's time to do so.
+			double elapsed = client->NetClock.ElapsedSeconds();
+			if( elapsed >= (1. / temp_netrate) )
 			{
-				client->PingClock.Reset();
-				client->SendPing();
+				client->NetClock.Advance( elapsed );
+				Raptor::Server->SendUpdate( client, client->Precision );
+				
+				double ping_elapsed = client->PingClock.ElapsedSeconds();
+				if( ping_elapsed >= (1. / client->PingRate) )
+				{
+					client->PingClock.Advance( ping_elapsed );
+					client->SendPing();
+				}
 			}
-			
-			Raptor::Server->SendUpdate( client, client->Precision );
 		}
 		
 		iter = next;
@@ -361,7 +364,7 @@ int NetServer::NetServerThread( void *server )
 		// Check for new connections.
 		if( (client_socket = SDLNet_TCP_Accept(net_server->Socket)) )
 		{
-			ConnectedClient *connected_client = new ConnectedClient( client_socket, net_server->UseOutThreads, net_server->NetRate, net_server->Precision );
+			ConnectedClient *connected_client = new ConnectedClient( client_socket, net_server->NetRate, net_server->Precision );
 			
 			if( (remote_ip = SDLNet_TCP_GetPeerAddress(client_socket)) )
 			{

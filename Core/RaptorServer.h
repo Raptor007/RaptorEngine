@@ -30,7 +30,6 @@ public:
 	double NetRate;
 	bool Announce;
 	double AnnounceInterval;
-	bool UseOutThreads;
 	
 	double FrameTime;
 	

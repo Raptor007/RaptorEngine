@@ -355,7 +355,7 @@ void Packet::AddString( const char *addition )
 }
 
 
-void Packet::AddString( std::string &addition )
+void Packet::AddString( const std::string &addition )
 {
 	AddString( addition.c_str() );
 }
@@ -517,7 +517,7 @@ uint64_t Packet::NextUInt64( void )
 
 float Packet::NextFloat( void )
 {
-	float value = 0.0f;
+	float value = 0.f;
 	if( Offset + 4 <= Size() )
 	{
 		// Retrieve from network-endian.
@@ -540,7 +540,7 @@ float Packet::NextFloat( void )
 
 double Packet::NextDouble( void )
 {
-	double value = 0.0;
+	double value = 0.;
 	if( Offset + 8 <= Size() )
 	{
 		// Retrieve from network-endian.
@@ -561,9 +561,9 @@ double Packet::NextDouble( void )
 }
 
 
-char *Packet::NextString( void )
+const char *Packet::NextString( void )
 {
-	char *value = NULL;
+	const char *value = "";
 	if( Offset < Size() )
 	{
 		value = ((char *)( Data + Offset ));

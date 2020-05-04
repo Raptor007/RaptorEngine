@@ -66,7 +66,7 @@ public:
 	void AddFloat( float addition );
 	void AddDouble( double addition );
 	void AddString( const char *addition );
-	void AddString( std::string &addition );
+	void AddString( const std::string &addition );
 	
 	int8_t NextChar( void );
 	uint8_t NextUChar( void );
@@ -78,7 +78,7 @@ public:
 	uint64_t NextUInt64( void );
 	float NextFloat( void );
 	double NextDouble( void );
-	char *NextString( void );
+	const char *NextString( void );
 	
 	static PacketSize FirstPacketSize( const void *data );
 };

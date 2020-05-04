@@ -28,6 +28,7 @@ public:
 	
 	void Reset( void );
 	void Reset( double count_up_to_secs );
+	void Advance( double secs );
 	
 	double ElapsedSeconds( void ) const;
 	double ElapsedMilliseconds( void ) const;

@@ -54,6 +54,25 @@ void ShaderManager::Select( Shader *shader )
 }
 
 
+void ShaderManager::SelectAndCopyVars( Shader *shader )
+{
+	bool active = Active();
+	
+	if( Ready() && shader && (shader != Selected) && shader->Ready() )
+	{
+		// OpenGL documentation says we should use the shader before setting its variables.
+		glUseProgram( shader->ProgramHandle );
+		
+		shader->CopyVarsFrom( Selected );
+		
+		if( ! active )
+			glUseProgram( 0 );
+	}
+	
+	Selected = shader;
+}
+
+
 void ShaderManager::StopShaders( void )
 {
 	if( ! Initialized )
@@ -93,7 +112,7 @@ bool ShaderManager::Ready( void )
 
 bool ShaderManager::Set1f( const char *name, double value )
 {
-	if( Selected )
+	if( Selected )  // FIXME: Make sure shader is active?
 		return Selected->Set1f( name, value );
 	
 	return false;
@@ -102,7 +121,7 @@ bool ShaderManager::Set1f( const char *name, double value )
 
 bool ShaderManager::Set3f( const char *name, double x, double y, double z )
 {
-	if( Selected )
+	if( Selected )  // FIXME: Make sure shader is active?
 		return Selected->Set3f( name, x, y, z );
 	
 	return false;
@@ -111,7 +130,7 @@ bool ShaderManager::Set3f( const char *name, double x, double y, double z )
 
 bool ShaderManager::Set4f( const char *name, double x, double y, double z, double w )
 {
-	if( Selected )
+	if( Selected )  // FIXME: Make sure shader is active?
 		return Selected->Set4f( name, x, y, z, w );
 	
 	return false;
@@ -120,7 +139,7 @@ bool ShaderManager::Set4f( const char *name, double x, double y, double z, doubl
 
 bool ShaderManager::Set1i( const char *name, int value )
 {
-	if( Selected )
+	if( Selected )  // FIXME: Make sure shader is active?
 		return Selected->Set1i( name, value );
 	
 	return false;

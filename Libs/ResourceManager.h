@@ -47,7 +47,7 @@ public:
 	GLuint GetTexture( const std::string &name );
 	Framebuffer *GetFramebuffer( const std::string &name, int x = 0, int y = 0 );
 	Animation *GetAnimation( const std::string &name );
-	Model *GetModel( const std::string &name );
+	Model *GetModel( const std::string &name, double scale = 1. );
 	Mix_Chunk *GetSound( const std::string &name );
 	Mix_Music *GetMusic( const std::string &name );
 	Font *GetFont( const std::string &name, int point_size );
@@ -77,7 +77,7 @@ private:
 	GLuint LoadTexture( const std::string &name );
 	Framebuffer *CreateFramebuffer( const std::string &name, int x, int y );
 	Animation *LoadAnimation( const std::string &name );
-	Model *LoadModel( const std::string &name );
+	Model *LoadModel( const std::string &name, double scale = 1. );
 	Mix_Chunk *LoadSound( const std::string &name );
 	Mix_Music *LoadMusic( const std::string &name );
 	Font *LoadFont( const std::string &name, int point_size );

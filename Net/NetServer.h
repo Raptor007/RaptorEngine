@@ -36,7 +36,6 @@ public:
 	std::list<ConnectedClient*> Clients;
 	std::list<ConnectedClient*> DisconnectedClients;
 	double NetRate;
-	bool UseOutThreads;
 	int8_t Precision;
 	
 	

@@ -10,6 +10,7 @@
 #include "Rand.h"
 #include "Num.h"
 #include "Notification.h"
+#include <cmath>
 
 
 namespace Raptor
@@ -201,10 +202,13 @@ void RaptorGame::Run( void )
 		
 		// Calculate the time elapsed for the frame.
 		double elapsed = GameClock.ElapsedSeconds();
-		if( (elapsed > 0.0) && ( (MaxFPS <= 0.0) || ((1.0 / elapsed) <= MaxFPS) ) )
+		if( MaxFPS && (elapsed > 0.) && (elapsed < 1. / MaxFPS) )
+			elapsed = 1. / MaxFPS;
+		
+		if( elapsed > 0. )
 		{
-			FrameTime = GameClock.ElapsedSeconds();
-			GameClock.Reset();
+			FrameTime = elapsed;
+			GameClock.Advance( FrameTime );
 			
 			// Keep the list of joysticks up-to-date.
 			Joy.FindJoysticks();
@@ -417,10 +421,13 @@ bool RaptorGame::ProcessPacket( Packet *packet )
 			{
 				// The server thinks we should have this object, so we're out of sync!
 				// This means the rest of the update packet could be misaligned, so stop trying to parse it.
-				Console.Print( "Sync error: UPDATE", TextConsole::MSG_ERROR );
+				Console.Print( "Sync error: UPDATE: missing object " + Num::ToString((int)obj_id), TextConsole::MSG_ERROR );
 				return true;
 			}
 		}
+		
+		if( packet->Offset < packet->Size() )
+			Console.Print( "Sync error: UPDATE: unparsed " + Num::ToString((int)(packet->Size() - packet->Offset)), TextConsole::MSG_ERROR );
 		
 		return true;
 	}
@@ -438,10 +445,13 @@ bool RaptorGame::ProcessPacket( Packet *packet )
 			uint32_t id = packet->NextUInt();
 			uint32_t type = packet->NextUInt();
 			GameObject *obj = NewObject( id, type );
-			Data.AddObject( obj );
+			obj->Data = &Data;  // Just in case ReadFromInitPacket checks ClientSide.
 			obj->ReadFromInitPacket( packet );
-			AddedObject( obj );
+			Data.AddObject( obj );
 		}
+		
+		if( packet->Offset < packet->Size() )
+			Console.Print( "Sync error: OBJECTS_ADD: unparsed " + Num::ToString((int)(packet->Size() - packet->Offset)), TextConsole::MSG_ERROR );
 		
 		return true;
 	}
@@ -473,7 +483,7 @@ bool RaptorGame::ProcessPacket( Packet *packet )
 	else if( type == Raptor::Packet::PLAYER_ADD )
 	{
 		uint16_t id = packet->NextUShort();
-		char *name = packet->NextString();
+		const char *name = packet->NextString();
 		
 		Player *player = NewPlayer( id );
 		player->Name = name;
@@ -517,7 +527,7 @@ bool RaptorGame::ProcessPacket( Packet *packet )
 			else
 			{
 				// The server thinks we should have this player, so we're out of sync!
-				Console.Print( "Sync error: PLAYER_PROPERTIES", TextConsole::MSG_ERROR );
+				Console.Print( "Sync error: PLAYER_PROPERTIES: missing player " + Num::ToString((int)id), TextConsole::MSG_ERROR );
 			}
 		}
 		
@@ -535,7 +545,7 @@ bool RaptorGame::ProcessPacket( Packet *packet )
 			obj_count --;
 			
 			uint16_t id = packet->NextUShort();
-			char *name = packet->NextString();
+			const char *name = packet->NextString();
 			
 			Player *player = NULL;
 			std::map<uint16_t,Player*>::iterator player_iter = Data.Players.find( id );
@@ -712,16 +722,6 @@ void RaptorGame::Connected( void )
 }
 
 
-void RaptorGame::AddedObject( GameObject *obj )
-{
-}
-
-
-void RaptorGame::RemovedObject( GameObject *obj )
-{
-}
-
-
 GameObject *RaptorGame::NewObject( uint32_t id, uint32_t type )
 {
 	return new GameObject( id, type );
@@ -747,7 +747,6 @@ void RaptorGame::Host( void )
 		Server->Port = Cfg.SettingAsInt( "sv_port", 7000 );
 		Server->MaxFPS = Cfg.SettingAsDouble( "sv_maxfps", 60. );
 		Server->NetRate = Cfg.SettingAsDouble( "sv_netrate", 30. );
-		Server->UseOutThreads = Cfg.SettingAsBool( "sv_use_out_threads", true );
 		Server->Start( Cfg.SettingAsString( "name" , Raptor::Server->Game.c_str() ) );
 		
 		Clock wait_for_start;
@@ -824,6 +823,9 @@ bool Raptor::PreMain( void )
 			if( (_tstat( path, &stat_buffer ) == 0) && (stat_buffer.st_mode & S_IFDIR) )
 				SetDllDirectory( path );
 		}
+		
+		// Prevent Windows DPI scaling from stupidly stretching things off-screen.
+		SetProcessDPIAware();
 	#endif
 	
 	#if defined(__APPLE__) && defined(PROC_PIDPATHINFO_MAXSIZE) && !defined(_DEBUG)

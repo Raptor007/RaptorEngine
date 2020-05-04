@@ -10,6 +10,7 @@ typedef unsigned int ShaderComponentType;
 
 #include "PlatformSpecific.h"
 
+#include <stdint.h>
 #include <string>
 #include <map>
 #include <vector>
@@ -37,6 +38,8 @@ public:
 	bool Set4f( const char *name, double x, double y, double z, double w );
 	bool Set1i( const char *name, int value );
 	
+	int CopyVarsFrom( const Shader *other );
+	
 private:
 	std::vector<ShaderComponent*> Components;
 };
@@ -63,9 +66,19 @@ class ShaderVar
 {
 public:
 	GLint Loc;
+	uint8_t Type;
 	double Float1, Float2, Float3, Float4;
 	int Int1, Int2, Int3, Int4;
 	
 	ShaderVar( void );
 	virtual ~ShaderVar();
+	
+	enum
+	{
+		TYPE_UNKNOWN = 0,
+		TYPE_1F,
+		TYPE_3F,
+		TYPE_4F,
+		TYPE_1I
+	};
 };

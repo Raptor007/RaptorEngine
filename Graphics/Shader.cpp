@@ -125,6 +125,7 @@ bool Shader::Set1f( const char *name, double value )
 			{
 				glUniform1f( var->Loc, value );
 				var->Float1 = value;
+				var->Type = ShaderVar::TYPE_1F;
 			}
 			valid = true;
 		}
@@ -155,6 +156,7 @@ bool Shader::Set3f( const char *name, double x, double y, double z )
 				var->Float1 = x;
 				var->Float2 = y;
 				var->Float3 = z;
+				var->Type = ShaderVar::TYPE_3F;
 			}
 			valid = true;
 		}
@@ -186,6 +188,7 @@ bool Shader::Set4f( const char *name, double x, double y, double z, double w )
 				var->Float2 = y;
 				var->Float3 = z;
 				var->Float4 = w;
+				var->Type = ShaderVar::TYPE_4F;
 			}
 			valid = true;
 		}
@@ -214,12 +217,38 @@ bool Shader::Set1i( const char *name, int value )
 			{
 				glUniform1i( var->Loc, value );
 				var->Int1 = value;
+				var->Type = ShaderVar::TYPE_1I;
 			}
 			valid = true;
 		}
 	}
 	
 	return valid;
+}
+
+
+int Shader::CopyVarsFrom( const Shader *other )
+{
+	int count = 0;
+	
+	for( std::map<std::string,ShaderVar>::const_iterator var_iter = other->Vars.begin(); var_iter != other->Vars.end(); var_iter ++ )
+	{
+		bool copied = false;
+		
+		if( var_iter->second.Type == ShaderVar::TYPE_1F )
+			copied = Set1f( var_iter->first.c_str(), var_iter->second.Float1 );
+		else if( var_iter->second.Type == ShaderVar::TYPE_3F )
+			copied = Set3f( var_iter->first.c_str(), var_iter->second.Float1, var_iter->second.Float2, var_iter->second.Float3 );
+		else if( var_iter->second.Type == ShaderVar::TYPE_4F )
+			copied = Set4f( var_iter->first.c_str(), var_iter->second.Float1, var_iter->second.Float2, var_iter->second.Float3, var_iter->second.Float4 );
+		else if( var_iter->second.Type == ShaderVar::TYPE_1I )
+			copied = Set1i( var_iter->first.c_str(), var_iter->second.Int1 );
+		
+		if( copied )
+			count ++;
+	}
+	
+	return count;
 }
 
 
@@ -290,7 +319,8 @@ bool ShaderComponent::Ready( void )
 ShaderVar::ShaderVar( void )
 {
 	Loc = -1;
-
+	Type = TYPE_UNKNOWN;
+	
 	Float1 = 0.;
 	Float2 = 0.;
 	Float3 = 0.;

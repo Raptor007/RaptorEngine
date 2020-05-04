@@ -36,7 +36,6 @@ RaptorServer::RaptorServer( std::string game, std::string version )
 	NetRate = 30.;
 	Announce = true;
 	AnnounceInterval = 3.;
-	UseOutThreads = true;
 	
 	Console = NULL;
 	
@@ -72,7 +71,6 @@ int RaptorServer::Start( std::string name )
 	}
 	
 	Net.NetRate = NetRate;
-	Net.UseOutThreads = UseOutThreads;
 	
 	if( !( Thread = SDL_CreateThread( RaptorServerThread, this ) ) )
 	{
@@ -442,16 +440,17 @@ void RaptorServer::ChangeState( int state )
 
 int RaptorServer::RaptorServerThread( void *game_server )
 {
+	RaptorServer *server = (RaptorServer*) game_server;
 	Rand::Seed( time(NULL) );
 	
-	((RaptorServer*) game_server)->Net.Initialize( ((RaptorServer*) game_server)->Port );
+	server->Net.Initialize( server->Port );
 	
 	char cstr[ 1024 ] = "";
 	
-	if( ((RaptorServer*) game_server)->Net.Listening )
+	if( server->Net.Listening )
 	{
-		snprintf( cstr, 1024, "%s server started on port %i.", ((RaptorServer*) game_server)->Game.c_str(), ((RaptorServer*) game_server)->Port );
-		((RaptorServer*) game_server)->ConsolePrint( cstr );
+		snprintf( cstr, 1024, "%s server started on port %i.", server->Game.c_str(), server->Port );
+		server->ConsolePrint( cstr );
 		
 		NetUDP ServerAnnouncer;
 		ServerAnnouncer.Initialize();
@@ -460,76 +459,79 @@ int RaptorServer::RaptorServerThread( void *game_server )
 		Clock AnnounceClock;
 		bool sleep_longer = false;
 		
-		while( ((RaptorServer*) game_server)->Net.Listening )
+		while( server->Net.Listening )
 		{
 			// Process network input buffers (one packet per client).
-			((RaptorServer*) game_server)->Net.ProcessTop();
+			server->Net.ProcessTop();
 			
 			// Calculate the time elapsed for the "frame".
 			double elapsed = GameClock.ElapsedSeconds();
-			if( (((RaptorServer*) game_server)->MaxFPS <= 0.0) || ( (elapsed > 0.0) && ((1.0 / elapsed) <= ((RaptorServer*) game_server)->MaxFPS) ) )
+			if( server->MaxFPS && (elapsed > 0.) && (elapsed < 1. / server->MaxFPS) )
+				elapsed = 1. / server->MaxFPS;
+			
+			if( elapsed > 0. )
 			{
-				((RaptorServer*) game_server)->FrameTime = GameClock.ElapsedSeconds();
-				GameClock.Reset();
+				server->FrameTime = elapsed;
+				GameClock.Advance( elapsed );
 				
 				// Update location.
-				((RaptorServer*) game_server)->Update( ((RaptorServer*) game_server)->FrameTime );
+				server->Update( server->FrameTime );
 				
 				// Drop disconnected clients from the list.
-				((RaptorServer*) game_server)->Net.RemoveDisconnectedClients();
+				server->Net.RemoveDisconnectedClients();
 				
 				// Send periodic updates to clients.
-				((RaptorServer*) game_server)->Net.SendUpdates();
-
+				server->Net.SendUpdates();
+				
 				// Send periodic server announcements over UDP broadcast.
-				if( ((RaptorServer*) game_server)->Announce && (AnnounceClock.ElapsedSeconds() > ((RaptorServer*) game_server)->AnnounceInterval) )
+				if( server->Announce && (AnnounceClock.ElapsedSeconds() > server->AnnounceInterval) )
 				{
 					AnnounceClock.Reset();
-
+					
 					Packet info( Raptor::Packet::INFO );
 					
 					// Properties.
-					info.AddUShort( 3 + ((RaptorServer*) game_server)->Data.Properties.size() );
+					info.AddUShort( 3 + server->Data.Properties.size() );
 					info.AddString( "game" );
-					info.AddString( ((RaptorServer*) game_server)->Game );
+					info.AddString( server->Game );
 					info.AddString( "version" );
-					info.AddString( ((RaptorServer*) game_server)->Version );
+					info.AddString( server->Version );
 					info.AddString( "port" );
 					char port_str[ 32 ] = "";
-					snprintf( port_str, 32, "%i", ((RaptorServer*) game_server)->Port );
+					snprintf( port_str, 32, "%i", server->Port );
 					info.AddString( port_str );
-					for( std::map<std::string,std::string>::iterator property_iter = ((RaptorServer*) game_server)->Data.Properties.begin(); property_iter != ((RaptorServer*) game_server)->Data.Properties.end(); property_iter ++ )
+					for( std::map<std::string,std::string>::iterator property_iter = server->Data.Properties.begin(); property_iter != server->Data.Properties.end(); property_iter ++ )
 					{
 						info.AddString( property_iter->first.c_str() );
 						info.AddString( property_iter->second.c_str() );
 					}
 					
 					// Players.
-					info.AddUShort( ((RaptorServer*) game_server)->Data.Players.size() );
-					for( std::map<uint16_t,Player*>::iterator player_iter = ((RaptorServer*) game_server)->Data.Players.begin(); player_iter != ((RaptorServer*) game_server)->Data.Players.end(); player_iter ++ )
+					info.AddUShort( server->Data.Players.size() );
+					for( std::map<uint16_t,Player*>::iterator player_iter = server->Data.Players.begin(); player_iter != server->Data.Players.end(); player_iter ++ )
 						info.AddString( player_iter->second->Name.c_str() );
 					
 					ServerAnnouncer.Broadcast( &info, 7000 );
 				}
 				
 				// Don't work very hard if nobody is connected.
-				sleep_longer = ( ((RaptorServer*) game_server)->Net.Clients.size() < 1 );
+				sleep_longer = ( server->Net.Clients.size() < 1 );
 			}
 			
 			// Let the thread rest a bit.
 			SDL_Delay( sleep_longer ? 100 : 1 );
 		}
 		
-		snprintf( cstr, 1024, "%s server stopped.", ((RaptorServer*) game_server)->Game.c_str() );
-		((RaptorServer*) game_server)->ConsolePrint( cstr );
+		snprintf( cstr, 1024, "%s server stopped.", server->Game.c_str() );
+		server->ConsolePrint( cstr );
 	}
 	else
 	{
-		snprintf( cstr, 1024, "%s server failed to start.", ((RaptorServer*) game_server)->Game.c_str() );
-		((RaptorServer*) game_server)->ConsolePrint( cstr, TextConsole::MSG_ERROR );
+		snprintf( cstr, 1024, "%s server failed to start.", server->Game.c_str() );
+		server->ConsolePrint( cstr, TextConsole::MSG_ERROR );
 	}
 	
-	((RaptorServer*) game_server)->Thread = NULL;
-	((RaptorServer*) game_server)->State = Raptor::State::DISCONNECTED;
+	server->Thread = NULL;
+	server->State = Raptor::State::DISCONNECTED;
 	return 0;
 }
