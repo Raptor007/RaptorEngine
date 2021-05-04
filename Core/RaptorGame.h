@@ -43,6 +43,7 @@ class RaptorGame
 public:
 	std::string Game;
 	std::string Version;
+	int DefaultPort;
 	
 	Graphics Gfx;
 	ShaderManager ShaderMgr;
@@ -90,7 +91,7 @@ public:
 	virtual void Draw( void );
 	
 	virtual bool HandleEvent( SDL_Event *event );
-	virtual bool HandleCommand( std::string cmd, std::vector<std::string> *elements );
+	virtual bool HandleCommand( std::string cmd, std::vector<std::string> *params = NULL );
 	virtual bool ProcessPacket( Packet *packet );
 	virtual void SendUpdate( int8_t precision = 0 );
 	
@@ -113,5 +114,5 @@ namespace Raptor
 #ifndef RAPTORGAME_CPP
 	extern RaptorGame *Game;
 #endif
-	bool PreMain( void );
+	bool PreMain( int bits = sizeof(void*) * 8 );
 }

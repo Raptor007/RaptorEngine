@@ -317,6 +317,58 @@ Pos3D *Pos3D::Nearest( const std::list<Pos3D*> *others, const std::set<Pos3D*> *
 }
 
 
+std::multimap<double,Pos3D*> Pos3D::Nearest( const std::vector<Pos3D*> *others, size_t max_size )
+{
+	std::multimap<double,Pos3D*> nearest;
+	double farthest_in_list = 0.;
+	
+	for( std::vector<Pos3D*>::const_iterator pos_iter = others->begin(); pos_iter != others->end(); pos_iter ++ )
+	{
+		double dist = Dist(*pos_iter);
+		if( nearest.size() < max_size )
+		{
+			nearest.insert( std::pair<double,Pos3D*>( dist, *pos_iter ) );
+			if( dist > farthest_in_list )
+				farthest_in_list = dist;
+		}
+		else if( dist < farthest_in_list )
+		{
+			nearest.erase( --(nearest.rbegin().base()) );
+			nearest.insert( std::pair<double,Pos3D*>( dist, *pos_iter ) );
+			farthest_in_list = nearest.rbegin()->first;
+		}
+	}
+	
+	return nearest;
+}
+
+
+std::multimap<double,Pos3D*> Pos3D::Nearest( const std::list<Pos3D*> *others, size_t max_size )
+{
+	std::multimap<double,Pos3D*> nearest;
+	double farthest_in_list = 0.;
+	
+	for( std::list<Pos3D*>::const_iterator pos_iter = others->begin(); pos_iter != others->end(); pos_iter ++ )
+	{
+		double dist = Dist(*pos_iter);
+		if( nearest.size() < max_size )
+		{
+			nearest.insert( std::pair<double,Pos3D*>( dist, *pos_iter ) );
+			if( dist > farthest_in_list )
+				farthest_in_list = dist;
+		}
+		else if( dist < farthest_in_list )
+		{
+			nearest.erase( --(nearest.rbegin().base()) );
+			nearest.insert( std::pair<double,Pos3D*>( dist, *pos_iter ) );
+			farthest_in_list = nearest.rbegin()->first;
+		}
+	}
+	
+	return nearest;
+}
+
+
 Pos3D &Pos3D::operator +=( const Vec3D &vec )
 {
 	X += vec.X;
@@ -354,22 +406,18 @@ Pos3D &Pos3D::operator -=( const Pos3D &other )
 
 
 const Pos3D Pos3D::operator+( const Vec3D &other ) const
-
 {
-
 	return Pos3D(this) += other;
-
 }
-
-
-
 
 
 const Pos3D Pos3D::operator-( const Vec3D &other ) const
-
 {
-
 	return Pos3D(this) -= other;
-
 }
 
+
+const Vec3D Pos3D::operator-( const Pos3D &other ) const
+{
+	return Vec3D( X - other.X, Y - other.Y, Z - other.Z );
+}

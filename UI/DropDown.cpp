@@ -28,7 +28,7 @@ void DropDown::AddItem( std::string value, std::string text )
 
 void DropDown::Update( void )
 {
-	for( std::vector<ListBoxItem>::iterator item_iter = Items.begin(); item_iter != Items.end(); item_iter ++ )
+	for( std::vector<ListBoxItem>::const_iterator item_iter = Items.begin(); item_iter != Items.end(); item_iter ++ )
 	{
 		if( item_iter->Value == Value )
 		{
@@ -46,12 +46,11 @@ bool DropDown::HandleEvent( SDL_Event *event )
 	if( (! handled) && MyListBox && ! MouseIsWithin )
 	{
 		if( event->type == SDL_MOUSEBUTTONDOWN )
-		{
 			return true;
-		}
 		else if( event->type == SDL_MOUSEBUTTONUP )
 		{
-			Close();
+			if( ! MyListBox->ClickedScrollBar )
+				Close();
 			return true;
 		}
 	}
@@ -134,8 +133,43 @@ void DropDown::Close( void )
 }
 
 
+bool DropDown::Select( std::string value )
+{
+	for( std::vector<ListBoxItem>::const_iterator item_iter = Items.begin(); item_iter != Items.end(); item_iter ++ )
+	{
+		if( item_iter->Value == value )
+		{
+			Value = value;
+			LabelText = item_iter->Text;
+			
+			Changed();
+			
+			return true;
+		}
+	}
+	
+	return false;
+}
+
+
+bool DropDown::Select( int index )
+{
+	if( (index < 0) || (index >= (int) Items.size()) )
+		return false;
+	
+	Value = Items[ index ].Value;
+	LabelText = Items[ index ].Text;
+	
+	Changed();
+	
+	return true;
+}
+
+
 void DropDown::Changed( void )
 {
+	if( MyListBox )
+		MyListBox->ScrollTo( Value );
 }
 
 
@@ -158,18 +192,20 @@ DropDownListBox::DropDownListBox( DropDown *dropdown )
 	
 	Rect.h = Items.size() * LineScroll();
 	
-	// FIXME: This dirty hack is needed because DropDown::Clicked happens when the dimensions are not the VR eye.
-	if( Raptor::Game->Head.VR && Raptor::Game->Cfg.SettingAsBool("vr_enable") )
-		return;
+	// FIXME: This check is needed because DropDown::Clicked happens when the dimensions are not the VR eye.
+	if( !( Raptor::Game->Head.VR && Raptor::Game->Cfg.SettingAsBool("vr_enable") ) )
+	{
+		if( Rect.h > max_h )
+			Rect.h = max_h;
+		
+		int offscreen = (CalledBy->Container ? CalledBy->Container->CalcRect.y : 0) + Rect.y + Rect.h - Raptor::Game->Gfx.H;
+		if( offscreen > 0 )
+			Rect.y -= offscreen;
+		if( Rect.y < min_y )
+			Rect.y = min_y;
+	}
 	
-	if( Rect.h > max_h )
-		Rect.h = max_h;
-	
-	int offscreen = (CalledBy->Container ? CalledBy->Container->CalcRect.y : 0) + Rect.y + Rect.h - Raptor::Game->Gfx.H;
-	if( offscreen > 0 )
-		Rect.y -= offscreen;
-	if( Rect.y < min_y )
-		Rect.y = min_y;
+	ScrollTo( CalledBy->Value, CalledBy->Rect.y - Rect.y );
 }
 
 
@@ -182,8 +218,8 @@ void DropDownListBox::Changed( void )
 {
 	CalledBy->LabelText = SelectedText();
 	CalledBy->Value = SelectedValue();
-	CalledBy->Changed();
 	CalledBy->MyListBox = NULL;
+	CalledBy->Changed();
 	Remove();
 }
 

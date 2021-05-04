@@ -7,9 +7,11 @@ class Pos;
 
 #include "PlatformSpecific.h"
 
+#include <cstdio>
 #include <vector>
 #include <list>
 #include <set>
+#include <map>
 #include "Vec.h"
 
 
@@ -61,6 +63,8 @@ public:
 	Pos3D *Nearest( const std::list<Pos3D*> *others );
 	Pos3D *Nearest( const std::vector<Pos3D*> *others, const std::set<Pos3D*> *except );
 	Pos3D *Nearest( const std::list<Pos3D*> *others, const std::set<Pos3D*> *except );
+	std::multimap<double,Pos3D*> Nearest( const std::vector<Pos3D*> *others, size_t max_size );
+	std::multimap<double,Pos3D*> Nearest( const std::list<Pos3D*> *others, size_t max_size );
 	
 	virtual Pos3D &operator +=( const Vec3D &vec );
 	virtual Pos3D &operator -=( const Vec3D &vec );
@@ -69,4 +73,6 @@ public:
 	
 	virtual const Pos3D operator+( const Vec3D &other ) const;
 	virtual const Pos3D operator-( const Vec3D &other ) const;
+	
+	virtual const Vec3D operator-( const Pos3D &other ) const;
 };

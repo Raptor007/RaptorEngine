@@ -10,7 +10,8 @@
 #include "RaptorGame.h"
 
 
-Effect::Effect( Animation *anim, double size, Mix_Chunk *sound, double loudness, const Pos3D *pos, const Vec3D *motion_vec, double rotation_speed, double speed_scale, double seconds_to_live ) : Pos3D( pos )
+Effect::Effect( Animation *anim, double size, Mix_Chunk *sound, double loudness, const Pos3D *pos, const Vec3D *motion_vec, double rotation_speed, double speed_scale, double seconds_to_live )
+: Pos3D( pos )
 {
 	Anim.BecomeInstance( anim );
 	Anim.Speed = speed_scale;
@@ -20,6 +21,34 @@ Effect::Effect( Animation *anim, double size, Mix_Chunk *sound, double loudness,
 		AudioChannel = Raptor::Game->Snd.PlayPanned( sound, X, Y, Z, loudness );
 	
 	Size = size;
+	Width = size;
+	Rotation = 0.;
+	
+	if( motion_vec )
+		MotionVector = *motion_vec;
+	RotationSpeed = rotation_speed;
+	
+	SecondsToLive = seconds_to_live;
+	
+	Red = 1.0f;
+	Green = 1.0f;
+	Blue = 1.0f;
+	Alpha = 1.0f;
+}
+
+
+Effect::Effect( Animation *anim, double length, double width, Mix_Chunk *sound, double loudness, const Pos3D *pos, const Vec3D *motion_vec, double rotation_speed, double speed_scale, double seconds_to_live )
+: Pos3D( pos )
+{
+	Anim.BecomeInstance( anim );
+	Anim.Speed = speed_scale;
+	
+	AudioChannel = -1;
+	if( sound )
+		AudioChannel = Raptor::Game->Snd.PlayPanned( sound, X, Y, Z, loudness );
+	
+	Size = length;
+	Width = width;
 	Rotation = 0.;
 	
 	if( motion_vec )
@@ -48,6 +77,10 @@ void Effect::Update( double dt )
 	Rotation += RotationSpeed * dt;
 	
 	UpdateAudioPos();
+	
+	// Don't start the animation until Lifetime.CountUpToSecs is complete.
+	if( Lifetime.Progress() < 1. )
+		Anim.Start();
 }
 
 
@@ -62,7 +95,7 @@ bool Effect::Finished( void )
 {
 	if( Anim.Finished() )
 		return true;
-	if( (SecondsToLive > 0.) && (Lifetime.ElapsedSeconds() > SecondsToLive) )
+	if( (SecondsToLive > 0.) && (Lifetime.ElapsedSeconds() > SecondsToLive + Lifetime.CountUpToSecs) )
 		return true;
 	return false;
 }
@@ -70,24 +103,23 @@ bool Effect::Finished( void )
 
 void Effect::Draw( void )
 {
-	// Need this to display a texture.
-	glEnable( GL_TEXTURE_2D );
+	// Allow using Lifetime.CountUpToSecs to queue a future effect.
+	if( Lifetime.Progress() < 1. )
+		return;
 	
+	glEnable( GL_TEXTURE_2D );
+	glBindTexture( GL_TEXTURE_2D, Anim.CurrentFrame() );
 	glColor4f( Red, Green, Blue, Alpha );
 	
-	// Bind the texture to which subsequent calls refer to.
-	glBindTexture( GL_TEXTURE_2D, Anim.CurrentFrame() );
-	
 	// Calculate corners.
-	Vec3D tl( Raptor::Game->Cam.Up.X - Raptor::Game->Cam.Right.X, Raptor::Game->Cam.Up.Y - Raptor::Game->Cam.Right.Y, Raptor::Game->Cam.Up.Z - Raptor::Game->Cam.Right.Z );
-	tl.ScaleTo( Size * sqrt(0.5) );
-	tl.RotateAround( &(Raptor::Game->Cam.Fwd), Rotation );
-	Vec3D tr = tl;
-	tr.RotateAround( &(Raptor::Game->Cam.Fwd), 90. );
+	Vec3D tl = Raptor::Game->Cam.Up * Size/2. - Raptor::Game->Cam.Right * Width/2.;
+	Vec3D tr = tl + Raptor::Game->Cam.Right * Width;
+	Vec3D bl = tr;
 	Vec3D br = tl;
-	br.RotateAround( &(Raptor::Game->Cam.Fwd), 180. );
-	Vec3D bl = tl;
-	bl.RotateAround( &(Raptor::Game->Cam.Fwd), 270. );
+	tl.RotateAround( &(Raptor::Game->Cam.Fwd), Rotation );
+	tr.RotateAround( &(Raptor::Game->Cam.Fwd), Rotation );
+	br.RotateAround( &(Raptor::Game->Cam.Fwd), Rotation + 180. );
+	bl.RotateAround( &(Raptor::Game->Cam.Fwd), Rotation + 180. );
 	
 	glBegin( GL_QUADS );
 		
@@ -110,5 +142,5 @@ void Effect::Draw( void )
 	glEnd();
 	
 	glDisable( GL_TEXTURE_2D );
+	glColor4f( 1.f, 1.f, 1.f, 1.f );
 }
-

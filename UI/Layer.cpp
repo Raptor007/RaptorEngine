@@ -343,7 +343,14 @@ void Layer::RemoveElement( Layer *element )
 void Layer::RemoveAllElements( void )
 {
 	for( std::list<Layer*>::iterator layer_iter = Elements.begin(); layer_iter != Elements.end(); layer_iter ++ )
-	{
 		(*layer_iter)->Remove();
-	}
+}
+
+
+size_t Layer::RemoveOthersAbove( void )
+{
+	size_t removed = 0;
+	while( ! IsTop() && Raptor::Game->Layers.RemoveTop() )
+		removed ++;
+	return removed;
 }

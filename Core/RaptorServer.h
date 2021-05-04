@@ -29,6 +29,7 @@ public:
 	double MaxFPS;
 	double NetRate;
 	bool Announce;
+	int AnnouncePort;
 	double AnnounceInterval;
 	
 	double FrameTime;
@@ -40,7 +41,7 @@ public:
 	RaptorServer( std::string game, std::string version );
 	virtual ~RaptorServer();
 	
-	int Start( std::string name );
+	bool Start( std::string name );
 	void StopAndWait( double max_wait_seconds = 3. );
 	bool IsRunning( void );
 	

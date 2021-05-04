@@ -42,7 +42,7 @@ public:
 	NetServer( void );
 	virtual ~NetServer();
 	
-	int Initialize( int port = 7000 );
+	int Initialize( int port = 0 );
 	void DisconnectNice( const char *message );
 	void Disconnect( void );
 	

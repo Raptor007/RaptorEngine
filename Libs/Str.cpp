@@ -30,8 +30,12 @@ void CStr::Delete( char *str )
 int CStr::Count( const char *str, const char *sub )
 {
 	int count = 0;
+	size_t sub_len = strlen(sub);
 	while( (str = strstr( str, sub )) )
+	{
 		count ++;
+		str += sub_len;
+	}
 	return count;
 }
 

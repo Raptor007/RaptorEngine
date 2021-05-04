@@ -59,4 +59,6 @@ public:
 	
 	virtual bool IsTop( void );
 	virtual Layer *TopElement( void );
+	
+	size_t RemoveOthersAbove( void );
 };

@@ -52,6 +52,14 @@ void Clock::Reset( double count_up_to_secs )
 }
 
 
+void Clock::Sync( const Clock *c )
+{
+	TimeVal.tv_sec = c->TimeVal.tv_sec;
+	TimeVal.tv_usec = c->TimeVal.tv_usec;
+	CountUpToSecs = c->CountUpToSecs;
+}
+
+
 void Clock::Advance( double secs )
 {
 	double s = 0.;
@@ -96,4 +104,13 @@ double Clock::ElapsedMicroseconds( void ) const
 double Clock::RemainingSeconds( void ) const
 {
 	return CountUpToSecs - ElapsedSeconds();
+}
+
+
+double Clock::Progress( void ) const
+{
+	if( CountUpToSecs )
+		return ElapsedSeconds() / CountUpToSecs;
+	
+	return 1.;  // Counting up to 0 is always 100% done.
 }

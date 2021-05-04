@@ -48,22 +48,22 @@ void Endian::ByteSwap( void *ptr, int bytes, int count )
 	}
 }
 
-void Endian::ByteSwapCopy( void *src, void *dest, int bytes )
+void Endian::ByteSwapCopy( const void *src, void *dest, int bytes )
 {
 	for( int i = 0; i < bytes; i ++ )
-		((uint8_t*)( dest ))[ bytes - i - 1 ] = ((uint8_t*)( src ))[ i ];
+		((uint8_t*)( dest ))[ bytes - i - 1 ] = ((const uint8_t*)( src ))[ i ];
 }
 
-void Endian::ByteSwapCopy( void *src, void *dest, int bytes, int count )
+void Endian::ByteSwapCopy( const void *src, void *dest, int bytes, int count )
 {
 	for( int word = 0; word < count; word ++ )
 	{
 		for( int i = 0; i < bytes; i ++ )
-			((uint8_t*)( dest ))[ (bytes - i - 1) + (bytes * word) ] = ((uint8_t*)( src ))[ i + (bytes * word) ];
+			((uint8_t*)( dest ))[ (bytes - i - 1) + (bytes * word) ] = ((const uint8_t*)( src ))[ i + (bytes * word) ];
 	}
 }
 
-void Endian::CopyBig( void *src, void *dest, int bytes )
+void Endian::CopyBig( const void *src, void *dest, int bytes )
 {
 	#ifdef ENDIAN_BIG
 		memmove( dest, src, bytes );
@@ -72,7 +72,7 @@ void Endian::CopyBig( void *src, void *dest, int bytes )
 	#endif
 }
 
-void Endian::CopyLittle( void *src, void *dest, int bytes )
+void Endian::CopyLittle( const void *src, void *dest, int bytes )
 {
 	#ifdef ENDIAN_BIG
 		ByteSwapCopy( src, dest, bytes );
@@ -82,10 +82,10 @@ void Endian::CopyLittle( void *src, void *dest, int bytes )
 }
 
 
-uint16_t Endian::ReadBig16( void *src )
+uint16_t Endian::ReadBig16( const void *src )
 {
 	#ifdef ENDIAN_BIG
-		return *((uint16_t*) src);
+		return *((const uint16_t*) src);
 	#else
 		uint16_t value;
 		ByteSwapCopy( src, &value, 2 );
@@ -93,10 +93,10 @@ uint16_t Endian::ReadBig16( void *src )
 	#endif
 }
 
-uint32_t Endian::ReadBig32( void *src )
+uint32_t Endian::ReadBig32( const void *src )
 {
 	#ifdef ENDIAN_BIG
-		return *((uint32_t*) src);
+		return *((const uint32_t*) src);
 	#else
 		uint32_t value;
 		ByteSwapCopy( src, &value, 4 );
@@ -104,10 +104,10 @@ uint32_t Endian::ReadBig32( void *src )
 	#endif
 }
 
-uint64_t Endian::ReadBig64( void *src )
+uint64_t Endian::ReadBig64( const void *src )
 {
 	#ifdef ENDIAN_BIG
-		return *((uint64_t*) src);
+		return *((const uint64_t*) src);
 	#else
 		uint64_t value;
 		ByteSwapCopy( src, &value, 8 );
@@ -116,10 +116,10 @@ uint64_t Endian::ReadBig64( void *src )
 }
 
 
-uint16_t Endian::ReadLittle16( void *src )
+uint16_t Endian::ReadLittle16( const void *src )
 {
 	#ifdef ENDIAN_LITTLE
-		return *((uint16_t*) src);
+		return *((const uint16_t*) src);
 	#else
 		uint16_t value;
 		ByteSwapCopy( src, &value, 2 );
@@ -127,10 +127,10 @@ uint16_t Endian::ReadLittle16( void *src )
 	#endif
 }
 
-uint32_t Endian::ReadLittle32( void *src )
+uint32_t Endian::ReadLittle32( const void *src )
 {
 	#ifdef ENDIAN_LITTLE
-		return *((uint32_t*) src);
+		return *((const uint32_t*) src);
 	#else
 		uint32_t value;
 		ByteSwapCopy( src, &value, 4 );
@@ -138,10 +138,10 @@ uint32_t Endian::ReadLittle32( void *src )
 	#endif
 }
 
-uint64_t Endian::ReadLittle64( void *src )
+uint64_t Endian::ReadLittle64( const void *src )
 {
 	#ifdef ENDIAN_LITTLE
-		return *((uint64_t*) src);
+		return *((const uint64_t*) src);
 	#else
 		uint64_t value;
 		ByteSwapCopy( src, &value, 8 );

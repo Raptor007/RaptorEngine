@@ -28,6 +28,7 @@ public:
 	
 	void Add( Layer *layer );
 	void Remove( Layer *layer );
+	bool RemoveTop( void );
 	void RemoveAll( void );
 	
 	bool IsTop( Layer *layer );

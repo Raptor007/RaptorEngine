@@ -17,8 +17,9 @@ class FirstLoadScreen : public Layer
 public:
 	Animation Background;
 	Font *TextFont;
+	std::string Text;
 	
-	FirstLoadScreen( const char *bg_filename = "bg_menu_small.ani", Font *font = NULL );
+	FirstLoadScreen( const char *bg_filename = "bg_menu_small.ani", Font *font = NULL, const char *text = "Loading..." );
 	virtual ~FirstLoadScreen();
 	
 	void Draw( void );

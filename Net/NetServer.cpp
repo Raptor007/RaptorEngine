@@ -43,6 +43,9 @@ NetServer::~NetServer()
 
 int NetServer::Initialize( int port )
 {
+	if( ! port )
+		port = Raptor::Server->Port;
+	
 	// Initialize SDL_net.
 	if( SDLNet_Init() < 0 )
 	{
@@ -59,7 +62,7 @@ int NetServer::Initialize( int port )
 		fprintf( stderr, "SDLNet_ResolveHost: %s\n", SDLNet_GetError() );
 		return -1;
 	}
- 
+ 	
 	// Open a connection with the "IP" provided (listen on the host's port).
 	if( !( Socket = SDLNet_TCP_Open(&nonsense_ip) ) )
 	{
@@ -305,7 +308,7 @@ void NetServer::SendUpdates( void )
 		
 		ConnectedClient *client = *iter;
 		
-		if( client->Connected && client->PlayerID )
+		if( client->Connected && client->PlayerID && client->BytesReceived )
 		{
 			// Reduce update rate temporarily in high-ping situations.
 			double temp_netrate = client->NetRate;

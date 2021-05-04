@@ -3,6 +3,7 @@
  */
 
 #include "PacketBuffer.h"
+#include "RaptorDefs.h"
 #include <cstddef>
 
 
@@ -52,7 +53,34 @@ void PacketBuffer::AddData( void *data, PacketSize size )
 	
 	while( size_unprocessed )
 	{
-		size_t packet_size = Packet::FirstPacketSize( data_unprocessed );
+		size_t packet_size = 0;
+		if( size_unprocessed >= PACKET_HEADER_SIZE )
+		{
+			packet_size = Packet::FirstPacketSize( data_unprocessed );
+			
+			// Sanity check the incoming packet size.
+			if( (packet_size < PACKET_HEADER_SIZE) || (packet_size > PACKET_MAX_SIZE) )
+			{
+				if( Unfinished )
+				{
+					delete Unfinished;
+					Unfinished = NULL;
+				}
+				
+				Packet *packet = NULL;
+				while( (packet = Pop()) )
+					delete packet;
+				
+				packet = new Packet( Raptor::Packet::DISCONNECT );
+				packet->AddString( "Packet size error." );
+				Complete.push( packet );
+				return;
+			}
+		}
+		else
+		{
+			// FIXME: What if a partial packet doesn't include the entire header?
+		}
 		
 		if( (size_unprocessed >= packet_size) && (size_unprocessed >= PACKET_HEADER_SIZE) )
 		{

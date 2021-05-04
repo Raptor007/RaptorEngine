@@ -30,6 +30,7 @@ public:
 	int ScrollBarSize;
 	float ScrollBarRed, ScrollBarGreen, ScrollBarBlue, ScrollBarAlpha;
 	int Scroll;
+	bool ClickedScrollBar;
 	
 	ListBox( SDL_Rect *rect, Font *font, int scroll_bar_size );
 	ListBox( SDL_Rect *rect, Font *font, int scroll_bar_size, std::vector<ListBoxItem> items );
@@ -43,12 +44,17 @@ public:
 	
 	int LineScroll( void );
 	int MaxScroll( void );
-	void ScrollUp( void );
-	void ScrollDown( void );
+	void ScrollUp( int lines = 1 );
+	void ScrollDown( int lines = 1 );
+	void ScrollTo( std::string value, int at = 0 );
+	void ScrollTo( int index, int at = 0 );
+	void ScrollToSelected( int at = 0 );
 	
 	void UpdateRects( void );
 	void Draw( void );
 	virtual void DrawItem( const ListBoxItem *item, const SDL_Rect *rect );
+	
+	void TrackEvent( SDL_Event *event );
 	void MouseEnter( void );
 	void MouseLeave( void );
 	bool MouseDown( Uint8 button = SDL_BUTTON_LEFT );

@@ -132,7 +132,6 @@ void Animation::BecomeInstance( const Animation *a )
 	Speed = a->Speed;
 	PlayCount = a->PlayCount;
 	Name = a->Name;
-	MostRecentFrame = 0;
 	LoadedTime = a->LoadedTime;
 	
 	Start();
@@ -165,6 +164,7 @@ void Animation::AddFrame( GLuint texture, double sec )
 
 void Animation::Start( void )
 {
+	MostRecentFrame = 0;
 	Timer.Reset();
 }
 

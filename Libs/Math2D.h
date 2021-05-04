@@ -6,6 +6,8 @@
 
 #include "PlatformSpecific.h"
 
+#include <cstddef>
+
 
 namespace Math2D
 {
@@ -18,7 +20,7 @@ namespace Math2D
 	double PointToPointDist( double x1, double y1, double x2, double y2 );
 	double PointToLineSegDist( double px, double py, double a1x, double a1y, double a2x, double a2y );
 	double LineSegToLineSegDist( double a1x, double a1y, double a2x, double a2y, double b1x, double b1y, double b2x, double b2y );
-	bool LineIntersection( double a1x, double a1y, double a2x, double a2y, double b1x, double b1y, double b2x, double b2y, double *pt_x, double *pt_y );
+	bool LineIntersection( double a1x, double a1y, double a2x, double a2y, double b1x, double b1y, double b2x, double b2y, double *pt_x = NULL, double *pt_y = NULL );
 	void NearestPointOnLineSeg( double px, double py, double a1x, double a1y, double a2x, double a2y, double *pt_x, double *pt_y );
 	
 	bool WithinRect( double px, double py, double x1, double y1, double x2, double y2 );

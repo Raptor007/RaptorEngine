@@ -39,6 +39,13 @@ void HeadState::Initialize( void )
 
 void HeadState::StartVR( void )
 {
+	if( Raptor::Game->Gfx.VSync )
+	{
+		// Reduce VR stutter by disabling vsync to main monitor.
+		Raptor::Game->Gfx.VSync = false;
+		Raptor::Game->Gfx.Restart();
+	}
+	
 #ifndef NO_VR
 	vr::EVRInitError eError = vr::VRInitError_None;
 	m_pHMD = vr::VR_Init( &eError, vr::VRApplication_Scene );

@@ -334,7 +334,7 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 						}
 						
 						if( mtl_filename != filename )
-							IncludeOBJ( mtl_filename );
+							IncludeOBJ( mtl_filename, get_textures );
 					}
 				}
 				

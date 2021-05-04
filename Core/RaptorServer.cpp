@@ -35,6 +35,7 @@ RaptorServer::RaptorServer( std::string game, std::string version )
 	MaxFPS = 60.;
 	NetRate = 30.;
 	Announce = true;
+	AnnouncePort = 7000;
 	AnnounceInterval = 3.;
 	
 	Console = NULL;
@@ -59,7 +60,7 @@ RaptorServer::~RaptorServer()
 }
 
 
-int RaptorServer::Start( std::string name )
+bool RaptorServer::Start( std::string name )
 {
 	Data.Properties["name"] = name;
 	
@@ -75,13 +76,13 @@ int RaptorServer::Start( std::string name )
 	if( !( Thread = SDL_CreateThread( RaptorServerThread, this ) ) )
 	{
 		fprintf( stderr, "SDL_CreateThread: %s\n", SDLNet_GetError() );
-		return -1;
+		return false;
 	}
 	
 	State = Raptor::State::CONNECTED;
 	Started();
 	
-	return 0;
+	return true;
 }
 
 
@@ -484,7 +485,8 @@ int RaptorServer::RaptorServerThread( void *game_server )
 				server->Net.SendUpdates();
 				
 				// Send periodic server announcements over UDP broadcast.
-				if( server->Announce && (AnnounceClock.ElapsedSeconds() > server->AnnounceInterval) )
+				if( server->Announce && server->AnnouncePort
+				&& (AnnounceClock.ElapsedSeconds() > server->AnnounceInterval) )
 				{
 					AnnounceClock.Reset();
 					
@@ -511,7 +513,7 @@ int RaptorServer::RaptorServerThread( void *game_server )
 					for( std::map<uint16_t,Player*>::iterator player_iter = server->Data.Players.begin(); player_iter != server->Data.Players.end(); player_iter ++ )
 						info.AddString( player_iter->second->Name.c_str() );
 					
-					ServerAnnouncer.Broadcast( &info, 7000 );
+					ServerAnnouncer.Broadcast( &info, server->AnnouncePort );
 				}
 				
 				// Don't work very hard if nobody is connected.

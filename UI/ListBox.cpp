@@ -35,6 +35,7 @@ ListBox::ListBox( SDL_Rect *rect, Font *font, int scroll_bar_size ) : Layer( rec
 	ScrollBarAlpha = 1.0f;
 	
 	Scroll = 0;
+	ClickedScrollBar = false;
 	
 	AddElement( new ListBoxButton( ListBox::SCROLL_UP, Raptor::Game->Res.GetAnimation("arrow_up.ani"), Raptor::Game->Res.GetAnimation("arrow_up_mdown.ani") ) );
 	AddElement( new ListBoxButton( ListBox::SCROLL_DOWN, Raptor::Game->Res.GetAnimation("arrow_down.ani"), Raptor::Game->Res.GetAnimation("arrow_down_mdown.ani") ) );
@@ -70,6 +71,7 @@ ListBox::ListBox( SDL_Rect *rect, Font *font, int scroll_bar_size, std::vector<L
 	ScrollBarAlpha = 1.0f;
 	
 	Scroll = 0;
+	ClickedScrollBar = false;
 	
 	AddElement( new ListBoxButton( ListBox::SCROLL_UP, Raptor::Game->Res.GetAnimation("arrow_up.ani"), Raptor::Game->Res.GetAnimation("arrow_up_mdown.ani") ) );
 	AddElement( new ListBoxButton( ListBox::SCROLL_DOWN, Raptor::Game->Res.GetAnimation("arrow_down.ani"), Raptor::Game->Res.GetAnimation("arrow_down_mdown.ani") ) );
@@ -161,22 +163,56 @@ int ListBox::MaxScroll( void )
 }
 
 
-void ListBox::ScrollUp( void )
+void ListBox::ScrollUp( int lines )
 {
-	Scroll -= LineScroll();
+	Scroll -= LineScroll() * lines;
 	
 	if( Scroll < 0 )
 		Scroll = 0;
 }
 
 
-void ListBox::ScrollDown( void )
+void ListBox::ScrollDown( int lines )
 {
-	Scroll += LineScroll();
+	Scroll += LineScroll() * lines;
 	
 	int max_scroll = MaxScroll();
 	if( Scroll > max_scroll )
 		Scroll = max_scroll;
+}
+
+
+void ListBox::ScrollTo( std::string value, int at )
+{
+	for( size_t i = 0; i < Items.size(); i ++ )
+	{
+		if( Items[ i ].Value == value )
+		{
+			ScrollTo( (int) i, at );
+			break;
+		}
+	}
+}
+
+
+void ListBox::ScrollTo( int index, int at )
+{
+	Scroll = LineScroll() * index - at;
+	
+	if( Scroll < 0 )
+		Scroll = 0;
+	else
+	{
+		int max_scroll = MaxScroll();
+		if( Scroll > max_scroll )
+			Scroll = max_scroll;
+	}
+}
+
+
+void ListBox::ScrollToSelected( int at )
+{
+	ScrollTo( SelectedValue(), at );
 }
 
 
@@ -249,6 +285,27 @@ void ListBox::DrawItem( const ListBoxItem *item, const SDL_Rect *rect )
 }
 
 
+void ListBox::TrackEvent( SDL_Event *event )
+{
+	Layer::TrackEvent( event );
+	
+	if( MouseIsDown && ClickedScrollBar )
+	{
+		// Update scroll state as we drag the scroll bar.
+		
+		int y = Raptor::Game->Mouse.Y - CalcRect.y - ScrollBarSize;
+		int h = Rect.h - ScrollBarSize * 2;
+		
+		int line = h ? (y / (float) h) * Items.size() - Rect.h * 0.5f / LineScroll() : 0;
+		if( line < 0 )
+			line = 0;
+		
+		Scroll = 0;
+		ScrollDown( line );
+	}
+}
+
+
 void ListBox::MouseEnter( void )
 {
 }
@@ -261,6 +318,23 @@ void ListBox::MouseLeave( void )
 
 bool ListBox::MouseDown( Uint8 button )
 {
+	if( button == SDL_BUTTON_LEFT )
+	{
+		ClickedScrollBar = Raptor::Game->Mouse.X > CalcRect.x + CalcRect.w - ScrollBarSize;
+		if( ClickedScrollBar )
+		{
+			int y = Raptor::Game->Mouse.Y - CalcRect.y - ScrollBarSize;
+			int h = Rect.h - ScrollBarSize * 2;
+			
+			int line = h ? (y / (float) h) * Items.size() - Rect.h * 0.5f / LineScroll() : 0;
+			if( line < 0 )
+				line = 0;
+			
+			Scroll = 0;
+			ScrollDown( line );
+		}
+	}
+	
 	return true;
 }
 
@@ -271,6 +345,20 @@ bool ListBox::MouseUp( Uint8 button )
 		ScrollDown();
 	else if( button == SDL_BUTTON_WHEELUP )
 		ScrollUp();
+	else if( (button == SDL_BUTTON_LEFT) && ClickedScrollBar )
+	{
+		ClickedScrollBar = false;
+		
+		int y = Raptor::Game->Mouse.Y - CalcRect.y - ScrollBarSize;
+		int h = Rect.h - ScrollBarSize * 2;
+		
+		int line = h ? (y / (float) h) * Items.size() - Rect.h * 0.5f / LineScroll() : 0;
+		if( line < 0 )
+			line = 0;
+		
+		Scroll = 0;
+		ScrollDown( line );
+	}
 	else
 	{
 		int y = Raptor::Game->Mouse.Y - CalcRect.y;

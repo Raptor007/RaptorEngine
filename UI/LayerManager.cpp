@@ -109,12 +109,25 @@ void LayerManager::Remove( Layer *layer )
 }
 
 
+bool LayerManager::RemoveTop( void )
+{
+	for( std::list<Layer*>::reverse_iterator layer_iter = Layers.rbegin(); layer_iter != Layers.rend(); layer_iter ++ )
+	{
+		if( ! (*layer_iter)->Removed )
+		{
+			(*layer_iter)->Remove();
+			return true;
+		}
+	}
+	
+	return false;
+}
+
+
 void LayerManager::RemoveAll( void )
 {
 	for( std::list<Layer*>::iterator layer_iter = Layers.begin(); layer_iter != Layers.end(); layer_iter ++ )
-	{
 		(*layer_iter)->Remove();
-	}
 }
 
 
@@ -126,8 +139,11 @@ bool LayerManager::IsTop( Layer *layer )
 
 Layer *LayerManager::TopLayer( void )
 {
-	if( Layers.size() )
-		return Layers.back();
+	for( std::list<Layer*>::reverse_iterator layer_iter = Layers.rbegin(); layer_iter != Layers.rend(); layer_iter ++ )
+	{
+		if( ! (*layer_iter)->Removed )
+			return *layer_iter;
+	}
 	
 	return NULL;
 }

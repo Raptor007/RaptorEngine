@@ -28,6 +28,8 @@ public:
 	bool HandleEvent( SDL_Event *event );
 	void Clicked( Uint8 button = SDL_BUTTON_LEFT );
 	void Close( void );
+	bool Select( std::string value );
+	bool Select( int index );
 	virtual void Changed( void );
 };
 

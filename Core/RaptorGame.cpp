@@ -26,6 +26,7 @@ RaptorGame::RaptorGame( std::string game, std::string version, RaptorServer *ser
 {
 	Game = game;
 	Version = version;
+	DefaultPort = 7000;
 	
 	SetServer( server );
 	
@@ -49,7 +50,10 @@ void RaptorGame::SetServer( RaptorServer *server )
 {
 	Server = server;
 	if( Server )
+	{
 		Server->Console = &Console;
+		Server->Port = DefaultPort;
+	}
 }
 
 
@@ -272,54 +276,54 @@ void RaptorGame::Run( void )
 				Head.Initialize();
 			if( Head.VR && vr_enable )
 			{
-				// If the VR viewport is larger than the window, center the mouse.
+				// If the VR viewport is larger than the window, center the mouse area.
 				int x = (Head.EyeR->W - Raptor::Game->Gfx.RealW) / 2;
 				int y = (Head.EyeR->H - Raptor::Game->Gfx.RealH) / 2;
 				Mouse.SetOffset( std::max<int>(0,x), std::max<int>(0,y) );
 				
+				// Draw all layers to each eye.
 				Head.Draw();
 				
-				// Mirror the right eye to the screen.
-				Gfx.Setup2D();
-				Gfx.Clear();
-				float x1 = x / (float) Head.EyeR->W;
-				float y1 = y / (float) Head.EyeR->H;
-				float x2 = (Head.EyeR->W - x) / (float) Head.EyeR->W;
-				float y2 = (Head.EyeR->H - y) / (float) Head.EyeR->H;
-				glColor4f( 1.f, 1.f, 1.f, 1.f );
-				glEnable( GL_TEXTURE_2D );
-				glBindTexture( GL_TEXTURE_2D, Head.EyeR->Texture );
-				glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP );
-				glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
-				glBegin( GL_QUADS );
-					
-					// Top-left
-					glTexCoord2f( x1, y2 );
-					glVertex2d( 0, 0 );
-					
-					// Bottom-left
-					glTexCoord2f( x1, y1 );
-					glVertex2d( 0, Gfx.RealH );
-					
-					// Bottom-right
-					glTexCoord2f( x2, y1 );
-					glVertex2d( Gfx.RealW, Gfx.RealH );
-					
-					// Top-right
-					glTexCoord2f( x2, y2 );
-					glVertex2d( Gfx.RealW, 0 );
-					
-				glEnd();
-				glDisable( GL_TEXTURE_2D );
+				if( Cfg.SettingAsBool("vr_mirror",true) )
+				{
+					// Mirror the right eye to the screen.
+					// This can be disabled to avoid monitor vsync slowdown.
+					Gfx.Setup2D();
+					Gfx.Clear();
+					float x1 = x / (float) Head.EyeR->W;
+					float y1 = y / (float) Head.EyeR->H;
+					float x2 = (Head.EyeR->W - x) / (float) Head.EyeR->W;
+					float y2 = (Head.EyeR->H - y) / (float) Head.EyeR->H;
+					glColor4f( 1.f, 1.f, 1.f, 1.f );
+					glEnable( GL_TEXTURE_2D );
+					glBindTexture( GL_TEXTURE_2D, Head.EyeR->Texture );
+					glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP );
+					glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
+					glBegin( GL_QUADS );
+						glTexCoord2f( x1, y2 );
+						glVertex2d( 0, 0 );
+						glTexCoord2f( x1, y1 );
+						glVertex2d( 0, Gfx.RealH );
+						glTexCoord2f( x2, y1 );
+						glVertex2d( Gfx.RealW, Gfx.RealH );
+						glTexCoord2f( x2, y2 );
+						glVertex2d( Gfx.RealW, 0 );
+					glEnd();
+					glDisable( GL_TEXTURE_2D );
+					Gfx.SwapBuffers();
+				}
 			}
 			else
 			{
+				// Mouse is aligned with the screen.
 				Mouse.SetOffset(0,0);
+				
+				// Draw all layers.
 				Draw();
+				
+				// Swap front and back framebuffers to update the screen.
+				Gfx.SwapBuffers();
 			}
-			
-			// Swap front and back framebuffers to update the screen.
-			Gfx.SwapBuffers();
 		}
 		
 		// Let the thread rest a bit.
@@ -386,7 +390,7 @@ bool RaptorGame::HandleEvent( SDL_Event *event )
 }
 
 
-bool RaptorGame::HandleCommand( std::string cmd, std::vector<std::string> *elements )
+bool RaptorGame::HandleCommand( std::string cmd, std::vector<std::string> *params )
 {
 	return false;
 }
@@ -744,7 +748,7 @@ void RaptorGame::Host( void )
 	
 	if( Server )
 	{
-		Server->Port = Cfg.SettingAsInt( "sv_port", 7000 );
+		Server->Port = Cfg.SettingAsInt( "sv_port", Raptor::Game->DefaultPort );
 		Server->MaxFPS = Cfg.SettingAsDouble( "sv_maxfps", 60. );
 		Server->NetRate = Cfg.SettingAsDouble( "sv_netrate", 30. );
 		Server->Start( Cfg.SettingAsString( "name" , Raptor::Server->Game.c_str() ) );
@@ -790,7 +794,7 @@ void Raptor::Terminate( int arg )
 #include <unistd.h>
 #endif
 
-bool Raptor::PreMain( void )
+bool Raptor::PreMain( int bits )
 {
 	#ifdef WIN32
 		TCHAR path[MAX_PATH+20] = L"";
@@ -810,21 +814,27 @@ bool Raptor::PreMain( void )
 			SetCurrentDirectory( path );
 		#endif
 		
-		// Set the DLL directory to Bin32/Bin64 (or ..\BinXX if that exists instead).
-		TCHAR bin_dir[ 16 ] = L"Bin32";
-		_stprintf( bin_dir, L"Bin%i", sizeof(void*) * 8 );
-		_stprintf( path_append, L"%ls", bin_dir );
-		struct _stat stat_buffer;
-		if( (_tstat( path, &stat_buffer ) == 0) && (stat_buffer.st_mode & S_IFDIR) )
-			SetDllDirectory( path );
-		else
+		if( bits )
 		{
-			_stprintf( path_append, L"..\\%ls", bin_dir );
+			// Set the DLL directory to Bin32/Bin64 (or ..\BinXX if that exists instead).
+			TCHAR bin_dir[ 16 ] = L"Bin32";
+			_stprintf( bin_dir, L"Bin%i", bits );
+			_stprintf( path_append, L"%ls", bin_dir );
+			struct _stat stat_buffer;
 			if( (_tstat( path, &stat_buffer ) == 0) && (stat_buffer.st_mode & S_IFDIR) )
 				SetDllDirectory( path );
+			else
+			{
+				_stprintf( path_append, L"..\\%ls", bin_dir );
+				if( (_tstat( path, &stat_buffer ) == 0) && (stat_buffer.st_mode & S_IFDIR) )
+					SetDllDirectory( path );
+			}
 		}
 		
 		// Prevent Windows DPI scaling from stupidly stretching things off-screen.
+		#ifndef _MSC_VER
+			BOOL (WINAPI *SetProcessDPIAware)( void ) = GetProcAddress( LoadLibraryA("user32.dll"), "SetProcessDPIAware" );
+		#endif
 		SetProcessDPIAware();
 	#endif
 	

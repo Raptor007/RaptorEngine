@@ -28,6 +28,7 @@ public:
 	
 	void Reset( void );
 	void Reset( double count_up_to_secs );
+	void Sync( const Clock *c );
 	void Advance( double secs );
 	
 	double ElapsedSeconds( void ) const;
@@ -35,4 +36,5 @@ public:
 	double ElapsedMicroseconds( void ) const;
 	
 	double RemainingSeconds( void ) const;
+	double Progress( void ) const;
 };

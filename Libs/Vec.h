@@ -26,6 +26,7 @@ public:
 	
 	virtual void ScaleBy( double factor );
 	virtual void ScaleTo( double length );
+	Vec2D Unit( void ) const;
 	
 	virtual double Dot( const Vec2D &other ) const;
 	virtual double Dot( double x, double y ) const;
@@ -52,6 +53,8 @@ public:
 	
 	Vec3D( const Vec3D &other );
 	Vec3D( const Vec3D *other );
+	Vec3D( const Vec2D &other );
+	Vec3D( const Vec2D *other );
 	Vec3D( double x = 0., double y = 0., double z = 0. );
 	virtual ~Vec3D();
 	
@@ -62,6 +65,7 @@ public:
 	
 	virtual void ScaleBy( double factor );
 	virtual void ScaleTo( double length );
+	Vec3D Unit( void ) const;
 	virtual void RotateAround( const Vec3D *axis, double degrees );
 	virtual void RotateAround( const Vec3D *axis, double degrees, const Vec3D *anchor );
 	

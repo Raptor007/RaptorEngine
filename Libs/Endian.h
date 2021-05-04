@@ -23,17 +23,17 @@ namespace Endian
 	
 	void ByteSwap( void *ptr, int bytes );
 	void ByteSwap( void *ptr, int bytes, int count );
-	void ByteSwapCopy( void *src, void *dest, int bytes );
-	void ByteSwapCopy( void *src, void *dest, int bytes, int count );
-	void CopyBig( void *src, void *dest, int bytes );
-	void CopyLittle( void *src, void *dest, int bytes );
+	void ByteSwapCopy( const void *src, void *dest, int bytes );
+	void ByteSwapCopy( const void *src, void *dest, int bytes, int count );
+	void CopyBig( const void *src, void *dest, int bytes );
+	void CopyLittle( const void *src, void *dest, int bytes );
 	
-	uint16_t ReadBig16( void *src );
-	uint32_t ReadBig32( void *src );
-	uint64_t ReadBig64( void *src );
-	uint16_t ReadLittle16( void *src );
-	uint32_t ReadLittle32( void *src );
-	uint64_t ReadLittle64( void *src );
+	uint16_t ReadBig16( const void *src );
+	uint32_t ReadBig32( const void *src );
+	uint64_t ReadBig64( const void *src );
+	uint16_t ReadLittle16( const void *src );
+	uint32_t ReadLittle32( const void *src );
+	uint64_t ReadLittle64( const void *src );
 	
 	void WriteBig16( uint16_t value, void *dest );
 	void WriteBig32( uint32_t value, void *dest );

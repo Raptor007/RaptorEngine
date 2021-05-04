@@ -84,6 +84,20 @@ double Num::FPart( double num )
 }
 
 
+uint16_t Num::Mantissa16( double num )
+{
+	uint64_t *raw = (uint64_t*) &num;
+	return (*raw & 0x000FFFF000000000ULL) >> 36;
+}
+
+
+uint32_t Num::Mantissa32( double num )
+{
+	uint64_t *raw = (uint64_t*) &num;
+	return (*raw & 0x000FFFFFFFF00000ULL) >> 20;
+}
+
+
 double Num::NearestWhole( double num, double step )
 {
 	return (floor( num / step + 0.5 ) * step);
@@ -117,6 +131,14 @@ double Num::RadToDeg( double num )
 int Num::NextPower( int num, int base )
 {
 	return ((int)( pow( base, ceil( log( (double)num ) / log( (double)base ) ) ) + 0.5 ));
+}
+
+
+double Num::SignedPow( double num, double exponent )
+{
+	if( num < 0. )
+		return pow( num * -1., exponent ) * -1.;
+	return pow( num, exponent );
 }
 
 

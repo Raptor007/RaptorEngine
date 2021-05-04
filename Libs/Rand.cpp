@@ -6,6 +6,9 @@
 #include <stdlib.h>
 
 
+int Rand::Max = RAND_MAX;
+
+
 void Rand::Seed( unsigned int seed )
 {
 	srand( seed );
@@ -14,35 +17,35 @@ void Rand::Seed( unsigned int seed )
 
 int Rand::Int( void )
 {
-	return rand();
+	return rand() & Max;
 }
 
 
 int Rand::Int( int min, int max )
 {
-	return ( rand() % (1 + max - min) ) + min;
+	return Int() % (1 + max - min) + min;
 }
 
 
 double Rand::Double( void )
 {
-	return ((double)( rand() )) / ((double)( RAND_MAX ));
+	return Int() / (double) Max;
 }
 
 
 double Rand::Double( double max )
 {
-	return ( ((double)( rand() )) / ((double)( RAND_MAX )) ) * max;
+	return Double() * max;
 }
 
 
 double Rand::Double( double min, double max )
 {
-	return ( ((double)( rand() )) / ((double)( RAND_MAX )) ) * (max - min) + min;
+	return Double() * (max - min) + min;
 }
 
 
 bool Rand::Bool( double chance )
 {
-	return Rand::Double() <= chance;
+	return Double() <= chance;
 }

@@ -112,7 +112,7 @@ int NetClient::Connect( const char *hostname, int port, const char *name, const 
 	if( port > 0 )
 		Port = port;
 	else
-		Port = 7000;
+		Port = Raptor::Game->DefaultPort;
 	
 	if( ! Initialized )
 		return -1;

@@ -57,11 +57,24 @@ void Vec2D::ScaleBy( double factor )
 	Y *= factor;
 }
 
+
 void Vec2D::ScaleTo( double length )
 {
 	double old_length = sqrt( X*X + Y*Y );
-	X *= length / old_length;
-	Y *= length / old_length;
+	if( old_length )
+	{
+		X *= length / old_length;
+		Y *= length / old_length;
+	}
+}
+
+
+Vec2D Vec2D::Unit( void ) const
+{
+	double old_length = sqrt( X*X + Y*Y );
+	if( old_length )
+		return Vec2D( X / old_length, Y / old_length );
+	return *this;
 }
 
 
@@ -69,6 +82,7 @@ double Vec2D::Dot( const Vec2D &other ) const
 {
 	return Dot( other.X, other.Y );
 }
+
 
 double Vec2D::Dot( double x, double y ) const
 {
@@ -81,6 +95,7 @@ Vec2D Vec2D::Reflect( const Vec2D *normal ) const
 	double dp_x2 = Dot(normal) * 2.0;
 	return Vec2D( X - dp_x2 * normal->X, Y - dp_x2 * normal->Y );
 }
+
 
 Vec2D Vec2D::ReflectAnySide( const Vec2D *normal ) const
 {
@@ -161,26 +176,32 @@ bool Vec2D::operator < ( const Vec2D &other ) const
 // ---------------------------------------------------------------------------
 
 
-Vec3D::Vec3D( const Vec3D &other ) : Vec2D()
+Vec3D::Vec3D( const Vec3D &other ) : Vec2D( other.X, other.Y )
 {
-	X = other.X;
-	Y = other.Y;
 	Z = other.Z;
 }
 
 
-Vec3D::Vec3D( const Vec3D *other ) : Vec2D()
+Vec3D::Vec3D( const Vec3D *other ) : Vec2D( other->X, other->Y )
 {
-	X = other->X;
-	Y = other->Y;
 	Z = other->Z;
 }
 
 
-Vec3D::Vec3D( double x, double y, double z ) : Vec2D()
+Vec3D::Vec3D( const Vec2D &other ) : Vec2D( other.X, other.Y )
 {
-	X = x;
-	Y = y;
+	Z = 0.;
+}
+
+
+Vec3D::Vec3D( const Vec2D *other ) : Vec2D( other->X, other->Y )
+{
+	Z = 0.;
+}
+
+
+Vec3D::Vec3D( double x, double y, double z ) : Vec2D( x, y )
+{
 	Z = z;
 }
 
@@ -223,9 +244,21 @@ void Vec3D::ScaleBy( double factor )
 void Vec3D::ScaleTo( double length )
 {
 	double old_length = sqrt( X*X + Y*Y + Z*Z );
-	X *= length / old_length;
-	Y *= length / old_length;
-	Z *= length / old_length;
+	if( old_length )
+	{
+		X *= length / old_length;
+		Y *= length / old_length;
+		Z *= length / old_length;
+	}
+}
+
+
+Vec3D Vec3D::Unit( void ) const
+{
+	double old_length = sqrt( X*X + Y*Y + Z*Z );
+	if( old_length )
+		return Vec3D( X / old_length, Y / old_length, Z / old_length );
+	return *this;
 }
 
 
@@ -267,6 +300,7 @@ double Vec3D::Dot( const Vec3D &other ) const
 {
 	return Dot( other.X, other.Y, other.Z );
 }
+
 
 double Vec3D::Dot( double x, double y, double z ) const
 {

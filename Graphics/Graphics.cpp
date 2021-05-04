@@ -23,9 +23,11 @@ Graphics::Graphics( void )
 	RealW = W;
 	RealH = H;
 	AspectRatio = ((float)( W )) / ((float)( H ));
+	BPP = 32;
 	ZNear = 0.125;
 	ZFar = 15000.;
 	Fullscreen = false;
+	VSync = false;
 	FSAA = 0;
 	AF = 16;
 	
@@ -70,17 +72,20 @@ void Graphics::Initialize( void )
 
 void Graphics::SetMode( int x, int y )
 {
-	SetMode( x, y, BPP, Fullscreen, FSAA, AF, ZBits, ZNear, ZFar );
+	SetMode( x, y, BPP, Fullscreen, FSAA, AF, ZBits );
 }
 
 
-void Graphics::SetMode( int x, int y, int bpp, bool fullscreen, int fsaa, int af, int z_bits, double z_near, double z_far )
+void Graphics::SetMode( int x, int y, int bpp, bool fullscreen, int fsaa, int af, int zbits )
 {
 	// Make sure we've initialized SDL.
 	if( ! Initialized )
 		Initialize();
 	if( ! Initialized )
 		return;
+	
+	// Get the current video properties.
+	const SDL_VideoInfo *info = SDL_GetVideoInfo();
 	
 	// Set up the video properties.
 	W = x;
@@ -90,17 +95,17 @@ void Graphics::SetMode( int x, int y, int bpp, bool fullscreen, int fsaa, int af
 	Fullscreen = fullscreen;
 	FSAA = fsaa;
 	AF = af;
-	ZBits = z_bits;
-	ZNear = z_near;
-	ZFar = z_far;
+	ZBits = zbits;
 	
-	// Enable double-buffering and vsync.
+	// Make sure we use hardware-accelerated double-buffered OpenGL.
+	SDL_GL_SetAttribute( SDL_GL_ACCELERATED_VISUAL, 1 );
 	SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
-	SDL_GL_SetAttribute( SDL_GL_SWAP_CONTROL, 1 );
+	
+	// Set vsync.
+	SDL_GL_SetAttribute( SDL_GL_SWAP_CONTROL, VSync ? 1 : 0 );
 	
 	// Set minimum depth buffer.
-	if( z_bits )
-		SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, z_bits );
+	SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, ZBits );
 	
 	// Enable multi-sample anti-aliasing.
 	if( FSAA > 1 )
@@ -114,9 +119,6 @@ void Graphics::SetMode( int x, int y, int bpp, bool fullscreen, int fsaa, int af
 		SDL_GL_SetAttribute( SDL_GL_MULTISAMPLEBUFFERS, 0 );
 		SDL_GL_SetAttribute( SDL_GL_MULTISAMPLESAMPLES, 1 );
 	}
-	
-	// Make sure we're getting hardware-accelerated OpenGL.
-	SDL_GL_SetAttribute( SDL_GL_ACCELERATED_VISUAL, 1 );
 	
 	// The current OpenGL context will be invalid, so clear all textures from the ResourceManager first.
 	Raptor::Game->Res.DeleteGraphics();
@@ -142,13 +144,19 @@ void Graphics::SetMode( int x, int y, int bpp, bool fullscreen, int fsaa, int af
 	{
 		fprintf( stderr, "Unable to set %s video mode %ix%ix%i: %s\n", (fullscreen ? "fullscreen" : "windowed"), x, y, bpp, SDL_GetError() );
 		
-		// We couldn't set that video mode, so try unspecified Z-depth, then 640x480, then windowed.
-		if( z_bits )
-			SetMode( x, y, bpp, fullscreen, fsaa, af, 0, z_near, z_far );
+		// We couldn't set that video mode, so try a few other options.
+		if( info && ((x > info->current_w) || (y > info->current_h)) )
+			SetMode( info->current_w, info->current_h, bpp, fullscreen, fsaa, af, 24 ); // Desktop Resolution
+		else if( zbits > 24 )
+			SetMode( x,   y,   bpp, fullscreen, fsaa, af, 24 );     // 24-bit Z-Depth
 		else if( fullscreen && ((x != 640) || (y != 480)) )
-			SetMode( 640, 480, bpp, fullscreen, fsaa, af, z_bits, z_near, z_far );
+			SetMode( 640, 480, bpp, fullscreen, fsaa, af, zbits );  // 640x480 Fullscreen
+		else if( zbits > 16 )
+			SetMode( x,   y,   bpp, fullscreen, fsaa, af, 16 );     // 16-bit Z-Depth
 		else if( fullscreen )
-			SetMode( 640, 480, bpp, false, fsaa, af, z_bits, z_near, z_far );
+			SetMode( 640, 480, bpp, false,      fsaa, af, zbits );  // 640x480 Windowed
+		else if( bpp > 16 )
+			SetMode( x,   y,   16,  fullscreen, fsaa, af, zbits );  // 16-bit Color
 		else
 		{
 			fflush( stderr );
@@ -165,17 +173,13 @@ void Graphics::SetMode( int x, int y, int bpp, bool fullscreen, int fsaa, int af
 	AspectRatio = (W && H) ? ((float)( W )) / ((float)( H )) : 1.f;
 	BPP = Screen->format->BitsPerPixel;
 	
-	if( Fullscreen )
-	{
-		// If we weren't able to use the level of multi-sample anti-aliasing requested,
-		// update the setting to reflect this.  Ignored for windowed mode because it lies.
-		int max_fsaa = 0;
-		SDL_GL_GetAttribute( SDL_GL_MULTISAMPLESAMPLES, &max_fsaa );
-		if( FSAA > max_fsaa )
-			FSAA = max_fsaa;
-		if( FSAA == 1 )
-			FSAA = 0;
-	}
+	// If we weren't able to use the requested anti-aliasing samples, update the setting.
+	int max_fsaa = 0;
+	SDL_GL_GetAttribute( SDL_GL_MULTISAMPLESAMPLES, &max_fsaa );
+	if( FSAA > max_fsaa )
+		FSAA = max_fsaa;
+	if( FSAA == 1 )
+		FSAA = 0;
 	
 	// Determine maximum anisotropic filtering.
 	if( AF < 1 )
@@ -233,6 +237,7 @@ void Graphics::SetMode( int x, int y, int bpp, bool fullscreen, int fsaa, int af
 		Raptor::Game->Cfg.Settings[ "g_res_windowed_x" ] = Num::ToString(x);
 		Raptor::Game->Cfg.Settings[ "g_res_windowed_y" ] = Num::ToString(y);
 	}
+	Raptor::Game->Cfg.Settings[ "g_bpp" ] = Num::ToString(BPP);
 	Raptor::Game->Cfg.Settings[ "g_fsaa" ] = Num::ToString(FSAA);
 	Raptor::Game->Cfg.Settings[ "g_af" ] = Num::ToString(AF);
 	Raptor::Game->Cfg.Settings[ "g_znear" ] = Num::ToString(ZNear);
@@ -242,7 +247,7 @@ void Graphics::SetMode( int x, int y, int bpp, bool fullscreen, int fsaa, int af
 
 void Graphics::Restart( void )
 {
-	int x = 1024, y = 768;
+	int x = 640, y = 480;
 	int bpp = Raptor::Game->Cfg.SettingAsInt( "g_bpp", 32 );
 	bool fullscreen = Raptor::Game->Cfg.SettingAsBool( "g_fullscreen", true );
 	int fsaa = Raptor::Game->Cfg.SettingAsInt( "g_fsaa", 0 );
@@ -257,11 +262,13 @@ void Graphics::Restart( void )
 		x = Raptor::Game->Cfg.SettingAsInt( "g_res_windowed_x", 640 );
 		y = Raptor::Game->Cfg.SettingAsInt( "g_res_windowed_y", 480 );
 	}
-	int z_bits = Raptor::Game->Cfg.SettingAsInt( "g_zbits", Z_BITS );
-	double z_near = Raptor::Game->Cfg.SettingAsDouble( "g_znear", 0.01 );
-	double z_far = Raptor::Game->Cfg.SettingAsDouble( "g_zfar", 100000 );
+	int zbits = Raptor::Game->Cfg.SettingAsInt( "g_zbits", 24 );
 	
-	SetMode( x, y, bpp, fullscreen, fsaa, af, z_bits, z_near, z_far );
+	ZNear = Raptor::Game->Cfg.SettingAsDouble( "g_znear", 0.125 );
+	ZFar = Raptor::Game->Cfg.SettingAsDouble( "g_zfar", 15000 );
+	VSync = Raptor::Game->Cfg.SettingAsBool( "g_vsync", false );
+	
+	SetMode( x, y, bpp, fullscreen, fsaa, af, zbits );
 }
 
 
@@ -346,11 +353,11 @@ void Graphics::Setup2D( void )
 
 void Graphics::Setup2D( double y1, double y2 )
 {
-	double h = y2 - y1;
+	double h = fabs( y2 - y1 );
 	double w = h * (double) W / (double) H;
 	double extra = (w - h) / 2.;
-	double x1 = y1 - extra;
-	double x2 = y2 + extra;
+	double x1 = std::min<double>( y1, y2 ) - extra;
+	double x2 = std::max<double>( y1, y2 ) + extra;
 	
 	Setup2D( x1, y1, x2, y2 );
 }

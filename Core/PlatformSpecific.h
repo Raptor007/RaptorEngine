@@ -42,7 +42,6 @@
 #undef DrawText
 #undef SearchPath
 
-#define Z_BITS (32)
 #define GLEW_STATIC true
 
 #else  // Not WIN32
@@ -55,8 +54,6 @@
 #if defined(APPLE_POWERPC) && ! defined(APPLE_POWERPC_GLEW)
 #define NO_GLEW true
 #endif
-
-#define Z_BITS (24)
 
 #endif
 

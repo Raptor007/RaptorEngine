@@ -22,6 +22,8 @@ namespace Num
 	int8_t Sign( int num );
 	double IPart( double num );
 	double FPart( double num );
+	uint16_t Mantissa16( double num );
+	uint32_t Mantissa32( double num );
 	double NearestWhole( double num, double step = 1. );
 	bool EveryOther( int num, int scale = 1 );
 	bool EveryOther( double num, double scale = 1. );
@@ -29,6 +31,7 @@ namespace Num
 	double RadToDeg( double num );
 	int NextPower( int num, int base );
 	int NextPowerOfTwo( int input );
+	double SignedPow( double num, double exponent );
 	
 	double Avg( const std::list<double> &nums );
 	double Avg( const std::vector<double> &nums );

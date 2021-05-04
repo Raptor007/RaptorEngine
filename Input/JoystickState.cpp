@@ -187,5 +187,18 @@ std::string JoystickState::Status( void )
 		return_string += cstr;
 	}
 	
+	if( BallsX.size() )
+	{
+		return_string += "\nJoy trackballs:";
+		for( std::map<Uint8, int>::const_iterator ball_iter = BallsX.begin(); ball_iter != BallsX.end(); ball_iter ++ )
+		{
+			if( ball_iter != BallsX.begin() )
+				return_string += ",";
+			
+			snprintf( cstr, 1024, " %i=%i,%i", ball_iter->first, ball_iter->second, BallsY[ ball_iter->first ] );
+			return_string += cstr;
+		}
+	}
+	
 	return return_string;
 }
