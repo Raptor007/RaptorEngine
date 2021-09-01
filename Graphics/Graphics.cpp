@@ -22,6 +22,8 @@ Graphics::Graphics( void )
 	H = 480;
 	RealW = W;
 	RealH = H;
+	DesktopW = 0;
+	DesktopH = 0;
 	AspectRatio = ((float)( W )) / ((float)( H ));
 	BPP = 32;
 	ZNear = 0.125;
@@ -60,6 +62,18 @@ void Graphics::Initialize( void )
 		return;
 	};
 	
+	// Get the desktop resolution.
+	const SDL_VideoInfo *info = SDL_GetVideoInfo();
+	if( info )
+	{
+		DesktopW = info->current_w;
+		DesktopH = info->current_h;
+	}
+	
+	// Default window position should be centered.
+	char sdl_env[] = "SDL_VIDEO_WINDOW_POS=center";
+	SDL_putenv( sdl_env );
+	
 	// Initialize SDL_ttf for text rendering.
 	TTF_Init();
 	
@@ -84,8 +98,11 @@ void Graphics::SetMode( int x, int y, int bpp, bool fullscreen, int fsaa, int af
 	if( ! Initialized )
 		return;
 	
-	// Get the current video properties.
-	const SDL_VideoInfo *info = SDL_GetVideoInfo();
+	// Going to fullscreen 0x0 should use desktop resolution.
+	if( fullscreen && ! x )
+		x = DesktopW;
+	if( fullscreen && ! y )
+		y = DesktopH;
 	
 	// Set up the video properties.
 	W = x;
@@ -145,8 +162,8 @@ void Graphics::SetMode( int x, int y, int bpp, bool fullscreen, int fsaa, int af
 		fprintf( stderr, "Unable to set %s video mode %ix%ix%i: %s\n", (fullscreen ? "fullscreen" : "windowed"), x, y, bpp, SDL_GetError() );
 		
 		// We couldn't set that video mode, so try a few other options.
-		if( info && ((x > info->current_w) || (y > info->current_h)) )
-			SetMode( info->current_w, info->current_h, bpp, fullscreen, fsaa, af, 24 ); // Desktop Resolution
+		if( DesktopW && DesktopH && ((x > DesktopW) || (y > DesktopH)) )
+			SetMode( DesktopW, DesktopH, bpp, fullscreen, fsaa, af, 24 ); // Desktop Resolution
 		else if( zbits > 24 )
 			SetMode( x,   y,   bpp, fullscreen, fsaa, af, 24 );     // 24-bit Z-Depth
 		else if( fullscreen && ((x != 640) || (y != 480)) )

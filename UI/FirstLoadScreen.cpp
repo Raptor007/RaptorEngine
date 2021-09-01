@@ -34,5 +34,6 @@ void FirstLoadScreen::Draw( void )
 {
 	Raptor::Game->Gfx.DrawRect2D( Rect.w / 2 - Rect.h, 0, Rect.w / 2 + Rect.h, Rect.h, Background.CurrentFrame(), 1.f, 1.f, 1.f, 1.f );
 	
-	TextFont->DrawText( Text, Rect.w / 2, Rect.h / 2, Font::ALIGN_MIDDLE_CENTER );
+	TextFont->DrawText( Text, Rect.w / 2 + 2, Rect.h / 2 + 2, Font::ALIGN_MIDDLE_CENTER, 0.f,0.f,0.f,0.8f );
+	TextFont->DrawText( Text, Rect.w / 2,     Rect.h / 2,     Font::ALIGN_MIDDLE_CENTER );
 }

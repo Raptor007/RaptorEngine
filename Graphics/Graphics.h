@@ -26,7 +26,7 @@ class Graphics
 public:
 	SDL_Surface *Screen;
 	bool Initialized;
-	int W, H, RealW, RealH, BPP;
+	int W, H, RealW, RealH, DesktopW, DesktopH, BPP;
 	float AspectRatio;
 	bool Fullscreen, VSync;
 	int FSAA, AF, ZBits;

@@ -8,6 +8,7 @@ class Layer;
 #include "PlatformSpecific.h"
 #include <cstddef>
 #include <list>
+#include <string>
 #include <SDL/SDL.h>
 
 
@@ -21,6 +22,7 @@ public:
 	bool Dirty;
 	bool Enabled;
 	bool Visible;
+	std::string Name;
 	
 	bool MouseIsDown;
 	bool MouseIsWithin;

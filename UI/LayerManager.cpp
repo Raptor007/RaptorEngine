@@ -147,3 +147,15 @@ Layer *LayerManager::TopLayer( void )
 	
 	return NULL;
 }
+
+
+Layer *LayerManager::Find( const std::string &name )
+{
+	for( std::list<Layer*>::reverse_iterator layer_iter = Layers.rbegin(); layer_iter != Layers.rend(); layer_iter ++ )
+	{
+		if( (! (*layer_iter)->Removed) && ((*layer_iter)->Name == name) )
+			return *layer_iter;
+	}
+	
+	return NULL;
+}

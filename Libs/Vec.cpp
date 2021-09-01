@@ -78,11 +78,30 @@ Vec2D Vec2D::Unit( void ) const
 }
 
 
+void Vec2D::Rotate( double degrees )
+{
+	double radians = Num::DegToRad(degrees);
+	double x = X, y = Y;
+	X = x * cos(radians) - y * sin(radians);
+	Y = y * cos(radians) + x * sin(radians);
+}
+
+void Vec2D::Rotate( double degrees, const Vec2D *anchor )
+{
+	X -= anchor->X;
+	Y -= anchor->Y;
+	
+	Rotate( degrees );
+	
+	X += anchor->X;
+	Y += anchor->Y;
+}
+
+
 double Vec2D::Dot( const Vec2D &other ) const
 {
 	return Dot( other.X, other.Y );
 }
-
 
 double Vec2D::Dot( double x, double y ) const
 {
@@ -265,17 +284,23 @@ Vec3D Vec3D::Unit( void ) const
 void Vec3D::RotateAround( const Vec3D *axis, double degrees )
 {
 	// http://inside.mines.edu/~gmurray/ArbitraryAxisRotation/
-
+	
 	// Convert to radians for the maths.
 	double radians = Num::DegToRad(degrees);
-
+	
 	// Keep old X,Y,Z values to use them as inputs for the new values.
 	double x = X, y = Y, z = Z;
-
-	// Convert the axis to a unit vector (scale to length 1).
-	double axis_length = sqrt( axis->X * axis->X + axis->Y * axis->Y + axis->Z * axis->Z );
-	double u = axis->X / axis_length, v = axis->Y / axis_length, w = axis->Z / axis_length;
-
+	
+	double u = 0., v = 0., w = 1.;
+	if( axis )
+	{
+		// Convert the axis to a unit vector (scale to length 1).
+		double axis_length = sqrt( axis->X * axis->X + axis->Y * axis->Y + axis->Z * axis->Z );
+		u = axis->X / axis_length;
+		v = axis->Y / axis_length;
+		w = axis->Z / axis_length;
+	}
+	
 	// Calculate new X,Y,Z values.
 	X = u * ( u*x + v*y + w*z ) * ( 1 - cos(radians) ) + x * cos(radians) + ( v*z - w*y ) * sin(radians);
 	Y = v * ( u*x + v*y + w*z ) * ( 1 - cos(radians) ) + y * cos(radians) + ( w*x - u*z ) * sin(radians);
@@ -300,7 +325,6 @@ double Vec3D::Dot( const Vec3D &other ) const
 {
 	return Dot( other.X, other.Y, other.Z );
 }
-
 
 double Vec3D::Dot( double x, double y, double z ) const
 {

@@ -19,6 +19,7 @@ namespace Raptor
 	RaptorGame *Game = NULL;
 	
 	void Terminate( int arg );
+	void BrokenPipe( int arg );
 }
 
 
@@ -161,9 +162,12 @@ void RaptorGame::Initialize( int argc, char **argv )
 	Mouse.SetCursor( Res.GetAnimation("cursor.ani"), 16, 1, 1 );
 	
 	
-	// Configure callback for SIGTERM.
+	// Configure signal callbacks.
 	
 	signal( SIGTERM, &(Raptor::Terminate) );
+#ifdef SIGPIPE
+	signal( SIGPIPE, &(Raptor::BrokenPipe) );
+#endif
 	
 	
 	// Run game-specific Setup method.
@@ -778,6 +782,25 @@ void RaptorGame::Quit( void )
 void Raptor::Terminate( int arg )
 {
 	Raptor::Game->Quit();
+}
+
+
+void Raptor::BrokenPipe( int arg )
+{
+	fprintf( stderr, "Received signal: SIGPIPE\n" );
+	fflush( stderr );
+	
+	if( ! Raptor::Server->IsRunning() )
+	{
+		Raptor::Game->Net.DisconnectMessage = "Broken Pipe";
+		Raptor::Game->Net.Disconnect();
+		
+#ifdef SIGPIPE
+		// SDLNet_TCP_Send gets stuck in an infinite do/while loop when a broke pipe occurs, so we exit.
+		// FIXME: Replace SDLNet_TCP_Send with our own send loop that can handle broken pipes?
+		exit( SIGPIPE );
+#endif
+	}
 }
 
 
