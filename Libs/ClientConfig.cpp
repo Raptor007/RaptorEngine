@@ -246,7 +246,14 @@ void ClientConfig::SetDefaults( void )
 		Settings[ "saitek_enable" ] = "true";
 	#endif
 	
-	Settings[ "name" ] = "Name";
+	const char *name = getenv("USER");
+	if( !(name && name[0]) )
+		name = getenv("USERNAME");
+	if( !(name && name[0]) )
+		name = getenv("HOSTNAME");
+	if( !(name && name[0]) )
+		name = "Name";
+	Settings[ "name" ] = name;
 	
 	Settings[ "netrate" ] = "30";
 	Settings[ "maxfps" ] = "60";

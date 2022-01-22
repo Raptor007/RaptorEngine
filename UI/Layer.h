@@ -22,6 +22,7 @@ public:
 	bool Dirty;
 	bool Enabled;
 	bool Visible;
+	bool Draggable;
 	std::string Name;
 	
 	bool MouseIsDown;
@@ -59,8 +60,14 @@ public:
 	void RemoveElement( Layer *element );
 	void RemoveAllElements( void );
 	
-	virtual bool IsTop( void );
-	virtual Layer *TopElement( void );
+	bool IsTop( bool and_containers = true );
+	Layer *TopElement( void );
 	
-	size_t RemoveOthersAbove( void );
+	void MoveElementToTop( Layer *element );
+	void MoveToTop( bool and_containers = true );
+	size_t RemoveOthersAbove( bool and_containers = false );
+	
+	void SizeToContainer( int buffer = 0 );
+	void SizeToElements( int max_buffer = 10 );
+	void Center( void );
 };

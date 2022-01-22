@@ -33,6 +33,7 @@ public:
 	
 	bool IsTop( Layer *layer );
 	Layer *TopLayer( void );
+	void MoveToTop( Layer *layer );
 	
 	Layer *Find( const std::string &name );
 };

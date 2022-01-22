@@ -39,6 +39,23 @@ void DropDown::Update( void )
 }
 
 
+void DropDown::SizeToText( void )
+{
+	if( LabelFont && Items.size() )
+	{
+		Uint16 max_w = 0;
+		for( std::vector<ListBoxItem>::const_iterator item_iter = Items.begin(); item_iter != Items.end(); item_iter ++ )
+		{
+			SDL_Rect rect = {0,0,0,0};
+			LabelFont->TextSize( item_iter->Text, &rect );
+			if( rect.w > max_w )
+				max_w = rect.w;
+		}
+		Rect.w = max_w;
+	}
+}
+
+
 bool DropDown::HandleEvent( SDL_Event *event )
 {
 	bool handled = Layer::HandleEvent( event );

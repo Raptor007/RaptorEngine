@@ -154,6 +154,10 @@ void NetServer::RemoveDisconnectedClients( void )
 		
 		ConnectedClient *client = *iter;
 		
+		// Kick connections held for too long without login; these are probably not valid clients.
+		if( client->Connected && ! client->Synchronized && (client->NetClock.ElapsedSeconds() >= 10.) )
+			client->Disconnect();
+		
 		if( ! client->Connected )
 		{
 			DisconnectedClients.push_back( client );
@@ -308,7 +312,7 @@ void NetServer::SendUpdates( void )
 		
 		ConnectedClient *client = *iter;
 		
-		if( client->Connected && client->PlayerID && client->BytesReceived )
+		if( client->Connected && client->Synchronized )
 		{
 			// Reduce update rate temporarily in high-ping situations.
 			double temp_netrate = client->NetRate;

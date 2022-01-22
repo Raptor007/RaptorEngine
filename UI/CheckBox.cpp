@@ -217,3 +217,14 @@ void CheckBox::Clicked( Uint8 button )
 void CheckBox::Changed( void )
 {
 }
+
+
+void CheckBox::SizeToText( void )
+{
+	if( LabelFont )
+	{
+		SDL_Rect rect = {0,0,0,0};
+		LabelFont->TextSize( LabelText, &rect );
+		Rect.w = Rect.h + rect.w;
+	}
+}

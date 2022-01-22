@@ -52,3 +52,14 @@ void LabelledButton::Draw( void )
 			LabelFont->DrawText( LabelText, 0, 0, Rect.w, Rect.h, LabelAlign, RedNormal, GreenNormal, BlueNormal, AlphaNormal );
 	}
 }
+
+
+void LabelledButton::SizeToText( void )
+{
+	if( LabelFont )
+	{
+		SDL_Rect rect = {0,0,0,0};
+		LabelFont->TextSize( LabelText, &rect );
+		Rect.w = rect.w;
+	}
+}

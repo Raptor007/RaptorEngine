@@ -24,5 +24,6 @@ public:
 	LabelledButton( SDL_Rect *rect, Font *label_font, std::string text, uint8_t align, Animation *normal, Animation *mouse_down = NULL, Animation *mouse_over = NULL );
 	virtual ~LabelledButton();
 	
-	void Draw( void );
+	virtual void Draw( void );
+	virtual void SizeToText( void );
 };

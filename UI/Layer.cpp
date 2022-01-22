@@ -16,6 +16,7 @@ Layer::Layer( SDL_Rect *rect )
 	Dirty = false;
 	Enabled = true;
 	Visible = true;
+	Draggable = false;
 	
 	MouseIsWithin = false;
 	MouseIsDown = false;
@@ -163,6 +164,10 @@ bool Layer::IsSelected( void )
 
 void Layer::TrackEvent( SDL_Event *event )
 {
+	// If we are dragging this layer, we don't want its elements to track the mouse motion.
+	if( Draggable && MouseIsWithin && MouseIsDown && (event->type == SDL_MOUSEMOTION) )
+		return;
+	
 	// Pass the event down the stack so the elements can track it too.
 	for( std::list<Layer*>::reverse_iterator layer_iter = Elements.rbegin(); layer_iter != Elements.rend(); layer_iter ++ )
 		(*layer_iter)->TrackEvent( event );
@@ -220,6 +225,13 @@ bool Layer::HandleEvent( SDL_Event *event )
 	
 	if( event->type == SDL_MOUSEMOTION )
 	{
+		if( Draggable && MouseIsWithin && MouseIsDown )
+		{
+			Rect.x += event->motion.xrel;
+			Rect.y += event->motion.yrel;
+			return true;
+		}
+		
 		mouse_is_within = WithinCalcRect( event->motion.x, event->motion.y );
 	}
 	else if( event->type == SDL_MOUSEBUTTONDOWN )
@@ -269,13 +281,13 @@ void Layer::MouseLeave( void )
 
 bool Layer::MouseDown( Uint8 button )
 {
-	return false;
+	return Draggable && (button != SDL_BUTTON_WHEELUP) && (button != SDL_BUTTON_WHEELDOWN);
 }
 
 
 bool Layer::MouseUp( Uint8 button )
 {
-	return false;
+	return Draggable && (button != SDL_BUTTON_WHEELUP) && (button != SDL_BUTTON_WHEELDOWN);
 }
 
 
@@ -288,24 +300,6 @@ bool Layer::KeyDown( SDLKey key )
 bool Layer::KeyUp( SDLKey key )
 {
 	return false;
-}
-
-
-bool Layer::IsTop( void )
-{
-	if( Container )
-		return (this == Container->TopElement()) && Container->IsTop();
-	else
-		return this == Raptor::Game->Layers.TopLayer();
-}
-
-
-Layer *Layer::TopElement( void )
-{
-	if( Elements.size() )
-		return Elements.back();
-	
-	return NULL;
 }
 
 
@@ -347,10 +341,129 @@ void Layer::RemoveAllElements( void )
 }
 
 
-size_t Layer::RemoveOthersAbove( void )
+bool Layer::IsTop( bool and_containers )
+{
+	if( Container )
+	{
+		if( and_containers )
+			return (this == Container->TopElement()) && Container->IsTop();
+		else
+			return this == Container->TopElement();
+	}
+	else
+		return this == Raptor::Game->Layers.TopLayer();
+}
+
+
+Layer *Layer::TopElement( void )
+{
+	if( Elements.size() )
+		return Elements.back();
+	
+	return NULL;
+}
+
+
+void Layer::MoveElementToTop( Layer *element )
+{
+	if( element == TopElement() )
+		return;
+	
+	for( std::list<Layer*>::iterator layer_iter = Elements.begin(); layer_iter != Elements.end(); layer_iter ++ )
+	{
+		if( *layer_iter == element )
+		{
+			Elements.erase( layer_iter );
+			break;
+		}
+	}
+	
+	Elements.push_back( element );
+}
+
+
+void Layer::MoveToTop( bool and_containers )
+{
+	if( Container )
+	{
+		Container->MoveElementToTop( this );
+		if( and_containers )
+			Container->MoveToTop( true );
+	}
+	else
+		Raptor::Game->Layers.MoveToTop( this );
+}
+
+
+size_t Layer::RemoveOthersAbove( bool and_containers )
 {
 	size_t removed = 0;
-	while( ! IsTop() && Raptor::Game->Layers.RemoveTop() )
+	if( Container )
+	{
+		while( ! IsTop(false) )
+		{
+			Container->RemoveElement( Container->TopElement() );
+			removed ++;
+		}
+		if( and_containers )
+			removed += Container->RemoveOthersAbove( true );
+	}
+	else while( ! IsTop(true) && Raptor::Game->Layers.RemoveTop() )
 		removed ++;
 	return removed;
+}
+
+
+void Layer::SizeToContainer( int buffer )
+{
+	Rect.x = buffer;
+	Rect.y = buffer;
+	
+	if( Container )
+	{
+		Rect.w = Container->Rect.w - buffer * 2;
+		Rect.h = Container->Rect.h - buffer * 2;
+	}
+	else
+	{
+		Rect.x = Raptor::Game->Gfx.W - buffer * 2;
+		Rect.y = Raptor::Game->Gfx.H - buffer * 2;
+	}
+}
+
+
+void Layer::SizeToElements( int max_buffer )
+{
+	int buffer = max_buffer, max_x = 0, max_y = 0;
+	
+	for( std::list<Layer*>::const_iterator layer_iter = Elements.begin(); layer_iter != Elements.end(); layer_iter ++ )
+	{
+		int x1 = std::max<int>( 0, (*layer_iter)->Rect.x );
+		int x2 = std::max<int>( 0, (*layer_iter)->Rect.x + (*layer_iter)->Rect.w );
+		int y2 = std::max<int>( 0, (*layer_iter)->Rect.y + (*layer_iter)->Rect.h );
+		if( x1 < buffer )
+			buffer = x1;
+		if( x2 > max_x )
+			max_x = x2;
+		if( y2 > max_y )
+			max_y = y2;
+	}
+	
+	Rect.w = max_x + buffer;
+	Rect.h = max_y + buffer;
+}
+
+
+void Layer::Center( void )
+{
+	if( Container )
+	{
+		Rect.x = Container->Rect.w/2 - Rect.w/2;
+		Rect.y = Container->Rect.h/2 - Rect.h/2;
+	}
+	else
+	{
+		Rect.x = Raptor::Game->Gfx.W/2 - Rect.w/2;
+		Rect.y = Raptor::Game->Gfx.H/2 - Rect.h/2;
+	}
 }

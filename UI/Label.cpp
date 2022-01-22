@@ -26,7 +26,16 @@ Label::~Label()
 void Label::Draw( void )
 {
 	if( LabelFont )
-	{
 		LabelFont->DrawText( LabelText, 0, 0, Rect.w, Rect.h, LabelAlign, Red, Green, Blue, Alpha );
+}
+
+
+void Label::SizeToText( void )
+{
+	if( LabelFont )
+	{
+		SDL_Rect rect = {0,0,0,0};
+		LabelFont->TextSize( LabelText, &rect );
+		Rect.w = rect.w;
 	}
 }

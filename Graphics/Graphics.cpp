@@ -98,11 +98,24 @@ void Graphics::SetMode( int x, int y, int bpp, bool fullscreen, int fsaa, int af
 	if( ! Initialized )
 		return;
 	
-	// Going to fullscreen 0x0 should use desktop resolution.
-	if( fullscreen && ! x )
-		x = DesktopW;
-	if( fullscreen && ! y )
-		y = DesktopH;
+	// Going to 0x0 should select resolution automatically.
+	if( !(x || y) )
+	{
+		if( fullscreen )
+		{
+			x = DesktopW;
+			y = DesktopH;
+		}
+		else if( DesktopW && DesktopH )
+		{
+			x = DesktopW - 20;
+			y = DesktopH - 100;
+			if( x > y * AspectRatio )
+				x = y * AspectRatio;
+			else
+				y = x / AspectRatio;
+		}
+	}
 	
 	// Set up the video properties.
 	W = x;

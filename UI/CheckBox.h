@@ -31,4 +31,6 @@ public:
 	
 	virtual void Clicked( Uint8 button = SDL_BUTTON_LEFT );
 	virtual void Changed( void );
+	
+	virtual void SizeToText( void );
 };

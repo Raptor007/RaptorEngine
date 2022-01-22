@@ -149,6 +149,24 @@ Layer *LayerManager::TopLayer( void )
 }
 
 
+void LayerManager::MoveToTop( Layer *layer )
+{
+	if( layer == TopLayer() )
+		return;
+	
+	for( std::list<Layer*>::iterator layer_iter = Layers.begin(); layer_iter != Layers.end(); layer_iter ++ )
+	{
+		if( *layer_iter == layer )
+		{
+			Layers.erase( layer_iter );
+			break;
+		}
+	}
+	
+	Layers.push_back( layer );
+}
+
+
 Layer *LayerManager::Find( const std::string &name )
 {
 	for( std::list<Layer*>::reverse_iterator layer_iter = Layers.rbegin(); layer_iter != Layers.rend(); layer_iter ++ )

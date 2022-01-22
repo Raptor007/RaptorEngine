@@ -25,6 +25,7 @@ public:
 	
 	void AddItem( std::string value, std::string text );
 	void Update( void );
+	virtual void SizeToText( void );
 	bool HandleEvent( SDL_Event *event );
 	void Clicked( Uint8 button = SDL_BUTTON_LEFT );
 	void Close( void );

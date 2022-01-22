@@ -29,6 +29,8 @@ ConnectedClient::ConnectedClient( TCPsocket socket, double net_rate, int8_t prec
 	InThread = NULL;
 	OutThread = NULL;
 	
+	PlayerID = 0;
+	
 	Connected = true;
 	
 	// Start the listener thread.
@@ -100,6 +102,8 @@ void ConnectedClient::Disconnect( void )
 		Connected = false;
 		Raptor::Server->DroppedClient( this );
 	}
+	
+	PlayerID = 0;
 	
 	// Handle cleanup later, after the threads are finished.
 }
@@ -235,7 +239,13 @@ bool ConnectedClient::ProcessPacket( Packet *packet )
 	}
 	
 	else
+	{
+		// Unknown packet type received before login; probably not a valid client.
+		if( ! Synchronized )
+			Disconnect();
+		
 		return false;
+	}
 	
 	return true;
 }

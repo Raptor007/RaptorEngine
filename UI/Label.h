@@ -20,5 +20,6 @@ public:
 	Label( SDL_Rect *rect, std::string text, Font *font, uint8_t align );
 	virtual ~Label();
 	
-	void Draw( void );
+	virtual void Draw( void );
+	virtual void SizeToText( void );
 };
