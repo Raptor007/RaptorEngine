@@ -21,7 +21,7 @@ public:
 	bool ShiftIsDown;
 	Font *TextFont;
 	uint8_t Align;
-	bool ReturnDeselects, PassReturn, EscDeselects, PassEsc;
+	bool ReturnDeselects, PassReturn, EscDeselects, PassEsc, TabDeselects, PassTab;
 	float SelectedRed, SelectedGreen, SelectedBlue, SelectedAlpha;
 	float TextRed, TextGreen, TextBlue, TextAlpha;
 	float SelectedTextRed, SelectedTextGreen, SelectedTextBlue, SelectedTextAlpha;

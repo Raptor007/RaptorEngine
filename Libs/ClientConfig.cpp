@@ -912,20 +912,19 @@ void ClientConfig::Load( std::string filename )
 }
 
 
-void ClientConfig::Save( std::string filename )
+void ClientConfig::Save( std::string filename ) const
 {
 	FILE *output = fopen( filename.c_str(), "wt" );
 	if( output )
 	{
-		for( std::map<std::string, std::string>::iterator setting_iter = Settings.begin(); setting_iter != Settings.end(); setting_iter ++ )
+		for( std::map<std::string, std::string>::const_iterator setting_iter = Settings.begin(); setting_iter != Settings.end(); setting_iter ++ )
 			fprintf( output, "set \"%s\" \"%s\"\n", Str::Escape( setting_iter->first, ORIGINAL, ESCAPED ).c_str(), Str::Escape( setting_iter->second, ORIGINAL, ESCAPED ).c_str() );
 		
 		fprintf( output, "\nunbindall\n" );
-		for( std::map<Uint8, uint8_t>::iterator mouse_iter = MouseBinds.begin(); mouse_iter != MouseBinds.end(); mouse_iter ++ )
+		for( std::map<Uint8, uint8_t>::const_iterator mouse_iter = MouseBinds.begin(); mouse_iter != MouseBinds.end(); mouse_iter ++ )
 			fprintf( output, "bind \"%s\" \"%s\"\n", Str::Escape( MouseName(mouse_iter->first), ORIGINAL, ESCAPED ).c_str(), Str::Escape( ControlName(mouse_iter->second), ORIGINAL, ESCAPED ).c_str() );
-		for( std::map<SDLKey, uint8_t>::iterator key_iter = KeyBinds.begin(); key_iter != KeyBinds.end(); key_iter ++ )
+		for( std::map<SDLKey, uint8_t>::const_iterator key_iter = KeyBinds.begin(); key_iter != KeyBinds.end(); key_iter ++ )
 			fprintf( output, "bind \"%s\" \"%s\"\n", Str::Escape( KeyName(key_iter->first), ORIGINAL, ESCAPED ).c_str(), Str::Escape( ControlName(key_iter->second), ORIGINAL, ESCAPED ).c_str() );
-		
 		
 		fflush( output );
 		fclose( output );
@@ -937,16 +936,16 @@ void ClientConfig::Save( std::string filename )
 // ---------------------------------------------------------------------------
 
 
-bool ClientConfig::HasSetting( std::string name )
+bool ClientConfig::HasSetting( std::string name ) const
 {
-	std::map<std::string, std::string>::iterator found = Settings.find( name );
+	std::map<std::string, std::string>::const_iterator found = Settings.find( name );
 	return ( found != Settings.end() );
 }
 
 
-std::string ClientConfig::SettingAsString( std::string name, const char *ifndef )
+std::string ClientConfig::SettingAsString( std::string name, const char *ifndef ) const
 {
-	std::map<std::string, std::string>::iterator found = Settings.find( name );
+	std::map<std::string, std::string>::const_iterator found = Settings.find( name );
 	if( found != Settings.end() )
 		return found->second;
 	if( ifndef )
@@ -955,38 +954,38 @@ std::string ClientConfig::SettingAsString( std::string name, const char *ifndef 
 }
 
 
-double ClientConfig::SettingAsDouble( std::string name, double ifndef )
+double ClientConfig::SettingAsDouble( std::string name, double ifndef ) const
 {
-	std::map<std::string, std::string>::iterator found = Settings.find( name );
+	std::map<std::string, std::string>::const_iterator found = Settings.find( name );
 	if( found != Settings.end() )
 		return Str::AsDouble( found->second );
 	return ifndef;
 }
 
 
-int ClientConfig::SettingAsInt( std::string name, int ifndef )
+int ClientConfig::SettingAsInt( std::string name, int ifndef ) const
 {
-	std::map<std::string, std::string>::iterator found = Settings.find( name );
+	std::map<std::string, std::string>::const_iterator found = Settings.find( name );
 	if( found != Settings.end() )
 		return Str::AsInt( found->second );
 	return ifndef;
 }
 
 
-bool ClientConfig::SettingAsBool( std::string name, bool ifndef )
+bool ClientConfig::SettingAsBool( std::string name, bool ifndef ) const
 {
-	std::map<std::string, std::string>::iterator found = Settings.find( name );
+	std::map<std::string, std::string>::const_iterator found = Settings.find( name );
 	if( found != Settings.end() )
 		return Str::AsBool( found->second );
 	return ifndef;
 }
 
 
-std::vector<int> ClientConfig::SettingAsInts( std::string name )
+std::vector<int> ClientConfig::SettingAsInts( std::string name ) const
 {
 	std::vector<int> results;
 	
-	std::map<std::string, std::string>::iterator found = Settings.find( name );
+	std::map<std::string, std::string>::const_iterator found = Settings.find( name );
 	if( found != Settings.end() )
 	{
 		bool seeking = true;
@@ -1066,18 +1065,18 @@ void ClientConfig::UnbindAll( void )
 // ---------------------------------------------------------------------------
 
 
-uint8_t ClientConfig::GetControl( SDL_Event *event )
+uint8_t ClientConfig::GetControl( SDL_Event *event ) const
 {
 	if( (event->type == SDL_KEYDOWN) || (event->type == SDL_KEYUP) )
 	{
-		std::map<SDLKey, uint8_t>::iterator iter = KeyBinds.find( event->key.keysym.sym );
+		std::map<SDLKey, uint8_t>::const_iterator iter = KeyBinds.find( event->key.keysym.sym );
 		if( iter != KeyBinds.end() )
 			return iter->second;
 	}
 	
 	else if( (event->type == SDL_MOUSEBUTTONDOWN) || (event->type == SDL_MOUSEBUTTONUP) )
 	{
-		std::map<Uint8, uint8_t>::iterator iter = MouseBinds.find( event->button.button );
+		std::map<Uint8, uint8_t>::const_iterator iter = MouseBinds.find( event->button.button );
 		if( iter != MouseBinds.end() )
 			return iter->second;
 	}
@@ -1090,9 +1089,9 @@ uint8_t ClientConfig::GetControl( SDL_Event *event )
 // ---------------------------------------------------------------------------
 
 
-std::string ClientConfig::ControlName( uint8_t control )
+std::string ClientConfig::ControlName( uint8_t control ) const
 {
-	std::map<uint8_t, std::string>::iterator iter = ControlNames.find( control );
+	std::map<uint8_t, std::string>::const_iterator iter = ControlNames.find( control );
 	if( iter != ControlNames.end() )
 		return iter->second;
 	
@@ -1102,9 +1101,9 @@ std::string ClientConfig::ControlName( uint8_t control )
 }
 
 
-std::string ClientConfig::KeyName( SDLKey key )
+std::string ClientConfig::KeyName( SDLKey key ) const
 {
-	std::map<SDLKey, std::string>::iterator iter = KeyNames.find( key );
+	std::map<SDLKey, std::string>::const_iterator iter = KeyNames.find( key );
 	if( iter != KeyNames.end() )
 		return iter->second;
 	
@@ -1114,9 +1113,9 @@ std::string ClientConfig::KeyName( SDLKey key )
 }
 
 
-std::string ClientConfig::MouseName( Uint8 mouse )
+std::string ClientConfig::MouseName( Uint8 mouse ) const
 {
-	std::map<Uint8, std::string>::iterator iter = MouseNames.find( mouse );
+	std::map<Uint8, std::string>::const_iterator iter = MouseNames.find( mouse );
 	if( iter != MouseNames.end() )
 		return iter->second;
 	
@@ -1132,15 +1131,15 @@ std::string ClientConfig::MouseName( Uint8 mouse )
 // ---------------------------------------------------------------------------
 
 
-uint8_t ClientConfig::ControlID( std::string name )
+uint8_t ClientConfig::ControlID( std::string name ) const
 {
-	for( std::map<uint8_t, std::string>::iterator iter = ControlNames.begin(); iter != ControlNames.end(); iter ++ )
+	for( std::map<uint8_t, std::string>::const_iterator iter = ControlNames.begin(); iter != ControlNames.end(); iter ++ )
 	{
 		if( iter->second == name )
 			return iter->first;
 	}
 	
-	for( std::map<uint8_t, std::string>::iterator iter = ControlNames.begin(); iter != ControlNames.end(); iter ++ )
+	for( std::map<uint8_t, std::string>::const_iterator iter = ControlNames.begin(); iter != ControlNames.end(); iter ++ )
 	{
 		if( ControlName(iter->first) == name )
 			return iter->first;
@@ -1150,15 +1149,15 @@ uint8_t ClientConfig::ControlID( std::string name )
 }
 
 
-SDLKey ClientConfig::KeyID( std::string name )
+SDLKey ClientConfig::KeyID( std::string name ) const
 {
-	for( std::map<SDLKey, std::string>::iterator iter = KeyNames.begin(); iter != KeyNames.end(); iter ++ )
+	for( std::map<SDLKey, std::string>::const_iterator iter = KeyNames.begin(); iter != KeyNames.end(); iter ++ )
 	{
 		if( iter->second == name )
 			return iter->first;
 	}
 	
-	for( std::map<SDLKey, std::string>::iterator iter = KeyNames.begin(); iter != KeyNames.end(); iter ++ )
+	for( std::map<SDLKey, std::string>::const_iterator iter = KeyNames.begin(); iter != KeyNames.end(); iter ++ )
 	{
 		if( KeyName(iter->first) == name )
 			return iter->first;
@@ -1168,15 +1167,15 @@ SDLKey ClientConfig::KeyID( std::string name )
 }
 
 
-Uint8 ClientConfig::MouseID( std::string name )
+Uint8 ClientConfig::MouseID( std::string name ) const
 {
-	for( std::map<Uint8, std::string>::iterator iter = MouseNames.begin(); iter != MouseNames.end(); iter ++ )
+	for( std::map<Uint8, std::string>::const_iterator iter = MouseNames.begin(); iter != MouseNames.end(); iter ++ )
 	{
 		if( iter->second == name )
 			return iter->first;
 	}
 	
-	for( std::map<Uint8, std::string>::iterator iter = MouseNames.begin(); iter != MouseNames.end(); iter ++ )
+	for( std::map<Uint8, std::string>::const_iterator iter = MouseNames.begin(); iter != MouseNames.end(); iter ++ )
 	{
 		if( MouseName(iter->first) == name )
 			return iter->first;

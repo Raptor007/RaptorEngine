@@ -51,6 +51,13 @@ public:
 	GameObject *GetObject( uint32_t id );
 	Player *GetPlayer( uint16_t id );
 	
+	bool HasProperty( std::string name ) const;
+	std::string PropertyAsString( std::string name, const char *ifndef = NULL ) const;
+	double PropertyAsDouble( std::string name, double ifndef = 0. ) const;
+	int PropertyAsInt( std::string name, int ifndef = 0 ) const;
+	bool PropertyAsBool( std::string name, bool ifndef = false ) const;
+	std::vector<int> PropertyAsInts( std::string name ) const;
+	
 	void CheckCollisions( double dt );
 	void Update( double dt );
 };

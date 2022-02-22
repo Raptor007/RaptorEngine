@@ -14,10 +14,14 @@ TextBox::TextBox( SDL_Rect *rect, Font *font, uint8_t align ) : Layer( rect )
 	ShiftIsDown = false;
 	TextFont = font;
 	Align = align;
+	
 	ReturnDeselects = false;
 	PassReturn = true;
 	EscDeselects = true;
 	PassEsc = false;
+	TabDeselects = true;
+	PassTab = false;
+	
 	CursorAppearance = "|";
 	CenterCursor = true;
 	
@@ -228,6 +232,11 @@ bool TextBox::KeyDown( SDLKey key )
 			if( PassEsc )
 				return false;
 		}
+		else if( key == SDLK_TAB )
+		{
+			if( PassTab )
+				return false;
+		}
 		else if( key == SDLK_BACKSPACE )
 		{
 			UpdateCursor();
@@ -235,6 +244,15 @@ bool TextBox::KeyDown( SDLKey key )
 			{
 				Text.erase( Cursor - 1, 1 );
 				Cursor --;
+				Changed();
+			}
+		}
+		else if( key == SDLK_DELETE )
+		{
+			UpdateCursor();
+			if( (size_t) Cursor < Text.length() )
+			{
+				Text.erase( Cursor, 1 );
 				Changed();
 			}
 		}
@@ -252,16 +270,8 @@ bool TextBox::KeyDown( SDLKey key )
 			Cursor = 0;
 		else if( (key == SDLK_DOWN) || (key == SDLK_END) )
 			Cursor = Text.length();
-		else if( (key == SDLK_LSHIFT) || (key == SDLK_RSHIFT) )
+		else if( (key == SDLK_LSHIFT) || (key == SDLK_RSHIFT) || (key == SDLK_CAPSLOCK) )
 			ShiftIsDown = true;
-		else if( (key == SDLK_LCTRL) || (key == SDLK_RCTRL) )
-			;
-		else if( (key == SDLK_LALT) || (key == SDLK_RALT) )
-			;
-		else if( (key == SDLK_LMETA) || (key == SDLK_RMETA) )
-			;
-		
-		// FIXME: Many more special scenarios to handle here.
 		
 		else if( (key >= SDLK_KP0) && (key <= SDLK_KP9) )
 			InsertAtCursor( ((char) key) + '0'-SDLK_KP0 );
@@ -321,7 +331,7 @@ bool TextBox::KeyDown( SDLKey key )
 			InsertAtCursor( '>' );
 		else if( ShiftIsDown && (key == '/') )
 			InsertAtCursor( '?' );
-		else
+		else if( key <= 255 )
 			InsertAtCursor( (char) key );
 		
 		return true;
@@ -349,7 +359,14 @@ bool TextBox::KeyUp( SDLKey key )
 			if( PassEsc )
 				return false;
 		}
-		else if( (key == SDLK_LSHIFT) || (key == SDLK_RSHIFT) )
+		else if( key == SDLK_TAB )
+		{
+			if( TabDeselects )
+				Container->Selected = NULL;
+			if( PassTab )
+				return false;
+		}
+		else if( (key == SDLK_LSHIFT) || (key == SDLK_RSHIFT) || (key == SDLK_CAPSLOCK) )
 			ShiftIsDown = false;
 		
 		return true;

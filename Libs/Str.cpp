@@ -44,7 +44,7 @@ double CStr::AsDouble( const char *str )
 {
 	if( ! str )
 		return 0.0;
-	if( strcmp( str, "true" ) == 0 )
+	if( strcasecmp( str, "true" ) == 0 )
 		return 1.0;
 	return atof( str );
 }
@@ -54,7 +54,7 @@ int CStr::AsInt( const char *str )
 {
 	if( ! str )
 		return 0;
-	if( strcmp( str, "true" ) == 0 )
+	if( strcasecmp( str, "true" ) == 0 )
 		return 1;
 	return atoi( str );
 }
@@ -68,32 +68,14 @@ bool CStr::AsBool( const char *str )
 
 int CStr::FindInsensitive( const char *str, const char *search_for )
 {
-	// Copy both strings.
-	char *str_copy = Copy(str);
-	char *search_for_copy = Copy(search_for);
-	
-	// Make the copies lowercase.
-	int len = strlen(str_copy);
-	for( int i = 0; i < len; i ++ )
-		str_copy[ i ] = tolower( str[ i ] );
-	len = strlen(search_for);
-	for( int i = 0; i < len; i ++ )
-		search_for_copy[ i ] = tolower( search_for[ i ] );
-	
-	// Search for the substring within the lowercase copies.
-	int index = -1;
-	char *found = strstr( str_copy, search_for_copy );
-	if( found )
-		index = found - str_copy;
-	
-	// Free the copied memory.
-	Delete(str_copy);
-	str_copy = NULL;
-	Delete(search_for_copy);
-	search_for_copy = NULL;
-	
-	// Return the index of the substring (or -1 for not found).
-	return index;
+	size_t search_len = strlen(search_for);
+	int count = strlen(str) + 1 - search_len;
+	for( int i = 0; i < count; i ++ )
+	{
+		if( strncasecmp( str + i, search_for, search_len ) == 0 )
+			return i;
+	}
+	return -1;
 }
 
 

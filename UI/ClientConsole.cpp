@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <SDL/SDL.h>
 #include "RaptorGame.h"
+#include "Str.h"
 
 
 ClientConsole::ClientConsole( void ) : Layer( &Rect )
@@ -233,6 +234,28 @@ bool ClientConsole::HandleEvent( SDL_Event *event )
 				{
 					Input->Text = "";
 					Input->Cursor = 0;
+				}
+			}
+			
+			return true;
+		}
+		
+		else if( ((event->type == SDL_KEYDOWN) || (event->type == SDL_KEYUP)) && (event->key.keysym.sym == SDLK_TAB) )
+		{
+			if( event->type == SDL_KEYDOWN )
+			{
+				size_t match = History.size();
+				for( size_t i = 0; i < History.size(); i ++ )
+				{
+					if( strncasecmp( History[ i ].c_str(), Input->Text.c_str(), Input->Text.length() ) == 0 )
+						match = i;
+				}
+				
+				if( match < History.size() )
+				{
+					HistoryIndex = match;
+					Input->Text = History[ HistoryIndex ];
+					Input->Cursor = Input->Text.length();
 				}
 			}
 			

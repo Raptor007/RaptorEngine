@@ -26,6 +26,58 @@ void DropDown::AddItem( std::string value, std::string text )
 }
 
 
+int DropDown::FindItem( std::string value )
+{
+	int size = Items.size();
+	for( int i = 0; i < size; i ++ )
+	{
+		try
+		{
+			if( Items.at( i ).Value == value )
+				return i;
+		}
+		catch( std::out_of_range &exception )
+		{
+			fprintf( stderr, "DropDown::FindItem: std::out_of_range\n" );
+		}
+	}
+
+	return -1;
+}
+
+
+void DropDown::RemoveItem( std::string value )
+{
+	int index = FindItem( value );
+	RemoveItem( index );
+}
+
+
+void DropDown::RemoveItem( int index )
+{
+	if( index >= 0 )
+	{
+		try
+		{
+			// Create an iterator so the vector::erase method will work properly.
+			std::vector<ListBoxItem>::iterator iter = Items.begin() + index;
+			Items.erase( iter );
+		}
+		catch( std::out_of_range &exception )
+		{
+			fprintf( stderr, "DropDown::RemoveItem: std::out_of_range\n" );
+		}
+	}
+}
+
+
+void DropDown::Clear( void )
+{
+	Items.clear();
+	Selected = NULL;
+}
+
+
 void DropDown::Update( void )
 {
 	for( std::vector<ListBoxItem>::const_iterator item_iter = Items.begin(); item_iter != Items.end(); item_iter ++ )
@@ -35,6 +87,13 @@ void DropDown::Update( void )
 			LabelText = item_iter->Text;
 			break;
 		}
+	}
+	
+	if( MyListBox )
+	{
+		MyListBox->Items = Items;
+		MyListBox->AutoSize();
+		MyListBox->ScrollTo( Value, Rect.y - MyListBox->Rect.y );
 	}
 }
 
@@ -58,7 +117,7 @@ void DropDown::SizeToText( void )
 
 bool DropDown::HandleEvent( SDL_Event *event )
 {
-	bool handled = Layer::HandleEvent( event );
+	bool handled = LabelledButton::HandleEvent( event );
 	
 	if( (! handled) && MyListBox && ! MouseIsWithin )
 	{
@@ -71,8 +130,8 @@ bool DropDown::HandleEvent( SDL_Event *event )
 			return true;
 		}
 	}
-
-	return false;
+	
+	return handled;
 }
 
 
@@ -197,8 +256,21 @@ DropDownListBox::DropDownListBox( DropDown *dropdown )
 : ListBox( &(dropdown->Rect), dropdown->LabelFont, dropdown->ScrollBarSize, dropdown->Items )
 {
 	CalledBy = dropdown;
-	
 	Alpha = 1.f;
+	
+	AutoSize();
+	ScrollTo( CalledBy->Value, CalledBy->Rect.y - Rect.y );
+}
+
+
+DropDownListBox::~DropDownListBox()
+{
+}
+
+
+void DropDownListBox::AutoSize( void )
+{
+	Rect.y = CalledBy->Rect.y;
 	
 	int min_y = CalledBy->Container ? -(CalledBy->Container->CalcRect.y) : 0;
 	int max_h = Raptor::Game->Gfx.H;
@@ -221,13 +293,6 @@ DropDownListBox::DropDownListBox( DropDown *dropdown )
 		if( Rect.y < min_y )
 			Rect.y = min_y;
 	}
-	
-	ScrollTo( CalledBy->Value, CalledBy->Rect.y - Rect.y );
-}
-
-
-DropDownListBox::~DropDownListBox()
-{
 }
 
 

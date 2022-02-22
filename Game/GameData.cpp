@@ -344,6 +344,79 @@ Player *GameData::GetPlayer( uint16_t id )
 // -----------------------------------------------------------------------------
 
 
+bool GameData::HasProperty( std::string name ) const
+{
+	std::map<std::string, std::string>::const_iterator found = Properties.find( name );
+	return ( found != Properties.end() );
+}
+
+
+std::string GameData::PropertyAsString( std::string name, const char *ifndef ) const
+{
+	std::map<std::string, std::string>::const_iterator found = Properties.find( name );
+	if( found != Properties.end() )
+		return found->second;
+	if( ifndef )
+		return std::string(ifndef);
+	return "";
+}
+
+
+double GameData::PropertyAsDouble( std::string name, double ifndef ) const
+{
+	std::map<std::string, std::string>::const_iterator found = Properties.find( name );
+	if( found != Properties.end() )
+		return Str::AsDouble( found->second );
+	return ifndef;
+}
+
+
+int GameData::PropertyAsInt( std::string name, int ifndef ) const
+{
+	std::map<std::string, std::string>::const_iterator found = Properties.find( name );
+	if( found != Properties.end() )
+		return Str::AsInt( found->second );
+	return ifndef;
+}
+
+
+bool GameData::PropertyAsBool( std::string name, bool ifndef ) const
+{
+	std::map<std::string, std::string>::const_iterator found = Properties.find( name );
+	if( found != Properties.end() )
+		return Str::AsBool( found->second );
+	return ifndef;
+}
+
+
+std::vector<int> GameData::PropertyAsInts( std::string name ) const
+{
+	std::vector<int> results;
+	
+	std::map<std::string, std::string>::const_iterator found = Properties.find( name );
+	if( found != Properties.end() )
+	{
+		bool seeking = true;
+		for( const char *buffer_ptr = found->second.c_str(); *buffer_ptr; buffer_ptr ++ )
+		{
+			bool numeric_char = strchr( "0123456789.", *buffer_ptr );
+			if( seeking && numeric_char )
+			{
+				results.push_back( atoi(buffer_ptr) );
+				seeking = false;
+			}
+			else if( ! numeric_char )
+				seeking = true;
+		}
+	}
+	
+	return results;
+}
+
+
+// -----------------------------------------------------------------------------
+
+
 Collision::Collision( GameObject *a, GameObject *b, std::string *a_object, std::string *b_object )
 {
 	first = a;

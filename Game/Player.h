@@ -10,6 +10,7 @@ class Player;
 #include <stdint.h>
 #include <string>
 #include <map>
+#include <vector>
 
 
 class Player
@@ -21,4 +22,11 @@ public:
 	
 	Player( uint16_t id = 0 );
 	virtual ~Player();
+	
+	bool HasProperty( std::string name ) const;
+	std::string PropertyAsString( std::string name, const char *ifndef = NULL ) const;
+	double PropertyAsDouble( std::string name, double ifndef = 0. ) const;
+	int PropertyAsInt( std::string name, int ifndef = 0 ) const;
+	bool PropertyAsBool( std::string name, bool ifndef = false ) const;
+	std::vector<int> PropertyAsInts( std::string name ) const;
 };

@@ -24,7 +24,12 @@ public:
 	virtual ~DropDown();
 	
 	void AddItem( std::string value, std::string text );
+	int FindItem( std::string value );
+	void RemoveItem( std::string value );
+	void RemoveItem( int index );
+	void Clear( void );
 	void Update( void );
+	
 	virtual void SizeToText( void );
 	bool HandleEvent( SDL_Event *event );
 	void Clicked( Uint8 button = SDL_BUTTON_LEFT );
@@ -42,6 +47,7 @@ public:
 	DropDownListBox( DropDown *dropdown );
 	virtual ~DropDownListBox();
 	
+	void AutoSize( void );
 	void Changed( void );
 	bool KeyDown( SDLKey key );
 	bool KeyUp( SDLKey key );
