@@ -52,6 +52,7 @@ public:
 	
 	virtual void Started( void );
 	virtual void Stopped( void );
+	virtual bool HandleCommand( std::string cmd, std::vector<std::string> *params = NULL );
 	virtual bool ProcessPacket( Packet *packet, ConnectedClient *from_client );
 	virtual bool ValidateLogin( std::string name, std::string password );
 	virtual void AcceptedClient( ConnectedClient *client );

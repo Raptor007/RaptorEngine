@@ -138,6 +138,12 @@ void RaptorServer::Update( double dt )
 }
 
 
+bool RaptorServer::HandleCommand( std::string cmd, std::vector<std::string> *params )
+{
+	return false;
+}
+
+
 bool RaptorServer::ProcessPacket( Packet *packet, ConnectedClient *from_client )
 {
 	PacketType type = packet->Type();

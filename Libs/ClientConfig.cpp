@@ -684,8 +684,13 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 					else if( elements.size() >= 1 )
 					{
 						std::string sv_cmd = elements.at(0);
+						std::vector<std::string> sv_params = elements;
+						sv_params.erase( sv_params.begin() );
 						
-						if( sv_cmd == "set" )
+						if( Raptor::Server->HandleCommand( sv_cmd, &sv_params ) )
+							;
+						
+						else if( sv_cmd == "set" )
 						{
 							if( elements.size() >= 3 )
 							{
