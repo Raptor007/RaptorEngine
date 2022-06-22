@@ -12,6 +12,8 @@ class PacketBuffer;
 class PacketBuffer
 {
 public:
+	size_t MaxPacketSize;
+	
 	PacketBuffer( void );
 	virtual ~PacketBuffer();
 	

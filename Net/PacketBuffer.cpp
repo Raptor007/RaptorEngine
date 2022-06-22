@@ -9,6 +9,7 @@
 
 PacketBuffer::PacketBuffer( void )
 {
+	MaxPacketSize = 0x00FFFFFF;
 	Unfinished = NULL;
 	UnfinishedSizeRemaining = 0;
 }
@@ -59,7 +60,7 @@ void PacketBuffer::AddData( void *data, PacketSize size )
 			packet_size = Packet::FirstPacketSize( data_unprocessed );
 			
 			// Sanity check the incoming packet size.
-			if( (packet_size < PACKET_HEADER_SIZE) || (packet_size > PACKET_MAX_SIZE) )
+			if( (packet_size < PACKET_HEADER_SIZE) || (MaxPacketSize && (packet_size > MaxPacketSize)) )
 			{
 				if( Unfinished )
 				{
@@ -67,11 +68,7 @@ void PacketBuffer::AddData( void *data, PacketSize size )
 					Unfinished = NULL;
 				}
 				
-				Packet *packet = NULL;
-				while( (packet = Pop()) )
-					delete packet;
-				
-				packet = new Packet( Raptor::Packet::DISCONNECT );
+				Packet *packet = new Packet( Raptor::Packet::DISCONNECT );
 				packet->AddString( "Packet size error." );
 				Complete.push( packet );
 				return;

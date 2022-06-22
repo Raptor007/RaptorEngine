@@ -7,7 +7,9 @@
 #include <cstring>
 #include <algorithm>
 #ifdef WIN32
+#ifndef _MSC_VER
 #include "strtok_r.h"
+#endif
 #endif
 
 

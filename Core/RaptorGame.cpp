@@ -856,7 +856,7 @@ bool Raptor::PreMain( int bits )
 		
 		// Prevent Windows DPI scaling from stupidly stretching things off-screen.
 		#ifndef _MSC_VER
-			BOOL (WINAPI *SetProcessDPIAware)( void ) = GetProcAddress( LoadLibraryA("user32.dll"), "SetProcessDPIAware" );
+			FARPROC SetProcessDPIAware = GetProcAddress( LoadLibraryA("user32.dll"), "SetProcessDPIAware" );
 		#endif
 		SetProcessDPIAware();
 	#endif

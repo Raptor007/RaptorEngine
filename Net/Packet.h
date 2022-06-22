@@ -15,7 +15,6 @@ class Packet;
 #define PACKET_OUTGOING_ALLOCATION_CHUNK_SIZE  1024
 #define PACKET_INCOMING_ALLOCATION_CHUNK_SIZE  1
 #define PACKET_BUFFER_SIZE                     65536
-#define PACKET_MAX_SIZE                        262144
 
 typedef uint32_t PacketType;
 typedef uint32_t PacketSize;

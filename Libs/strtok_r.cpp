@@ -7,6 +7,7 @@
 
 #include "strtok_r.h"
 #include <cstring>
+extern "C" {
 
 char *strtok_r( char *str, const char *delim, char **saveptr )
 {
@@ -26,5 +27,6 @@ char *strtok_r( char *str, const char *delim, char **saveptr )
 	return str;
 }
 
+}
 #endif
 #endif

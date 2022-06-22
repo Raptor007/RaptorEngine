@@ -74,7 +74,6 @@ void DropDown::RemoveItem( int index )
 void DropDown::Clear( void )
 {
 	Items.clear();
-	Selected = NULL;
 }
 
 

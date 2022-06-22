@@ -404,6 +404,7 @@ int ConnectedClient::ConnectedClientInThread( void *client )
 	ConnectedClient *connected_client = (ConnectedClient *) client;
 	char data[ PACKET_BUFFER_SIZE ] = "";
 	PacketBuffer Buffer;
+	Buffer.MaxPacketSize = 0x0007FFFF;
 	
 	while( connected_client->Connected )
 	{

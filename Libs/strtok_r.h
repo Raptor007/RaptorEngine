@@ -6,8 +6,10 @@
 
 #ifdef WIN32
 #ifndef strtok_r
+extern "C" {
 
 char *strtok_r( char *s1, const char *s2, char **s3 );
 
+}
 #endif
 #endif

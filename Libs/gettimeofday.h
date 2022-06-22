@@ -9,12 +9,12 @@
 #include <time.h>
 #include <winsock.h>
 
-struct timezone 
+struct timezone_win32
 {
 	int tz_minuteswest; // minutes W of Greenwich
 	int tz_dsttime;     // type of dst correction
 };
 
-int gettimeofday( struct timeval *tv, struct timezone *tz );
+int gettimeofday( struct timeval *tv, struct timezone_win32 *tz );
 
 #endif

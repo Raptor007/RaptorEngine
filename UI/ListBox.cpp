@@ -289,7 +289,7 @@ void ListBox::TrackEvent( SDL_Event *event )
 {
 	Layer::TrackEvent( event );
 	
-	if( MouseIsDown && ClickedScrollBar )
+	if( MouseIsDown && ClickedScrollBar && (event->type == SDL_MOUSEMOTION) )
 	{
 		// Update scroll state as we drag the scroll bar.
 		
