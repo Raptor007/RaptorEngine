@@ -40,6 +40,7 @@ public:
 	double SettingAsDouble( std::string name, double ifndef = 0. ) const;
 	int SettingAsInt( std::string name, int ifndef = 0 ) const;
 	bool SettingAsBool( std::string name, bool ifndef = false ) const;
+	std::vector<double> SettingAsDoubles( std::string name ) const;
 	std::vector<int> SettingAsInts( std::string name ) const;
 	
 	bool Bind( SDL_Event *event, uint8_t control );

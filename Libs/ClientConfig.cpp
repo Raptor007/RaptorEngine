@@ -986,6 +986,31 @@ bool ClientConfig::SettingAsBool( std::string name, bool ifndef ) const
 }
 
 
+std::vector<double> ClientConfig::SettingAsDoubles( std::string name ) const
+{
+	std::vector<double> results;
+	
+	std::map<std::string, std::string>::const_iterator found = Settings.find( name );
+	if( found != Settings.end() )
+	{
+		bool seeking = true;
+		for( const char *buffer_ptr = found->second.c_str(); *buffer_ptr; buffer_ptr ++ )
+		{
+			bool numeric_char = strchr( "0123456789.-", *buffer_ptr );
+			if( seeking && numeric_char )
+			{
+				results.push_back( atof(buffer_ptr) );
+				seeking = false;
+			}
+			else if( ! numeric_char )
+				seeking = true;
+		}
+	}
+	
+	return results;
+}
+
+
 std::vector<int> ClientConfig::SettingAsInts( std::string name ) const
 {
 	std::vector<int> results;
@@ -996,7 +1021,7 @@ std::vector<int> ClientConfig::SettingAsInts( std::string name ) const
 		bool seeking = true;
 		for( const char *buffer_ptr = found->second.c_str(); *buffer_ptr; buffer_ptr ++ )
 		{
-			bool numeric_char = strchr( "0123456789.", *buffer_ptr );
+			bool numeric_char = strchr( "0123456789.-", *buffer_ptr );
 			if( seeking && numeric_char )
 			{
 				results.push_back( atoi(buffer_ptr) );

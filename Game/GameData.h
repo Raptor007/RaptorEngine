@@ -56,6 +56,7 @@ public:
 	double PropertyAsDouble( std::string name, double ifndef = 0. ) const;
 	int PropertyAsInt( std::string name, int ifndef = 0 ) const;
 	bool PropertyAsBool( std::string name, bool ifndef = false ) const;
+	std::vector<double> PropertyAsDoubles( std::string name ) const;
 	std::vector<int> PropertyAsInts( std::string name ) const;
 	
 	void CheckCollisions( double dt );

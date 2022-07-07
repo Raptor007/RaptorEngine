@@ -17,6 +17,7 @@ DropDown::DropDown( SDL_Rect *rect, Font *font, uint8_t align, int scroll_bar_si
 
 DropDown::~DropDown()
 {
+	Close();
 }
 
 
@@ -196,15 +197,18 @@ void DropDown::Clicked( Uint8 button )
 	{
 		MyListBox = new DropDownListBox(this);
 		MyListBox->TextAlign = LabelAlign;
-		Container->AddElement( MyListBox );
+		Raptor::Game->Layers.Add( MyListBox );
 	}
 }
 
 
 void DropDown::Close( void )
 {
-	MyListBox->Remove();
-	MyListBox = NULL;
+	if( MyListBox )
+	{
+		MyListBox->Remove();
+		MyListBox = NULL;
+	}
 }
 
 
@@ -252,7 +256,7 @@ void DropDown::Changed( void )
 
 
 DropDownListBox::DropDownListBox( DropDown *dropdown )
-: ListBox( &(dropdown->Rect), dropdown->LabelFont, dropdown->ScrollBarSize, dropdown->Items )
+: ListBox( &(dropdown->CalcRect), dropdown->LabelFont, dropdown->ScrollBarSize, dropdown->Items )
 {
 	CalledBy = dropdown;
 	Alpha = 1.f;
@@ -269,9 +273,9 @@ DropDownListBox::~DropDownListBox()
 
 void DropDownListBox::AutoSize( void )
 {
-	Rect.y = CalledBy->Rect.y;
+	Rect.y = CalledBy->CalcRect.y;
 	
-	int min_y = CalledBy->Container ? -(CalledBy->Container->CalcRect.y) : 0;
+	int min_y = 0;
 	int max_h = Raptor::Game->Gfx.H;
 	
 	int selected_index = FindItem( CalledBy->Value );
@@ -286,7 +290,7 @@ void DropDownListBox::AutoSize( void )
 		if( Rect.h > max_h )
 			Rect.h = max_h;
 		
-		int offscreen = (CalledBy->Container ? CalledBy->Container->CalcRect.y : 0) + Rect.y + Rect.h - Raptor::Game->Gfx.H;
+		int offscreen = Rect.y + Rect.h - Raptor::Game->Gfx.H;
 		if( offscreen > 0 )
 			Rect.y -= offscreen;
 		if( Rect.y < min_y )
