@@ -390,6 +390,11 @@ void RaptorGame::Update( double dt )
 
 bool RaptorGame::HandleEvent( SDL_Event *event )
 {
+#ifdef WIN32
+	// FIXME: Should a signal handler be responsible for this instead?
+	if( (event->type == SDL_KEYDOWN) && (event->key.keysym.sym == SDLK_F4) && (Keys.KeyDown(SDLK_LALT) || Keys.KeyDown(SDLK_RALT)) )
+		Quit();
+#endif
 	return false;
 }
 
@@ -771,8 +776,7 @@ void RaptorGame::Host( void )
 
 void RaptorGame::Quit( void )
 {
-	// This quickly removes all layers without deleting them.
-	Layers.Layers.clear();
+	Layers.RemoveAll();
 }
 
 
@@ -857,6 +861,7 @@ bool Raptor::PreMain( int bits )
 		// Prevent Windows DPI scaling from stupidly stretching things off-screen.
 		#ifndef _MSC_VER
 			FARPROC SetProcessDPIAware = GetProcAddress( LoadLibraryA("user32.dll"), "SetProcessDPIAware" );
+			if( SetProcessDPIAware )
 		#endif
 		SetProcessDPIAware();
 	#endif

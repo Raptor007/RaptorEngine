@@ -59,6 +59,7 @@ public:
 	virtual void ReadFromUpdatePacketFromClient( Packet *packet, int8_t precision = 0 );
 	
 	virtual bool WillCollide( const GameObject *other, double dt, std::string *this_object = NULL, std::string *other_object = NULL ) const;
+	GameObject *Trace( double dt, double precision = 0.01 ) const;
 	virtual void Update( double dt );
 	
 	virtual void Draw( void );

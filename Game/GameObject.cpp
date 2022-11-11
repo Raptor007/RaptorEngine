@@ -5,6 +5,7 @@
 #include "GameObject.h"
 
 #include <cstddef>
+#include <cmath>
 #include "Num.h"
 #include "RaptorGame.h"
 
@@ -157,6 +158,12 @@ void GameObject::AddToUpdatePacket( Packet *packet, int8_t precision )
 	packet->AddFloat( MotionVector.X );
 	packet->AddFloat( MotionVector.Y );
 	packet->AddFloat( MotionVector.Z );
+	if( precision >= 0 )
+	{
+		packet->AddFloat( RollRate );
+		packet->AddFloat( PitchRate );
+		packet->AddFloat( YawRate );
+	}
 }
 
 
@@ -200,6 +207,12 @@ void GameObject::ReadFromUpdatePacket( Packet *packet, int8_t precision )
 	MotionVector.X = packet->NextFloat();
 	MotionVector.Y = packet->NextFloat();
 	MotionVector.Z = packet->NextFloat();
+	if( precision >= 0 )
+	{
+		RollRate  = packet->NextFloat();
+		PitchRate = packet->NextFloat();
+		YawRate   = packet->NextFloat();
+	}
 	FixVectors();
 	
 	if( SmoothPos && (Dist(&PrevPos) < SMOOTH_RADIUS) && MotionVector.Length() )
@@ -259,6 +272,54 @@ void GameObject::ReadFromUpdatePacketFromClient( Packet *packet, int8_t precisio
 bool GameObject::WillCollide( const GameObject *other, double dt, std::string *this_object, std::string *other_object ) const
 {
 	return false;
+}
+
+
+GameObject *GameObject::Trace( double dt, double precision ) const
+{
+	if( ! Data )
+		return NULL;
+	
+	std::set<GameObject*> will_hit;
+	
+	// First find every object that this will collide with.
+	for( std::map<uint32_t,GameObject*>::iterator obj_iter = Data->GameObjects.begin(); obj_iter != Data->GameObjects.end(); obj_iter ++ )
+	{
+		if( obj_iter->second == this )
+			continue;
+		if( obj_iter->second->Type() == Type() )
+		{
+			if( ! CanCollideWithOwnType() )
+				continue;
+		}
+		else if( ! CanCollideWithOtherTypes() )
+			continue;
+		else if( ! obj_iter->second->CanCollideWithOtherTypes() )
+			continue;
+		if( WillCollide( obj_iter->second, dt ) )
+			will_hit.insert( obj_iter->second );
+	}
+	
+	// Binary search slices of time until we find the first collision by itself or hit the precision limit.
+	double ddt = dt / -2.;
+	while( (will_hit.size() > 1) && (fabs(ddt) >= precision) )
+	{
+		dt += ddt;
+		ddt = fabs(ddt) / 2.;
+		std::set<GameObject*> these_hits;
+		for( std::set<GameObject*>::iterator hit_iter = will_hit.begin(); hit_iter != will_hit.end(); hit_iter ++ )
+		{
+			if( WillCollide( *hit_iter, dt ) )
+				these_hits.insert( *hit_iter );
+		}
+		if( these_hits.size() )
+		{
+			will_hit = these_hits;
+			ddt *= -1.;
+		}
+	}
+	
+	return will_hit.size() ? *(will_hit.begin()) : NULL;
 }
 
 

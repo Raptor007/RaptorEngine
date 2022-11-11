@@ -262,18 +262,50 @@ bool ClientConsole::HandleEvent( SDL_Event *event )
 			return true;
 		}
 		
-		else if( ( ((event->type == SDL_MOUSEBUTTONDOWN) || (event->type == SDL_MOUSEBUTTONUP)) && (event->button.button == SDL_BUTTON_WHEELUP) ) || ( ((event->type == SDL_KEYDOWN) || (event->type == SDL_KEYUP)) && (event->key.keysym.sym == SDLK_PAGEUP) ) )
+		else if( ((event->type == SDL_MOUSEBUTTONDOWN) || (event->type == SDL_MOUSEBUTTONUP)) && (event->button.button == SDL_BUTTON_WHEELUP) )
 		{
-			if( (event->type == SDL_MOUSEBUTTONDOWN) || (event->type == SDL_KEYDOWN) )
+			if( event->type == SDL_MOUSEBUTTONDOWN )
 				ScrollUp();
 			
 			return true;
 		}
 		
-		else if( ( ((event->type == SDL_MOUSEBUTTONDOWN) || (event->type == SDL_MOUSEBUTTONUP)) && (event->button.button == SDL_BUTTON_WHEELDOWN) ) || ( ((event->type == SDL_KEYDOWN) || (event->type == SDL_KEYUP)) && (event->key.keysym.sym == SDLK_PAGEDOWN) ) )
+		else if( ((event->type == SDL_MOUSEBUTTONDOWN) || (event->type == SDL_MOUSEBUTTONUP)) && (event->button.button == SDL_BUTTON_WHEELDOWN) )
 		{
-			if( (event->type == SDL_MOUSEBUTTONDOWN) || (event->type == SDL_KEYDOWN) )
+			if( event->type == SDL_MOUSEBUTTONDOWN )
 				ScrollDown();
+			
+			return true;
+		}
+		
+		else if( ((event->type == SDL_KEYDOWN) || (event->type == SDL_KEYUP)) && (event->key.keysym.sym == SDLK_PAGEUP) )
+		{
+			if( event->type == SDL_KEYDOWN )
+				ScrollUp( Rect.h / MessageFont->TextHeight("Q") );
+			
+			return true;
+		}
+		
+		else if( ((event->type == SDL_KEYDOWN) || (event->type == SDL_KEYUP)) && (event->key.keysym.sym == SDLK_PAGEDOWN) )
+		{
+			if( event->type == SDL_KEYDOWN )
+				ScrollDown( Rect.h / MessageFont->TextHeight("Q") );
+			
+			return true;
+		}
+		
+		else if( ((event->type == SDL_KEYDOWN) || (event->type == SDL_KEYUP)) && (event->key.keysym.sym == SDLK_HOME) )
+		{
+			if( event->type == SDL_KEYDOWN )
+				Scroll = std::min<int>( Rect.h / MessageFont->TextHeight("Q") - 1, Messages.size() );
+			
+			return true;
+		}
+		
+		else if( ((event->type == SDL_KEYDOWN) || (event->type == SDL_KEYUP)) && (event->key.keysym.sym == SDLK_END) )
+		{
+			if( event->type == SDL_KEYDOWN )
+				Scroll = -1;
 			
 			return true;
 		}
