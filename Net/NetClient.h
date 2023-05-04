@@ -35,6 +35,7 @@ public:
 	std::queue< Packet*, std::list<Packet*> > InBuffer;
 	Clock NetClock, PingClock;
 	double NetRate, PingRate;
+	double DisconnectTime;
 	int8_t Precision;
 	uintmax_t BytesSent;
 	uintmax_t BytesReceived;
@@ -52,10 +53,11 @@ public:
 	NetClient( void );
 	virtual ~NetClient();
 	
-	int Initialize( double net_rate = 30., int8_t precision = 0 );
-	int Connect( const char *host, const char *name, const char *password );
-	int Connect( const char *hostname, int port, const char *name, const char *password );
-	int Reconnect( const char *name, const char *password );
+	bool Initialize( double net_rate = 30., int8_t precision = 0 );
+	bool Connect( const char *host, const char *name, const char *password );
+	bool Connect( const char *hostname, int port, const char *name, const char *password );
+	bool Reconnect( void );
+	bool Reconnect( const char *name, const char *password );
 	void DisconnectNice( const char *message = NULL );
 	void Disconnect( void );
 	void Cleanup( void );
@@ -64,11 +66,11 @@ public:
 	void ProcessIn( void );
 	bool ProcessPacket( Packet *packet );
 	
-	int Send( Packet *packet );
+	bool Send( Packet *packet );
 	
 	void SendUpdates( void );
 	void SendUpdate( void );
-	void SendPing( void );
+	bool SendPing( void );
 	double LatestPing( void );
 	double AveragePing( void );
 	double MedianPing( void );

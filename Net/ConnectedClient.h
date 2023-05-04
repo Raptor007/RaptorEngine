@@ -44,8 +44,8 @@ public:
 	uint64_t BytesReceived;
 	std::list<double> PingTimes;
 	std::map<uint8_t,Clock> SentPings;
-	
-	uint16_t PlayerID;
+	Clock ResyncClock;
+	uint16_t PlayerID, DropPlayerID;
 	
 	
 	ConnectedClient( TCPsocket socket, double net_rate = 30., int8_t precision = 0 );
@@ -68,7 +68,8 @@ public:
 	
 	void SendOthers( Packet *packet );
 	
-	void SendPing( void );
+	bool SendPing( void );
+	bool SendResync( void );
 	double LatestPing( void );
 	double AveragePing( void );
 	double MedianPing( void );

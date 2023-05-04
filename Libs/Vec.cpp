@@ -347,7 +347,7 @@ double Vec3D::AngleBetween( const Vec3D &other ) const
 	Vec3D unit1 = this, unit2 = other;
 	unit1.ScaleTo( 1. );
 	unit2.ScaleTo( 1. );
-	return Num::RadToDeg( acos( unit1.Dot(unit2) ) );
+	return Num::RadToDeg( acos( Num::Clamp( unit1.Dot(&unit2), -1., 1. ) ) );
 }
 
 

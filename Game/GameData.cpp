@@ -16,6 +16,8 @@ GameData::GameData( void )
 :	GameObjectIDs( 1 )
 ,	PlayerIDs( 1 )
 {
+	AntiJitter = 0.999;
+	MaxFrameTime = 0.125;  // Assume dropping below 8 FPS is a momentary hiccup.
 }
 
 
@@ -304,6 +306,8 @@ void GameData::CheckCollisions( double dt )
 
 void GameData::Update( double dt )
 {
+	AntiJitter = Raptor::Game->Cfg.SettingAsDouble("net_anti_jitter",0.999);
+	
 	for( std::map<uint32_t,GameObject*>::iterator obj_iter = GameObjects.begin(); obj_iter != GameObjects.end(); obj_iter ++ )
 		obj_iter->second->Update( dt );
 	

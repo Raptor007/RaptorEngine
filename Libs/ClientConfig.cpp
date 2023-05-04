@@ -23,167 +23,6 @@
 
 ClientConfig::ClientConfig( void )
 {
-	// Configure key and mouse button names.
-	
-	KeyNames[ SDLK_BACKSPACE ] = "Backspace";
-	KeyNames[ SDLK_TAB ] = "Tab";
-	KeyNames[ SDLK_CLEAR ] = "Clear";
-	KeyNames[ SDLK_RETURN ] = "Return";
-	KeyNames[ SDLK_PAUSE ] = "Pause";
-	KeyNames[ SDLK_ESCAPE ] = "Esc";
-	KeyNames[ SDLK_SPACE ] = "Space";
-	KeyNames[ SDLK_EXCLAIM ] = "!";
-	KeyNames[ SDLK_QUOTEDBL ] = "\"";
-	KeyNames[ SDLK_HASH ] = "#";
-	KeyNames[ SDLK_DOLLAR ] = "$";
-	KeyNames[ SDLK_AMPERSAND ] = "&";
-	KeyNames[ SDLK_QUOTE ] = "'";
-	KeyNames[ SDLK_LEFTPAREN ] = "(";
-	KeyNames[ SDLK_RIGHTPAREN ] = ")";
-	KeyNames[ SDLK_ASTERISK ] = "*";
-	KeyNames[ SDLK_PLUS ] = "+";
-	KeyNames[ SDLK_COMMA ] = ",";
-	KeyNames[ SDLK_MINUS ] = "-";
-	KeyNames[ SDLK_PERIOD ] = ".";
-	KeyNames[ SDLK_SLASH ] = "/";
-	KeyNames[ SDLK_0 ] = "0";
-	KeyNames[ SDLK_1 ] = "1";
-	KeyNames[ SDLK_2 ] = "2";
-	KeyNames[ SDLK_3 ] = "3";
-	KeyNames[ SDLK_4 ] = "4";
-	KeyNames[ SDLK_5 ] = "5";
-	KeyNames[ SDLK_6 ] = "6";
-	KeyNames[ SDLK_7 ] = "7";
-	KeyNames[ SDLK_8 ] = "8";
-	KeyNames[ SDLK_9 ] = "9";
-	KeyNames[ SDLK_COLON ] = ":";
-	KeyNames[ SDLK_SEMICOLON ] = ";";
-	KeyNames[ SDLK_LESS ] = "<";
-	KeyNames[ SDLK_EQUALS ] = "=";
-	KeyNames[ SDLK_GREATER ] = ">";
-	KeyNames[ SDLK_QUESTION ] = "?";
-	KeyNames[ SDLK_AT ] = "@";
-	KeyNames[ SDLK_LEFTBRACKET ] = "[";
-	KeyNames[ SDLK_BACKSLASH ] = "\\";
-	KeyNames[ SDLK_RIGHTBRACKET ] = "]";
-	KeyNames[ SDLK_CARET ] = "^";
-	KeyNames[ SDLK_UNDERSCORE ] = "_";
-	KeyNames[ SDLK_BACKQUOTE ] = "`";
-	KeyNames[ SDLK_a ] = "A";
-	KeyNames[ SDLK_b ] = "B";
-	KeyNames[ SDLK_c ] = "C";
-	KeyNames[ SDLK_d ] = "D";
-	KeyNames[ SDLK_e ] = "E";
-	KeyNames[ SDLK_f ] = "F";
-	KeyNames[ SDLK_g ] = "G";
-	KeyNames[ SDLK_h ] = "H";
-	KeyNames[ SDLK_i ] = "I";
-	KeyNames[ SDLK_j ] = "J";
-	KeyNames[ SDLK_k ] = "K";
-	KeyNames[ SDLK_l ] = "L";
-	KeyNames[ SDLK_m ] = "M";
-	KeyNames[ SDLK_n ] = "N";
-	KeyNames[ SDLK_o ] = "O";
-	KeyNames[ SDLK_p ] = "P";
-	KeyNames[ SDLK_q ] = "Q";
-	KeyNames[ SDLK_r ] = "R";
-	KeyNames[ SDLK_s ] = "S";
-	KeyNames[ SDLK_t ] = "T";
-	KeyNames[ SDLK_u ] = "U";
-	KeyNames[ SDLK_v ] = "V";
-	KeyNames[ SDLK_w ] = "W";
-	KeyNames[ SDLK_x ] = "X";
-	KeyNames[ SDLK_y ] = "Y";
-	KeyNames[ SDLK_z ] = "Z";
-	KeyNames[ SDLK_DELETE ] = "Delete";
-	KeyNames[ SDLK_KP0 ] = "KP0";
-	KeyNames[ SDLK_KP1 ] = "KP1";
-	KeyNames[ SDLK_KP2 ] = "KP2";
-	KeyNames[ SDLK_KP3 ] = "KP3";
-	KeyNames[ SDLK_KP4 ] = "KP4";
-	KeyNames[ SDLK_KP5 ] = "KP5";
-	KeyNames[ SDLK_KP6 ] = "KP6";
-	KeyNames[ SDLK_KP7 ] = "KP7";
-	KeyNames[ SDLK_KP8 ] = "KP8";
-	KeyNames[ SDLK_KP9 ] = "KP9";
-	KeyNames[ SDLK_KP_PERIOD ] = "KP .";
-	KeyNames[ SDLK_KP_DIVIDE ] = "KP /";
-	KeyNames[ SDLK_KP_MULTIPLY ] = "KP *";
-	KeyNames[ SDLK_KP_MINUS ] = "KP -";
-	KeyNames[ SDLK_KP_PLUS ] = "KP +";
-	KeyNames[ SDLK_KP_ENTER	] = "KP Enter";
-	KeyNames[ SDLK_KP_EQUALS ] = "KP =";
-	KeyNames[ SDLK_UP ] = "Up";
-	KeyNames[ SDLK_DOWN ] = "Down";
-	KeyNames[ SDLK_RIGHT ] = "Right";
-	KeyNames[ SDLK_LEFT ] = "Left";
-	KeyNames[ SDLK_INSERT ] = "Insert";
-	KeyNames[ SDLK_HOME ] = "Home";
-	KeyNames[ SDLK_END ] = "End";
-	KeyNames[ SDLK_PAGEUP ] = "PgUp";
-	KeyNames[ SDLK_PAGEDOWN ] = "PgDn";
-	KeyNames[ SDLK_F1 ] = "F1";
-	KeyNames[ SDLK_F2 ] = "F2";
-	KeyNames[ SDLK_F3 ] = "F3";
-	KeyNames[ SDLK_F4 ] = "F4";
-	KeyNames[ SDLK_F5 ] = "F5";
-	KeyNames[ SDLK_F6 ] = "F6";
-	KeyNames[ SDLK_F7 ] = "F7";
-	KeyNames[ SDLK_F8 ] = "F8";
-	KeyNames[ SDLK_F9 ] = "F9";
-	KeyNames[ SDLK_F10 ] = "F10";
-	KeyNames[ SDLK_F11 ] = "F11";
-	KeyNames[ SDLK_F12 ] = "F12";
-	KeyNames[ SDLK_F13 ] = "F13";
-	KeyNames[ SDLK_F14 ] = "F14";
-	KeyNames[ SDLK_F15 ] = "F15";
-	KeyNames[ SDLK_NUMLOCK ] = "NumLock";
-	KeyNames[ SDLK_CAPSLOCK ] = "CapsLock";
-	KeyNames[ SDLK_SCROLLOCK ] = "ScrollLock";
-	KeyNames[ SDLK_RSHIFT ] = "RShift";
-	KeyNames[ SDLK_LSHIFT ] = "LShift";
-	KeyNames[ SDLK_RCTRL ] = "RCtrl";
-	KeyNames[ SDLK_LCTRL ] = "LCtrl";
-	#ifdef __MACOSX__
-	KeyNames[ SDLK_RALT ] = "ROption";
-	KeyNames[ SDLK_LALT ] = "LOption";
-	KeyNames[ SDLK_RMETA ] = "RCmd";
-	KeyNames[ SDLK_LMETA ] = "LCmd";
-	#else
-	KeyNames[ SDLK_RALT ] = "RAlt";
-	KeyNames[ SDLK_LALT ] = "LAlt";
-	KeyNames[ SDLK_RMETA ] = "RMeta";
-	KeyNames[ SDLK_LMETA ] = "LMeta";
-	#endif
-	KeyNames[ SDLK_LSUPER ] = "LWin";
-	KeyNames[ SDLK_RSUPER ] = "RWin";
-	KeyNames[ SDLK_MODE ] = "Mode";
-	KeyNames[ SDLK_COMPOSE ] = "Compose";
-	KeyNames[ SDLK_HELP ] = "Help";
-	KeyNames[ SDLK_PRINT ] = "Print";
-	KeyNames[ SDLK_SYSREQ ] = "SysReq";
-	KeyNames[ SDLK_BREAK ] = "Break";
-	KeyNames[ SDLK_MENU ] = "Menu";
-	KeyNames[ SDLK_POWER ] = "Power";
-	KeyNames[ SDLK_EURO ] = "Euro";
-	KeyNames[ SDLK_UNDO ] = "Undo";
-	
-	MouseNames[ SDL_BUTTON_LEFT ] = "Mouse1";
-	MouseNames[ SDL_BUTTON_RIGHT ] = "Mouse2";
-	MouseNames[ SDL_BUTTON_MIDDLE ] = "Mouse3";
-	MouseNames[ SDL_BUTTON_WHEELUP ] = "MWheelUp";
-	MouseNames[ SDL_BUTTON_WHEELDOWN ] = "MWheelDown";
-	MouseNames[ SDL_BUTTON_X1 ] = "Mouse4";
-	MouseNames[ SDL_BUTTON_X2 ] = "Mouse5";
-	
-	
-	// Define command names (only UNBOUND is included in the engine).
-	
-	ControlNames[ UNBOUND ] = "Unbound";
-
-
-	// Set basic default configuration.
-
 	SetDefaults();
 }
 
@@ -198,10 +37,8 @@ ClientConfig::~ClientConfig()
 
 void ClientConfig::SetDefaults( void )
 {
-	// Remove any existing settings and binds.
-	
+	// Remove any existing settings.
 	Settings.clear();
-	UnbindAll();
 	
 	
 	// Default client settings.
@@ -241,6 +78,16 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "vr_fov" ] = "-111";
 	Settings[ "vr_separation" ] = "0.0625";
 	Settings[ "vr_offset" ] = "87";
+	
+	Settings[ "joy_deadzone" ] = "0.03";
+	Settings[ "joy_deadzone_thumbsticks" ] = "0.1";
+	Settings[ "joy_deadzone_triggers" ] = "0.02";
+	Settings[ "joy_smooth_x" ] = "0";
+	Settings[ "joy_smooth_y" ] = "0.125";
+	Settings[ "joy_smooth_z" ] = "0.5";
+	Settings[ "joy_smooth_pedals" ] = "0";
+	Settings[ "joy_smooth_thumbsticks" ] = "2";
+	Settings[ "joy_smooth_triggers" ] = "0.75";
 	
 	#ifdef WIN32
 		Settings[ "saitek_enable" ] = "true";
@@ -385,25 +232,33 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 						Raptor::Game->Console.Print( "Usage: unset <variable>", TextConsole::MSG_ERROR );
 				}
 				
+				else if( cmd == "set_defaults" )
+				{
+					Raptor::Game->SetDefaults();
+				}
+				
 				else if( cmd == "bind" )
 				{
 					if( elements.size() >= 2 )
 					{
 						uint8_t control = ControlID( elements.at(1) );
-						if( control != UNBOUND )
+						if( control || (elements.at(1) == ControlName(0)) )
 						{
-							SDLKey key = KeyID( elements.at(0) );
-							Uint8 mouse = MouseID( elements.at(0) );
-							
-							if( key != SDLK_UNKNOWN )
-								KeyBinds[ key ] = control;
-							else if( mouse )
-								MouseBinds[ mouse ] = control;
-							else
-								Raptor::Game->Console.Print( "Unknown key: " + elements.at(0), TextConsole::MSG_ERROR );
+							if( ! Bind( elements.at(0), control ) )
+								Raptor::Game->Console.Print( "Unknown key/button/axis: " + elements.at(0), TextConsole::MSG_ERROR );
 						}
 						else
 							Raptor::Game->Console.Print( "Unknown command: " + elements.at(1), TextConsole::MSG_ERROR );
+					}
+					else if( elements.size() == 1 )
+					{
+						uint8_t control = BoundControl( elements.at(0) );
+						if( control )
+							Raptor::Game->Console.Print( elements.at(0) + std::string(" is bound to: ") + ControlName(control) );
+						else if( Raptor::Game->Input.ValidInput( elements.at(0) ) )
+							Raptor::Game->Console.Print( elements.at(0) + std::string(" is unbound.") );
+						else
+							Raptor::Game->Console.Print( "Unknown key/button/axis: " + elements.at(0), TextConsole::MSG_ERROR );
 					}
 					else
 						Raptor::Game->Console.Print( "Usage: bind <input> <command>", TextConsole::MSG_ERROR );
@@ -413,15 +268,8 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 				{
 					if( elements.size() >= 1 )
 					{
-						SDLKey key = KeyID( elements.at(0) );
-						if( key != SDLK_UNKNOWN )
-							KeyBinds[ key ] = UNBOUND;
-						else
-						{
-							Uint8 mouse = MouseID( elements.at(0) );
-							if( mouse )
-								MouseBinds[ mouse ] = UNBOUND;
-						}
+						if( ! Unbind( elements.at(0) ) && ! Raptor::Game->Input.ValidInput( elements.at(0) ) )
+							Raptor::Game->Console.Print( "Unknown key/button/axis: " + elements.at(0), TextConsole::MSG_ERROR );
 					}
 					else
 						Raptor::Game->Console.Print( "Usage: unbind <input>", TextConsole::MSG_ERROR );
@@ -430,6 +278,11 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 				else if( cmd == "unbindall" )
 				{
 					UnbindAll();
+				}
+				
+				else if( cmd == "bind_defaults" )
+				{
+					Raptor::Game->SetDefaultControls();
 				}
 				
 				else if( cmd == "exec" )
@@ -458,6 +311,18 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 					Raptor::Game->Snd.StopSounds();
 					Raptor::Game->Res.DeleteSounds();
 				}
+				
+				else if( cmd == "joy_refresh" )
+				{
+					Raptor::Game->Joy.Refresh();
+				}
+				
+			#ifdef WIN32
+				else if( cmd == "saitek_restart" )
+				{
+					Raptor::Game->Saitek.RestartService();
+				}
+			#endif
 				
 				else if( cmd == "vr_restart" )
 				{
@@ -506,15 +371,34 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 					if( Raptor::Game->Net.Connected )
 						Raptor::Game->Net.Disconnect();
 					else
-						Raptor::Game->Console.Print( "Not connected." );
+						Raptor::Game->Console.Print( "Not connected.", TextConsole::MSG_ERROR );
 				}
 				
 				else if( cmd == "reconnect" )
 				{
-					if( HasSetting("host_address") )
+					if( Raptor::Server->IsRunning() )
+						Raptor::Game->Console.Print( "You are the server.", TextConsole::MSG_ERROR );
+					else if( HasSetting("host_address") )
 						Raptor::Game->Net.Connect( SettingAsString("host_address").c_str(), SettingAsString("name").c_str(), SettingAsString("password").c_str() );
 					else
-						Raptor::Game->Console.Print( "No recent server to connect to." );
+						Raptor::Game->Console.Print( "No recent server to connect to.", TextConsole::MSG_ERROR );
+				}
+				
+				else if( cmd == "resync" )
+				{
+					uint16_t player_id = Raptor::Game->PlayerID;
+					
+					if( (! Raptor::Game->Net.Connected) && Raptor::Game->Net.Host.length() && ! Raptor::Server->IsRunning() )
+						Raptor::Game->Net.Reconnect();
+					
+					if( Raptor::Game->Net.Connected )
+					{
+						Packet local_resync_request( Raptor::Packet::RESYNC );
+						local_resync_request.AddUShort( player_id );
+						Raptor::Game->Net.ProcessPacket( &local_resync_request );
+					}
+					else
+						Raptor::Game->Console.Print( "Not connected.", TextConsole::MSG_ERROR );
 				}
 				
 				else if( cmd == "host" )
@@ -577,28 +461,34 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 				{
 					if( elements.size() >= 1 )
 					{
-						Settings[ "name" ] = elements.at(0);
+						std::string name = elements.at(0);
 						for( size_t i = 1; i < elements.size(); i ++ )
-							Settings[ "name" ] += std::string(" ") + elements.at(i);
+							name += std::string(" ") + elements.at(i);
 						
-						Packet player_properties = Packet( Raptor::Packet::PLAYER_PROPERTIES );
-						player_properties.AddUShort( Raptor::Game->PlayerID );
-						player_properties.AddUInt( 1 );
-						player_properties.AddString( "name" );
-						player_properties.AddString( Settings[ "name" ] );
-						Raptor::Game->Net.Send( &player_properties );
+						Raptor::Game->SetPlayerProperty( "name", name );
 					}
 					else
 					{
 						std::map<uint16_t,Player*>::const_iterator player_iter = Raptor::Game->Data.Players.find( Raptor::Game->PlayerID );
-						std::string name = (player_iter != Raptor::Game->Data.Players.end()) ? player_iter->second->Name : Settings[ "name" ];
+						std::string name = (player_iter != Raptor::Game->Data.Players.end()) ? player_iter->second->Name : SettingAsString("name");
 						Raptor::Game->Console.Print( std::string("name: ") + name );
 					}
 				}
 				
+				else if( cmd == "who" )
+				{
+					if( Raptor::Game->Net.Connected )
+					{
+						for( std::map<uint16_t,Player*>::const_iterator player_iter = Raptor::Game->Data.Players.begin(); player_iter != Raptor::Game->Data.Players.end(); player_iter ++ )
+							Raptor::Game->Console.Print( player_iter->second->Name );
+					}
+					else
+						Raptor::Game->Console.Print( "Not connected.", TextConsole::MSG_ERROR );
+				}
+				
 				else if( cmd == "say" )
 				{
-					if( !( Raptor::Game->Net.Connected && Raptor::Game->PlayerID) )
+					if( !(Raptor::Game->Net.Connected && Raptor::Game->PlayerID) )
 						Raptor::Game->Console.Print( "Must be connected to chat.", TextConsole::MSG_ERROR );
 					else if( elements.size() >= 1 )
 					{
@@ -756,7 +646,7 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 							else
 							{
 								Raptor::Game->Console.Print( std::string("Server port: ") + Num::ToString( Raptor::Game->Server->Port ) );
-								int sv_port = Raptor::Game->Cfg.SettingAsInt( "sv_port", Raptor::Game->DefaultPort );
+								int sv_port = SettingAsInt( "sv_port", Raptor::Game->DefaultPort );
 								if( sv_port != Raptor::Game->Server->Port )
 									Raptor::Game->Console.Print( std::string("(Will be ") + Num::ToString(sv_port) + std::string(" after restart.)") );
 							}
@@ -784,11 +674,11 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 						}
 						else if( sv_cmd == "restart" )
 						{
-							Raptor::Server->Port = Raptor::Game->Cfg.SettingAsInt( "sv_port", Raptor::Game->DefaultPort );
-							Raptor::Server->NetRate = Raptor::Game->Cfg.SettingAsDouble( "sv_netrate", 30. );
-							Raptor::Server->MaxFPS = Raptor::Game->Cfg.SettingAsDouble( "sv_maxfps", 60. );
+							Raptor::Server->Port = SettingAsInt( "sv_port", Raptor::Game->DefaultPort );
+							Raptor::Server->NetRate = SettingAsDouble( "sv_netrate", 30. );
+							Raptor::Server->MaxFPS = SettingAsDouble( "sv_maxfps", 60. );
 							
-							Raptor::Server->Start( Raptor::Game->Cfg.SettingAsString("name") );
+							Raptor::Server->Start( SettingAsString("name") );
 						}
 						else if( sv_cmd == "status" )
 						{
@@ -804,6 +694,11 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 							Raptor::Game->Console.Print( cstr );
 							snprintf( cstr, sizeof(cstr), "Server FPS: %.0f", 1. / Raptor::Server->FrameTime );
 							Raptor::Game->Console.Print( cstr );
+						}
+						else if( cmd == "who" )
+						{
+							for( std::map<uint16_t,Player*>::const_iterator player_iter = Raptor::Server->Data.Players.begin(); player_iter != Raptor::Server->Data.Players.end(); player_iter ++ )
+								Raptor::Game->Console.Print( player_iter->second->Name );
 						}
 						else if( sv_cmd == "say" )
 						{
@@ -925,11 +820,27 @@ void ClientConfig::Save( std::string filename ) const
 		for( std::map<std::string, std::string>::const_iterator setting_iter = Settings.begin(); setting_iter != Settings.end(); setting_iter ++ )
 			fprintf( output, "set \"%s\" \"%s\"\n", Str::Escape( setting_iter->first, ORIGINAL, ESCAPED ).c_str(), Str::Escape( setting_iter->second, ORIGINAL, ESCAPED ).c_str() );
 		
-		fprintf( output, "\nunbindall\n" );
-		for( std::map<Uint8, uint8_t>::const_iterator mouse_iter = MouseBinds.begin(); mouse_iter != MouseBinds.end(); mouse_iter ++ )
+		if( Raptor::Game->Input.ControlNames.size() > 1 )
+			fprintf( output, "\nunbindall\n" );
+		
+		for( std::map<Uint8,uint8_t>::const_iterator mouse_iter = MouseBinds.begin(); mouse_iter != MouseBinds.end(); mouse_iter ++ )
 			fprintf( output, "bind \"%s\" \"%s\"\n", Str::Escape( MouseName(mouse_iter->first), ORIGINAL, ESCAPED ).c_str(), Str::Escape( ControlName(mouse_iter->second), ORIGINAL, ESCAPED ).c_str() );
-		for( std::map<SDLKey, uint8_t>::const_iterator key_iter = KeyBinds.begin(); key_iter != KeyBinds.end(); key_iter ++ )
+		
+		for( std::map<SDLKey,uint8_t>::const_iterator key_iter = KeyBinds.begin(); key_iter != KeyBinds.end(); key_iter ++ )
 			fprintf( output, "bind \"%s\" \"%s\"\n", Str::Escape( KeyName(key_iter->first), ORIGINAL, ESCAPED ).c_str(), Str::Escape( ControlName(key_iter->second), ORIGINAL, ESCAPED ).c_str() );
+		
+		for( std::map<std::string,std::map<Uint8,uint8_t> >::const_iterator dev_iter = JoyAxisBinds.begin(); dev_iter != JoyAxisBinds.end(); dev_iter ++ )
+			for( std::map<Uint8,uint8_t>::const_iterator bind = dev_iter->second.begin(); bind != dev_iter->second.end(); bind ++ )
+				fprintf( output, "bind \"%s\" \"%s\"\n", Str::Escape( Raptor::Game->Input.JoyAxisName(dev_iter->first,bind->first), ORIGINAL, ESCAPED ).c_str(), Str::Escape( ControlName(bind->second), ORIGINAL, ESCAPED ).c_str() );
+		
+		for( std::map<std::string,std::map<Uint8,uint8_t> >::const_iterator dev_iter = JoyButtonBinds.begin(); dev_iter != JoyButtonBinds.end(); dev_iter ++ )
+			for( std::map<Uint8,uint8_t>::const_iterator bind = dev_iter->second.begin(); bind != dev_iter->second.end(); bind ++ )
+				fprintf( output, "bind \"%s\" \"%s\"\n", Str::Escape( Raptor::Game->Input.JoyButtonName(dev_iter->first,bind->first), ORIGINAL, ESCAPED ).c_str(), Str::Escape( ControlName(bind->second), ORIGINAL, ESCAPED ).c_str() );
+		
+		for( std::map<std::string,std::map<Uint8,std::map<Uint8,uint8_t> > >::const_iterator dev_iter = JoyHatBinds.begin(); dev_iter != JoyHatBinds.end(); dev_iter ++ )
+			for( std::map<Uint8,std::map<Uint8,uint8_t> >::const_iterator hat = dev_iter->second.begin(); hat != dev_iter->second.end(); hat ++ )
+				for( std::map<Uint8,uint8_t>::const_iterator bind = hat->second.begin(); bind != hat->second.end(); bind ++ )
+					fprintf( output, "bind \"%s\" \"%s\"\n", Str::Escape( Raptor::Game->Input.JoyHatName(dev_iter->first,hat->first,bind->first), ORIGINAL, ESCAPED ).c_str(), Str::Escape( ControlName(bind->second), ORIGINAL, ESCAPED ).c_str() );
 		
 		fflush( output );
 		fclose( output );
@@ -1039,20 +950,184 @@ std::vector<int> ClientConfig::SettingAsInts( std::string name ) const
 // ---------------------------------------------------------------------------
 
 
-bool ClientConfig::Bind( SDL_Event *event, uint8_t control )
+int8_t ClientConfig::Bind( SDL_Event *event, uint8_t control )
 {
 	if( event->type == SDL_KEYDOWN )
 	{
 		KeyBinds[ event->key.keysym.sym ] = control;
-		return true;
+		return 1;
 	}
 	else if( event->type == SDL_MOUSEBUTTONDOWN )
 	{
 		MouseBinds[ event->button.button ] = control;
+		return 1;
+	}
+	else if( (event->type == SDL_JOYAXISMOTION)
+	&&       (event->jaxis.value >= 16384)
+	&&       (event->jaxis.value > Raptor::Game->Joy.Joysticks[ event->jaxis.which ].PrevAxes[ event->jaxis.axis ]) )
+	{
+		std::string joy_name = Raptor::Game->Joy.Joysticks[ event->jaxis.which ].Name;
+		std::string joy_type = Raptor::Game->Input.DeviceType( joy_name );
+		JoyAxisBinds[ joy_type ][ event->jaxis.axis ] = control;
+		return 1;
+	}
+	else if( (event->type == SDL_JOYAXISMOTION)
+	&&       (event->jaxis.value <= -16384)
+	&&       (event->jaxis.value < Raptor::Game->Joy.Joysticks[ event->jaxis.which ].PrevAxes[ event->jaxis.axis ]) )
+	{
+		std::string joy_name = Raptor::Game->Joy.Joysticks[ event->jaxis.which ].Name;
+		std::string joy_type = Raptor::Game->Input.DeviceType( joy_name );
+		JoyAxisBinds[ joy_type ][ event->jaxis.axis ] = control;
+		return -1;  // Axis was moved in negative direction.
+	}
+	else if( event->type == SDL_JOYBUTTONDOWN )
+	{
+		std::string joy_name = Raptor::Game->Joy.Joysticks[ event->jbutton.which ].Name;
+		std::string joy_type = Raptor::Game->Input.DeviceType( joy_name );
+		JoyButtonBinds[ joy_type ][ event->jbutton.button ] = control;
+		return 1;
+	}
+	else if( event->type == SDL_JOYHATMOTION )
+	{
+		std::string joy_name = Raptor::Game->Joy.Joysticks[ event->jhat.which ].Name;
+		std::string joy_type = Raptor::Game->Input.DeviceType( joy_name );
+		JoyHatBinds[ joy_type ][ event->jhat.hat ][ event->jhat.value ] = control;
+		return 1;
+	}
+	
+	return 0;  // Event type could not be bound.
+}
+
+
+bool ClientConfig::Bind( std::string input, uint8_t control )
+{
+	if( ! control )
+		return Unbind( input );
+	
+	SDLKey key = KeyID( input );
+	if( key != SDLK_UNKNOWN )
+	{
+		KeyBinds[ key ] = control;
 		return true;
 	}
 	
-	// Return false if the event type could not be bound.
+	Uint8 mouse = MouseID( input );
+	if( mouse )
+	{
+		MouseBinds[ mouse ] = control;
+		return true;
+	}
+	
+	std::string dev;
+	Uint8 index = 0, dir = 0;
+	if( Raptor::Game->Input.ParseJoyAxis( input, &dev, &index ) )
+	{
+		JoyAxisBinds[ dev ][ index ] = control;
+		Raptor::Game->Input.DeviceTypes.insert( dev );
+		return true;
+	}
+	else if( Raptor::Game->Input.ParseJoyButton( input, &dev, &index ) )
+	{
+		JoyButtonBinds[ dev ][ index ] = control;
+		Raptor::Game->Input.DeviceTypes.insert( dev );
+		return true;
+	}
+	else if( Raptor::Game->Input.ParseJoyHat( input, &dev, &index, &dir ) )
+	{
+		JoyHatBinds[ dev ][ index ][ dir ] = control;
+		Raptor::Game->Input.DeviceTypes.insert( dev );
+		return true;
+	}
+	
+	return false;
+}
+
+
+bool ClientConfig::Unbind( std::string input )
+{
+	SDLKey key = KeyID( input );
+	if( key != SDLK_UNKNOWN )
+	{
+		std::map<SDLKey,uint8_t>::iterator bind = KeyBinds.find( key );
+		if( bind != KeyBinds.end() )
+		{
+			KeyBinds.erase( bind );
+			return true;
+		}
+		return false;
+	}
+	
+	Uint8 mouse = MouseID( input );
+	if( mouse )
+	{
+		std::map<Uint8,uint8_t>::iterator bind = MouseBinds.find( mouse );
+		if( bind != MouseBinds.end() )
+		{
+			MouseBinds.erase( bind );
+			return true;
+		}
+		return false;
+	}
+	
+	std::string dev;
+	Uint8 index = 0, dir = 0;
+	if( Raptor::Game->Input.ParseJoyAxis( input, &dev, &index ) )
+	{
+		std::map<std::string,std::map<Uint8,uint8_t> >::iterator dev_iter = JoyAxisBinds.find( dev );
+		if( dev_iter != JoyAxisBinds.end() )
+		{
+			std::map<Uint8,uint8_t>::iterator bind = dev_iter->second.find( index );
+			if( bind != dev_iter->second.end() )
+			{
+				dev_iter->second.erase( bind );
+				if( dev_iter->second.empty() )
+					JoyAxisBinds.erase( dev_iter );
+				return true;
+			}
+		}
+		return false;
+	}
+	else if( Raptor::Game->Input.ParseJoyButton( input, &dev, &index ) )
+	{
+		std::map<std::string,std::map<Uint8,uint8_t> >::iterator dev_iter = JoyButtonBinds.find( dev );
+		if( dev_iter != JoyButtonBinds.end() )
+		{
+			std::map<Uint8,uint8_t>::iterator bind = dev_iter->second.find( index );
+			if( bind != dev_iter->second.end() )
+			{
+				dev_iter->second.erase( bind );
+				if( dev_iter->second.empty() )
+					JoyButtonBinds.erase( dev_iter );
+				return true;
+			}
+		}
+		return false;
+	}
+	else if( Raptor::Game->Input.ParseJoyHat( input, &dev, &index, &dir ) )
+	{
+		std::map<std::string,std::map<Uint8,std::map<Uint8,uint8_t> > >::iterator dev_iter = JoyHatBinds.find( dev );
+		if( dev_iter != JoyHatBinds.end() )
+		{
+			std::map<Uint8,std::map<Uint8,uint8_t> >::iterator hat = dev_iter->second.find( index );
+			if( hat != dev_iter->second.end() )
+			{
+				std::map<Uint8,uint8_t>::iterator bind = hat->second.find( dir );
+				if( bind != hat->second.end() )
+				{
+					hat->second.erase( bind );
+					if( hat->second.empty() )
+					{
+						dev_iter->second.erase( hat );
+						if( dev_iter->second.empty() )
+							JoyHatBinds.erase( dev_iter );
+					}
+					return true;
+				}
+			}
+		}
+		return true;
+	}
+	
 	return false;
 }
 
@@ -1060,27 +1135,79 @@ bool ClientConfig::Bind( SDL_Event *event, uint8_t control )
 void ClientConfig::Unbind( uint8_t control )
 {
 	const std::map<SDLKey, uint8_t>::iterator key_binds_end = KeyBinds.end();
-	for( std::map<SDLKey, uint8_t>::iterator iter = KeyBinds.begin(); iter != key_binds_end; )
+	for(  std::map<SDLKey, uint8_t>::iterator bind = KeyBinds.begin(); bind != key_binds_end; )
 	{
-		std::map<SDLKey, uint8_t>::iterator next = iter;
+		std::map<SDLKey, uint8_t>::iterator next = bind;
 		next ++;
 		
-		if( iter->second == control )
-			KeyBinds.erase( iter );
+		if( bind->second == control )
+			KeyBinds.erase( bind );
 		
-		iter = next;
+		bind = next;
 	}
 	
 	const std::map<Uint8, uint8_t>::iterator mouse_binds_end = MouseBinds.end();
-	for( std::map<Uint8, uint8_t>::iterator iter = MouseBinds.begin(); iter != mouse_binds_end; )
+	for(  std::map<Uint8, uint8_t>::iterator bind = MouseBinds.begin(); bind != mouse_binds_end; )
 	{
-		std::map<Uint8, uint8_t>::iterator next = iter;
+		std::map<Uint8, uint8_t>::iterator next = bind;
 		next ++;
 		
-		if( iter->second == control )
-			MouseBinds.erase( iter );
+		if( bind->second == control )
+			MouseBinds.erase( bind );
 		
-		iter = next;
+		bind = next;
+	}
+	
+	const std::map<std::string, std::map<Uint8, uint8_t> >::iterator joy_axis_binds_end = JoyAxisBinds.end();
+	for(  std::map<std::string, std::map<Uint8, uint8_t> >::iterator dev_iter = JoyAxisBinds.begin(); dev_iter != joy_axis_binds_end; dev_iter ++ )
+	{
+		const std::map<Uint8, uint8_t>::iterator dev_iter_second_end = dev_iter->second.end();
+		for(  std::map<Uint8, uint8_t>::iterator bind = dev_iter->second.begin(); bind != dev_iter_second_end; )
+		{
+			std::map<Uint8, uint8_t>::iterator next = bind;
+			next ++;
+			
+			if( bind->second == control )
+				dev_iter->second.erase( bind );
+			
+			bind = next;
+		}
+	}
+	
+	const std::map<std::string, std::map<Uint8, uint8_t> >::iterator joy_button_binds_end = JoyButtonBinds.end();
+	for(  std::map<std::string, std::map<Uint8, uint8_t> >::iterator dev_iter = JoyButtonBinds.begin(); dev_iter != joy_button_binds_end; dev_iter ++ )
+	{
+		const std::map<Uint8, uint8_t>::iterator dev_iter_second_end = dev_iter->second.end();
+		for(  std::map<Uint8, uint8_t>::iterator bind = dev_iter->second.begin(); bind != dev_iter_second_end; )
+		{
+			std::map<Uint8, uint8_t>::iterator next = bind;
+			next ++;
+			
+			if( bind->second == control )
+				dev_iter->second.erase( bind );
+			
+			bind = next;
+		}
+	}
+	
+	const std::map<std::string, std::map<Uint8, std::map<Uint8, uint8_t> > >::iterator joy_hat_binds_end = JoyHatBinds.end();
+	for(  std::map<std::string, std::map<Uint8, std::map<Uint8, uint8_t> > >::iterator dev_iter = JoyHatBinds.begin(); dev_iter != joy_hat_binds_end; dev_iter ++ )
+	{
+		const std::map<Uint8, std::map<Uint8, uint8_t> >::iterator dev_iter_second_end = dev_iter->second.end();
+		for(  std::map<Uint8, std::map<Uint8, uint8_t> >::iterator hat = dev_iter->second.begin(); hat != dev_iter_second_end; hat ++ )
+		{
+			const std::map<Uint8, uint8_t>::iterator hat_second_end = hat->second.end();
+			for(  std::map<Uint8, uint8_t>::iterator bind = hat->second.begin(); bind != hat_second_end; )
+			{
+				std::map<Uint8, uint8_t>::iterator next = bind;
+				next ++;
+				
+				if( bind->second == control )
+					hat->second.erase( bind );
+				
+				bind = next;
+			}
+		}
 	}
 }
 
@@ -1089,30 +1216,219 @@ void ClientConfig::UnbindAll( void )
 {
 	KeyBinds.clear();
 	MouseBinds.clear();
+	JoyAxisBinds.clear();
+	JoyButtonBinds.clear();
+	JoyHatBinds.clear();
+}
+
+
+size_t ClientConfig::SwapBinds( uint8_t control_a, uint8_t control_b )
+{
+	size_t count = 0;
+	
+	const std::map<SDLKey, uint8_t>::iterator key_binds_end = KeyBinds.end();
+	for(  std::map<SDLKey, uint8_t>::iterator bind = KeyBinds.begin(); bind != key_binds_end; )
+	{
+		std::map<SDLKey, uint8_t>::iterator next = bind;
+		next ++;
+		
+		if( bind->second == control_a )
+		{
+			KeyBinds[ bind->first ] = control_b;
+			count ++;
+		}
+		else if( bind->second == control_b )
+		{
+			KeyBinds[ bind->first ] = control_a;
+			count ++;
+		}
+		
+		bind = next;
+	}
+	
+	const std::map<Uint8, uint8_t>::iterator mouse_binds_end = MouseBinds.end();
+	for(  std::map<Uint8, uint8_t>::iterator bind = MouseBinds.begin(); bind != mouse_binds_end; )
+	{
+		std::map<Uint8, uint8_t>::iterator next = bind;
+		next ++;
+		
+		if( bind->second == control_a )
+		{
+			MouseBinds[ bind->first ] = control_b;
+			count ++;
+		}
+		else if( bind->second == control_b )
+		{
+			MouseBinds[ bind->first ] = control_a;
+			count ++;
+		}
+		
+		bind = next;
+	}
+	
+	const std::map<std::string, std::map<Uint8, uint8_t> >::iterator joy_axis_binds_end = JoyAxisBinds.end();
+	for(  std::map<std::string, std::map<Uint8, uint8_t> >::iterator dev_iter = JoyAxisBinds.begin(); dev_iter != joy_axis_binds_end; dev_iter ++ )
+	{
+		const std::map<Uint8, uint8_t>::iterator dev_iter_second_end = dev_iter->second.end();
+		for(  std::map<Uint8, uint8_t>::iterator bind = dev_iter->second.begin(); bind != dev_iter_second_end; )
+		{
+			std::map<Uint8, uint8_t>::iterator next = bind;
+			next ++;
+			
+			if( bind->second == control_a )
+			{
+				JoyAxisBinds[ dev_iter->first ][ bind->first ] = control_b;
+				count ++;
+			}
+			else if( bind->second == control_b )
+			{
+				JoyAxisBinds[ dev_iter->first ][ bind->first ] = control_a;
+				count ++;
+			}
+			
+			bind = next;
+		}
+	}
+	
+	const std::map<std::string, std::map<Uint8, uint8_t> >::iterator joy_button_binds_end = JoyButtonBinds.end();
+	for(  std::map<std::string, std::map<Uint8, uint8_t> >::iterator dev_iter = JoyButtonBinds.begin(); dev_iter != joy_button_binds_end; dev_iter ++ )
+	{
+		const std::map<Uint8, uint8_t>::iterator dev_iter_second_end = dev_iter->second.end();
+		for(  std::map<Uint8, uint8_t>::iterator bind = dev_iter->second.begin(); bind != dev_iter_second_end; )
+		{
+			std::map<Uint8, uint8_t>::iterator next = bind;
+			next ++;
+			
+			if( bind->second == control_a )
+			{
+				JoyButtonBinds[ dev_iter->first ][ bind->first ] = control_b;
+				count ++;
+			}
+			else if( bind->second == control_b )
+			{
+				JoyButtonBinds[ dev_iter->first ][ bind->first ] = control_a;
+				count ++;
+			}
+			
+			bind = next;
+		}
+	}
+	
+	const std::map<std::string, std::map<Uint8, std::map<Uint8, uint8_t> > >::iterator joy_hat_binds_end = JoyHatBinds.end();
+	for(  std::map<std::string, std::map<Uint8, std::map<Uint8, uint8_t> > >::iterator dev_iter = JoyHatBinds.begin(); dev_iter != joy_hat_binds_end; dev_iter ++ )
+	{
+		const std::map<Uint8, std::map<Uint8, uint8_t> >::iterator dev_iter_second_end = dev_iter->second.end();
+		for(  std::map<Uint8, std::map<Uint8, uint8_t> >::iterator hat = dev_iter->second.begin(); hat != dev_iter_second_end; hat ++ )
+		{
+			const std::map<Uint8, uint8_t>::iterator hat_second_end = hat->second.end();
+			for(  std::map<Uint8, uint8_t>::iterator bind = hat->second.begin(); bind != hat_second_end; )
+			{
+				std::map<Uint8, uint8_t>::iterator next = bind;
+				next ++;
+				
+				if( bind->second == control_a )
+				{
+					JoyHatBinds[ dev_iter->first ][ hat->first ][ bind->first ] = control_b;
+					count ++;
+				}
+				else if( bind->second == control_b )
+				{
+					JoyHatBinds[ dev_iter->first ][ hat->first ][ bind->first ] = control_a;
+					count ++;
+				}
+				
+				bind = next;
+			}
+		}
+	}
+	
+	return count;
 }
 
 
 // ---------------------------------------------------------------------------
 
 
-uint8_t ClientConfig::GetControl( SDL_Event *event ) const
+uint8_t ClientConfig::BoundControl( const SDL_Event *event, bool down_only ) const
 {
-	if( (event->type == SDL_KEYDOWN) || (event->type == SDL_KEYUP) )
+	if( (event->type == SDL_KEYDOWN) || ((event->type == SDL_KEYUP) && ! down_only) )
 	{
-		std::map<SDLKey, uint8_t>::const_iterator iter = KeyBinds.find( event->key.keysym.sym );
-		if( iter != KeyBinds.end() )
-			return iter->second;
+		std::map<SDLKey, uint8_t>::const_iterator bind = KeyBinds.find( event->key.keysym.sym );
+		if( bind != KeyBinds.end() )
+			return bind->second;
 	}
 	
-	else if( (event->type == SDL_MOUSEBUTTONDOWN) || (event->type == SDL_MOUSEBUTTONUP) )
+	else if( (event->type == SDL_MOUSEBUTTONDOWN) || ((event->type == SDL_MOUSEBUTTONUP) && ! down_only) )
 	{
-		std::map<Uint8, uint8_t>::const_iterator iter = MouseBinds.find( event->button.button );
-		if( iter != MouseBinds.end() )
-			return iter->second;
+		std::map<Uint8, uint8_t>::const_iterator bind = MouseBinds.find( event->button.button );
+		if( bind != MouseBinds.end() )
+			return bind->second;
 	}
 	
-	// Return 0 if the event was not bound.
-	return UNBOUND;
+	else if( event->type == SDL_JOYAXISMOTION )
+	{
+		std::string dev = Raptor::Game->Input.DeviceType( Raptor::Game->Joy.Name( event->jaxis.which ) );
+		std::map<std::string, std::map<Uint8, uint8_t> >::const_iterator dev_iter = JoyAxisBinds.find( dev );
+		if( dev_iter != JoyAxisBinds.end() )
+		{
+			std::map<Uint8, uint8_t>::const_iterator bind = dev_iter->second.find( event->jaxis.axis );
+			if( bind != dev_iter->second.end() )
+				return bind->second;
+		}
+	}
+	
+	else if( (event->type == SDL_JOYBUTTONDOWN) || ((event->type == SDL_JOYBUTTONUP) && ! down_only) )
+	{
+		std::string dev = Raptor::Game->Input.DeviceType( Raptor::Game->Joy.Name( event->jbutton.which ) );
+		std::map<std::string, std::map<Uint8, uint8_t> >::const_iterator dev_iter = JoyButtonBinds.find( dev );
+		if( dev_iter != JoyButtonBinds.end() )
+		{
+			std::map<Uint8, uint8_t>::const_iterator bind = dev_iter->second.find( event->jbutton.button );
+			if( bind != dev_iter->second.end() )
+				return bind->second;
+		}
+	}
+	
+	else if( event->type == SDL_JOYHATMOTION )
+	{
+		std::string dev = Raptor::Game->Input.DeviceType( Raptor::Game->Joy.Name( event->jhat.which ) );
+		std::map<std::string, std::map<Uint8, std::map<Uint8, uint8_t> > >::const_iterator dev_iter = JoyHatBinds.find( dev );
+		if( dev_iter != JoyHatBinds.end() )
+		{
+			std::map<Uint8, std::map<Uint8, uint8_t> >::const_iterator hat = dev_iter->second.find( event->jhat.hat );
+			if( hat != dev_iter->second.end() )
+			{
+				std::map<Uint8, uint8_t>::const_iterator bind = hat->second.find( event->jhat.value );
+				if( bind != hat->second.end() )
+					return bind->second;
+			}
+		}
+	}
+	
+	return 0;
+}
+
+
+uint8_t ClientConfig::BoundControl( std::string input ) const
+{
+	SDLKey key = KeyID( input );
+	if( key != SDLK_UNKNOWN )
+		return KeyBind( key );
+	
+	Uint8 mouse = MouseID( input );
+	if( mouse )
+		return MouseBind( mouse );
+	
+	std::string dev;
+	Uint8 index = 0, dir = 0;
+	if( Raptor::Game->Input.ParseJoyAxis( input, &dev, &index ) )
+		return JoyAxisBind( dev, index );
+	else if( Raptor::Game->Input.ParseJoyButton( input, &dev, &index ) )
+		return JoyButtonBind( dev, index );
+	else if( Raptor::Game->Input.ParseJoyHat( input, &dev, &index, &dir ) )
+		return JoyHatBind( dev, index, dir );
+	
+	return 0;
 }
 
 
@@ -1121,96 +1437,210 @@ uint8_t ClientConfig::GetControl( SDL_Event *event ) const
 
 std::string ClientConfig::ControlName( uint8_t control ) const
 {
-	std::map<uint8_t, std::string>::const_iterator iter = ControlNames.find( control );
-	if( iter != ControlNames.end() )
-		return iter->second;
-	
-	char control_string[ 32 ] = "";
-	snprintf( control_string, sizeof(control_string), "Control%i", control );
-	return std::string( control_string );
+	return Raptor::Game->Input.ControlName( control );
 }
 
 
 std::string ClientConfig::KeyName( SDLKey key ) const
 {
-	std::map<SDLKey, std::string>::const_iterator iter = KeyNames.find( key );
-	if( iter != KeyNames.end() )
-		return iter->second;
-	
-	char key_string[ 32 ] = "";
-	snprintf( key_string, sizeof(key_string), "Key%i", key );
-	return std::string( key_string );
+	return Raptor::Game->Input.KeyName( key );
 }
 
 
 std::string ClientConfig::MouseName( Uint8 mouse ) const
 {
-	std::map<Uint8, std::string>::const_iterator iter = MouseNames.find( mouse );
-	if( iter != MouseNames.end() )
-		return iter->second;
-	
-	char mouse_string[ 32 ] = "";
-	if( mouse > 5 )
-		snprintf( mouse_string, sizeof(mouse_string), "Mouse%i", mouse - 2 );
-	else
-		snprintf( mouse_string, sizeof(mouse_string), "MouseUnknown" );
-	return std::string( mouse_string );
+	return Raptor::Game->Input.MouseName( mouse );
+}
+
+
+uint8_t ClientConfig::ControlID( std::string name ) const
+{
+	return Raptor::Game->Input.ControlID( name );
+}
+
+
+SDLKey ClientConfig::KeyID( std::string name ) const
+{
+	return Raptor::Game->Input.KeyID( name );
+}
+
+
+Uint8 ClientConfig::MouseID( std::string name ) const
+{
+	return Raptor::Game->Input.MouseID( name );
 }
 
 
 // ---------------------------------------------------------------------------
 
 
-uint8_t ClientConfig::ControlID( std::string name ) const
+uint8_t ClientConfig::KeyBind( SDLKey key ) const
 {
-	for( std::map<uint8_t, std::string>::const_iterator iter = ControlNames.begin(); iter != ControlNames.end(); iter ++ )
-	{
-		if( iter->second == name )
-			return iter->first;
-	}
-	
-	for( std::map<uint8_t, std::string>::const_iterator iter = ControlNames.begin(); iter != ControlNames.end(); iter ++ )
-	{
-		if( ControlName(iter->first) == name )
-			return iter->first;
-	}
-	
-	return UNBOUND;
+	std::map<SDLKey,uint8_t>::const_iterator bind = KeyBinds.find( key );
+	return (bind != KeyBinds.end()) ? bind->second : 0;
+}
+
+uint8_t ClientConfig::MouseBind( Uint8 button ) const
+{
+	std::map<Uint8,uint8_t>::const_iterator bind = MouseBinds.find( button );
+	return (bind != MouseBinds.end()) ? bind->second : 0;
 }
 
 
-SDLKey ClientConfig::KeyID( std::string name ) const
+uint8_t ClientConfig::JoyAxisBind( std::string dev, Uint8 axis ) const
 {
-	for( std::map<SDLKey, std::string>::const_iterator iter = KeyNames.begin(); iter != KeyNames.end(); iter ++ )
+	std::map<std::string,std::map<Uint8,uint8_t> >::const_iterator dev_iter = JoyAxisBinds.find( dev );
+	if( dev_iter != JoyAxisBinds.end() )
 	{
-		if( iter->second == name )
-			return iter->first;
+		std::map<Uint8,uint8_t>::const_iterator bind = dev_iter->second.find( axis );
+		return (bind != dev_iter->second.end()) ? bind->second : 0;
 	}
-	
-	for( std::map<SDLKey, std::string>::const_iterator iter = KeyNames.begin(); iter != KeyNames.end(); iter ++ )
-	{
-		if( KeyName(iter->first) == name )
-			return iter->first;
-	}
-	
-	return SDLK_UNKNOWN;
-}
-
-
-Uint8 ClientConfig::MouseID( std::string name ) const
-{
-	for( std::map<Uint8, std::string>::const_iterator iter = MouseNames.begin(); iter != MouseNames.end(); iter ++ )
-	{
-		if( iter->second == name )
-			return iter->first;
-	}
-	
-	for( std::map<Uint8, std::string>::const_iterator iter = MouseNames.begin(); iter != MouseNames.end(); iter ++ )
-	{
-		if( MouseName(iter->first) == name )
-			return iter->first;
-	}
-	
 	return 0;
 }
 
+
+uint8_t ClientConfig::JoyButtonBind( std::string dev, Uint8 button ) const
+{
+	std::map<std::string,std::map<Uint8,uint8_t> >::const_iterator dev_iter = JoyButtonBinds.find( dev );
+	if( dev_iter != JoyButtonBinds.end() )
+	{
+		std::map<Uint8,uint8_t>::const_iterator bind = dev_iter->second.find( button );
+		return (bind != dev_iter->second.end()) ? bind->second : 0;
+	}
+	return 0;
+}
+
+
+uint8_t ClientConfig::JoyHatBind( std::string dev, Uint8 hat, Uint8 dir ) const
+{
+	std::map<std::string,std::map<Uint8,std::map<Uint8,uint8_t> > >::const_iterator dev_iter = JoyHatBinds.find( dev );
+	if( dev_iter != JoyHatBinds.end() )
+	{
+		std::map<Uint8,std::map<Uint8,uint8_t> >::const_iterator hat_iter = dev_iter->second.find( hat );
+		if( hat_iter != dev_iter->second.end() )
+		{
+			std::map<Uint8,uint8_t>::const_iterator bind = hat_iter->second.find( dir );
+			return (bind != hat_iter->second.end()) ? bind->second : 0;
+		}
+	}
+	return 0;
+}
+
+
+// ---------------------------------------------------------------------------
+
+
+bool ClientConfig::HasControlBound( uint8_t control ) const
+{
+	const std::map<SDLKey, uint8_t>::const_iterator key_binds_end = KeyBinds.end();
+	for(  std::map<SDLKey, uint8_t>::const_iterator bind = KeyBinds.begin(); bind != key_binds_end; bind ++ )
+	{
+		if( bind->second == control )
+			return true;
+	}
+	
+	const std::map<Uint8, uint8_t>::const_iterator mouse_binds_end = MouseBinds.end();
+	for(  std::map<Uint8, uint8_t>::const_iterator bind = MouseBinds.begin(); bind != mouse_binds_end; bind ++ )
+	{
+		if( bind->second == control )
+			return true;
+	}
+	
+	const std::map<std::string, std::map<Uint8, uint8_t> >::const_iterator joy_axis_binds_end = JoyAxisBinds.end();
+	for(  std::map<std::string, std::map<Uint8, uint8_t> >::const_iterator dev_iter = JoyAxisBinds.begin(); dev_iter != joy_axis_binds_end; dev_iter ++ )
+	{
+		const std::map<Uint8, uint8_t>::const_iterator dev_iter_second_end = dev_iter->second.end();
+		for(  std::map<Uint8, uint8_t>::const_iterator bind = dev_iter->second.begin(); bind != dev_iter_second_end; bind ++ )
+		{
+			if( bind->second == control )
+				return true;
+		}
+	}
+	
+	const std::map<std::string, std::map<Uint8, uint8_t> >::const_iterator joy_button_binds_end = JoyButtonBinds.end();
+	for(  std::map<std::string, std::map<Uint8, uint8_t> >::const_iterator dev_iter = JoyButtonBinds.begin(); dev_iter != joy_button_binds_end; dev_iter ++ )
+	{
+		const std::map<Uint8, uint8_t>::const_iterator dev_iter_second_end = dev_iter->second.end();
+		for(  std::map<Uint8, uint8_t>::const_iterator bind = dev_iter->second.begin(); bind != dev_iter_second_end; bind ++ )
+		{
+			if( bind->second == control )
+				return true;
+		}
+	}
+	
+	const std::map<std::string, std::map<Uint8, std::map<Uint8, uint8_t> > >::const_iterator joy_hat_binds_end = JoyHatBinds.end();
+	for(  std::map<std::string, std::map<Uint8, std::map<Uint8, uint8_t> > >::const_iterator dev_iter = JoyHatBinds.begin(); dev_iter != joy_hat_binds_end; dev_iter ++ )
+	{
+		const std::map<Uint8, std::map<Uint8, uint8_t> >::const_iterator dev_iter_second_end = dev_iter->second.end();
+		for(  std::map<Uint8, std::map<Uint8, uint8_t> >::const_iterator hat = dev_iter->second.begin(); hat != dev_iter_second_end; hat ++ )
+		{
+			const std::map<Uint8, uint8_t>::const_iterator hat_second_end = hat->second.end();
+			for(  std::map<Uint8, uint8_t>::const_iterator bind = hat->second.begin(); bind != hat_second_end; bind ++ )
+			{
+				if( bind->second == control )
+					return true;
+			}
+		}
+	}
+	
+	return false;
+}
+
+
+std::vector<std::string> ClientConfig::ControlBoundTo( uint8_t control ) const
+{
+	std::vector<std::string> binds;
+	
+	const std::map<Uint8, uint8_t>::const_iterator mouse_binds_end = MouseBinds.end();
+	for(  std::map<Uint8, uint8_t>::const_iterator bind = MouseBinds.begin(); bind != mouse_binds_end; bind ++ )
+	{
+		if( bind->second == control )
+			binds.push_back( Raptor::Game->Input.MouseName( bind->first ) );
+	}
+	
+	const std::map<SDLKey, uint8_t>::const_iterator key_binds_end = KeyBinds.end();
+	for(  std::map<SDLKey, uint8_t>::const_iterator bind = KeyBinds.begin(); bind != key_binds_end; bind ++ )
+	{
+		if( bind->second == control )
+			binds.push_back( Raptor::Game->Input.KeyName( bind->first ) );
+	}
+	
+	const std::map<std::string, std::map<Uint8, uint8_t> >::const_iterator joy_axis_binds_end = JoyAxisBinds.end();
+	for(  std::map<std::string, std::map<Uint8, uint8_t> >::const_iterator dev_iter = JoyAxisBinds.begin(); dev_iter != joy_axis_binds_end; dev_iter ++ )
+	{
+		const std::map<Uint8, uint8_t>::const_iterator dev_iter_second_end = dev_iter->second.end();
+		for(  std::map<Uint8, uint8_t>::const_iterator bind = dev_iter->second.begin(); bind != dev_iter_second_end; bind ++ )
+		{
+			if( bind->second == control )
+				binds.push_back( Raptor::Game->Input.JoyAxisName( dev_iter->first, bind->first ) );
+		}
+	}
+	
+	const std::map<std::string, std::map<Uint8, uint8_t> >::const_iterator joy_button_binds_end = JoyButtonBinds.end();
+	for(  std::map<std::string, std::map<Uint8, uint8_t> >::const_iterator dev_iter = JoyButtonBinds.begin(); dev_iter != joy_button_binds_end; dev_iter ++ )
+	{
+		const std::map<Uint8, uint8_t>::const_iterator dev_iter_second_end = dev_iter->second.end();
+		for(  std::map<Uint8, uint8_t>::const_iterator bind = dev_iter->second.begin(); bind != dev_iter_second_end; bind ++ )
+		{
+			if( bind->second == control )
+				binds.push_back( Raptor::Game->Input.JoyButtonName( dev_iter->first, bind->first ) );
+		}
+	}
+	
+	const std::map<std::string, std::map<Uint8, std::map<Uint8, uint8_t> > >::const_iterator joy_hat_binds_end = JoyHatBinds.end();
+	for(  std::map<std::string, std::map<Uint8, std::map<Uint8, uint8_t> > >::const_iterator dev_iter = JoyHatBinds.begin(); dev_iter != joy_hat_binds_end; dev_iter ++ )
+	{
+		const std::map<Uint8, std::map<Uint8, uint8_t> >::const_iterator dev_iter_second_end = dev_iter->second.end();
+		for(  std::map<Uint8, std::map<Uint8, uint8_t> >::const_iterator hat = dev_iter->second.begin(); hat != dev_iter_second_end; hat ++ )
+		{
+			const std::map<Uint8, uint8_t>::const_iterator hat_second_end = hat->second.end();
+			for(  std::map<Uint8, uint8_t>::const_iterator bind = hat->second.begin(); bind != hat_second_end; bind ++ )
+			{
+				if( bind->second == control )
+					binds.push_back( Raptor::Game->Input.JoyHatName( dev_iter->first, hat->first, bind->first ) );
+			}
+		}
+	}
+	
+	return binds;
+}

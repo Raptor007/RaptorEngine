@@ -35,5 +35,5 @@ public:
 	Layer *TopLayer( void );
 	void MoveToTop( Layer *layer );
 	
-	Layer *Find( const std::string &name );
+	Layer *Find( const std::string &name, bool recursive = false );
 };

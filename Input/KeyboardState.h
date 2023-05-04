@@ -21,7 +21,7 @@ public:
 	virtual ~KeyboardState();
 	
 	void TrackEvent( SDL_Event *event );
-	bool KeyDown( SDLKey key );
+	bool KeyDown( SDLKey key ) const;
 
-	std::string Status( void );
+	std::string Status( void ) const;
 };

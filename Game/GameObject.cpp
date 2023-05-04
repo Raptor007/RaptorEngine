@@ -41,7 +41,7 @@ GameObject::GameObject( const GameObject &other ) : Pos3D( other )
 	PitchRate = other.PitchRate;
 	YawRate = other.YawRate;
 	Lifetime = other.Lifetime;
-	SmoothPos = true;
+	SmoothPos = other.SmoothPos;
 }
 
 
@@ -64,6 +64,11 @@ void GameObject::ClientInit( void )
 uint32_t GameObject::Type( void ) const
 {
 	return TypeCode;
+}
+
+Player *GameObject::Owner( void ) const
+{
+	return Data ? Data->GetPlayer( PlayerID ) : NULL;
 }
 
 
@@ -215,14 +220,14 @@ void GameObject::ReadFromUpdatePacket( Packet *packet, int8_t precision )
 	}
 	FixVectors();
 	
-	if( SmoothPos && (Dist(&PrevPos) < SMOOTH_RADIUS) && MotionVector.Length() )
+	if( SmoothPos && Data && Data->AntiJitter && (Dist(&PrevPos) < SMOOTH_RADIUS) && MotionVector.Length() )
 	{
 		// Remove jitter from delayed position updates.
 		Vec3D unit_motion = MotionVector;
 		unit_motion.ScaleTo( 1. );
 		double dist_behind = PrevPos.DistAlong( &unit_motion, this );
 		if( dist_behind > 0. )
-			MoveAlong( &unit_motion, dist_behind );
+			MoveAlong( &unit_motion, dist_behind * Data->AntiJitter );
 	}
 }
 
@@ -327,10 +332,33 @@ void GameObject::Update( double dt )
 {
 	PrevPos.Copy( this );
 	
+	// Limit over-prediction from momentary hiccups, such as when loading assets mid-game.
+	if( (dt > Data->MaxFrameTime) && (Data->MaxFrameTime > 0.) )
+		dt = Data->MaxFrameTime;
+	
 	Roll( dt * RollRate );
 	Pitch( dt * PitchRate );
 	Yaw( dt * YawRate );
 	Move( MotionVector.X * dt, MotionVector.Y * dt, MotionVector.Z * dt );
+}
+
+
+void GameObject::SendUpdate( int8_t precision )
+{
+	Packet update( Raptor::Packet::UPDATE );
+	update.AddChar( precision );
+	update.AddUInt( 1 );
+	update.AddUInt( ID );
+	if( ClientSide() )
+	{
+		AddToUpdatePacketFromClient( &update, precision );
+		Raptor::Game->Net.Send( &update );
+	}
+	else
+	{
+		AddToUpdatePacketFromServer( &update, precision );
+		Raptor::Server->Net.SendAll( &update );
+	}
 }
 
 

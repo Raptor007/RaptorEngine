@@ -46,6 +46,7 @@ namespace Raptor
 			
 			PING = 'Ping',
 			PONG = 'Pong',
+			RESYNC = 'Sync',
 			
 			MESSAGE = 'Note',
 			PLAY_SOUND = 'PSnd',

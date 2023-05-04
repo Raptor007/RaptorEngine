@@ -81,6 +81,22 @@ int CStr::FindInsensitive( const char *str, const char *search_for )
 }
 
 
+bool CStr::BeginsWith( const char *str, const char *search_for )
+{
+	return (strncasecmp( str, search_for, strlen(search_for) ) == 0);
+}
+
+
+bool CStr::EndsWith( const char *str, const char *search_for )
+{
+	size_t str_len = strlen(str);
+	size_t search_len = strlen(search_for);
+	if( search_len > str_len )
+		return false;
+	return (strncasecmp( str + str_len - search_len, search_for, search_len ) == 0);
+}
+
+
 bool CStr::Less::operator()( const char *a, const char *b ) const
 {
 	if( ! b )
@@ -383,6 +399,18 @@ bool Str::AsBool( std::string str )
 int Str::FindInsensitive( std::string str, std::string search_for )
 {
 	return CStr::FindInsensitive( str.c_str(), search_for.c_str() );
+}
+
+
+bool Str::BeginsWith( std::string str, std::string search_for )
+{
+	return CStr::BeginsWith( str.c_str(), search_for.c_str() );
+}
+
+
+bool Str::EndsWith( std::string str, std::string search_for )
+{
+	return CStr::EndsWith( str.c_str(), search_for.c_str() );
 }
 
 

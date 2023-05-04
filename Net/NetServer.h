@@ -33,16 +33,16 @@ public:
 	SDL_Thread *Thread;
 	Mutex Lock;
 	TCPsocket Socket;
-	std::list<ConnectedClient*> Clients;
-	std::list<ConnectedClient*> DisconnectedClients;
+	std::list<ConnectedClient*> Clients, DisconnectedClients;
 	double NetRate;
+	double ResyncTime, DisconnectTime;
 	int8_t Precision;
 	
 	
 	NetServer( void );
 	virtual ~NetServer();
 	
-	int Initialize( int port = 0 );
+	bool Initialize( int port = 0 );
 	void DisconnectNice( const char *message );
 	void Disconnect( void );
 	

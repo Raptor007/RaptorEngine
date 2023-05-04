@@ -32,6 +32,7 @@ Graphics::Graphics( void )
 	VSync = false;
 	FSAA = 0;
 	AF = 16;
+	Framebuffers = true;
 	
 	Screen = NULL;
 	DrawTo = NULL;
@@ -272,6 +273,8 @@ void Graphics::SetMode( int x, int y, int bpp, bool fullscreen, int fsaa, int af
 	Raptor::Game->Cfg.Settings[ "g_af" ] = Num::ToString(AF);
 	Raptor::Game->Cfg.Settings[ "g_znear" ] = Num::ToString(ZNear);
 	Raptor::Game->Cfg.Settings[ "g_zfar" ] = Num::ToString(ZFar);
+	Raptor::Game->Cfg.Settings[ "g_vsync" ] = VSync ? "true" : "false";
+	Raptor::Game->Cfg.Settings[ "g_framebuffers" ] = Framebuffers ? "true" : "false";
 }
 
 
@@ -297,6 +300,7 @@ void Graphics::Restart( void )
 	ZNear = Raptor::Game->Cfg.SettingAsDouble( "g_znear", 0.125 );
 	ZFar = Raptor::Game->Cfg.SettingAsDouble( "g_zfar", 15000 );
 	VSync = Raptor::Game->Cfg.SettingAsBool( "g_vsync", false );
+	Framebuffers = Raptor::Game->Cfg.SettingAsBool( "g_framebuffers", true );
 	
 	SetMode( x, y, bpp, fullscreen, fsaa, af, zbits );
 }
@@ -371,7 +375,7 @@ void Graphics::SetViewport( int x, int y, int w, int h )
 	if( DrawTo )
 		DrawTo->SetViewport( x, y, w, h );
 	else
-		glViewport( x, y, w, h );
+		glViewport( x, H - y - h, w, h );  // 0,0 is top left for RaptorEngine but bottom left for OpenGL.
 }
 
 

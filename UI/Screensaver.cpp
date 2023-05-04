@@ -26,11 +26,13 @@ bool Screensaver::HandleEvent( SDL_Event *event )
 	if( Raptor::Game->Console.IsActive() )
 		return false;
 	
+#ifndef DEBUG
 	if( (event->type == SDL_MOUSEMOTION) || (event->type == SDL_MOUSEBUTTONDOWN) || ((event->type == SDL_KEYDOWN) && (IgnoreKeys.find( event->key.keysym.sym ) == IgnoreKeys.end())) )
 	{
 		Raptor::Game->Quit();
 		return true;
 	}
+#endif
 	
 	return false;
 }

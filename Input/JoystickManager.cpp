@@ -37,6 +37,20 @@ void JoystickManager::Initialize( void )
 }
 
 
+void JoystickManager::Refresh( void )
+{
+	if( Initialized )
+	{
+		ReleaseJoysticks();
+		SDL_JoystickEventState( SDL_DISABLE );
+		SDL_QuitSubSystem( SDL_INIT_JOYSTICK );
+		Initialized = false;
+	}
+	Initialize();
+	FindJoysticks();
+}
+
+
 void JoystickManager::FindJoysticks( void )
 {
 	if( ! Initialized )
@@ -55,6 +69,18 @@ void JoystickManager::FindJoysticks( void )
 			}
 		}
 	}
+}
+
+
+bool JoystickManager::DeviceTypeFound( std::string dev ) const
+{
+	for( std::map<Uint8, JoystickState>::const_iterator joy_iter = Joysticks.begin(); joy_iter != Joysticks.end(); joy_iter ++ )
+	{
+		if( joy_iter->second.DeviceType() == dev )
+			return true;
+	}
+	
+	return false;
 }
 
 
@@ -96,11 +122,11 @@ void JoystickManager::TrackEvent( SDL_Event *event )
 }
 
 
-bool JoystickManager::HasAxis( int joystick_id, Uint8 axis )
+bool JoystickManager::HasAxis( int joystick_id, Uint8 axis ) const
 {
 	// Return true if this joystick has ever seen motion on this axis.
 	
-	std::map<Uint8, JoystickState>::iterator joy_iter = Joysticks.find( joystick_id );
+	std::map<Uint8, JoystickState>::const_iterator joy_iter = Joysticks.find( joystick_id );
 	if( joy_iter != Joysticks.end() )
 		return joy_iter->second.HasAxis( axis );
 
@@ -108,12 +134,12 @@ bool JoystickManager::HasAxis( int joystick_id, Uint8 axis )
 }
 
 
-double JoystickManager::Axis( int joystick_id, Uint8 axis, double deadzone, double deadzone_at_ends )
+double JoystickManager::Axis( int joystick_id, Uint8 axis, double deadzone, double deadzone_at_ends ) const
 {
 	// Return the value of a joystick's axis.
 	// Note that these values are scaled to the (-1,1) range when tracked.
 	
-	std::map<Uint8, JoystickState>::iterator joy_iter = Joysticks.find( joystick_id );
+	std::map<Uint8, JoystickState>::const_iterator joy_iter = Joysticks.find( joystick_id );
 	if( joy_iter != Joysticks.end() )
 		return joy_iter->second.Axis( axis, deadzone, deadzone_at_ends );
 
@@ -121,11 +147,11 @@ double JoystickManager::Axis( int joystick_id, Uint8 axis, double deadzone, doub
 }
 
 
-double JoystickManager::AxisScaled( int joystick_id, Uint8 axis, double low, double high, double deadzone, double deadzone_at_ends )
+double JoystickManager::AxisScaled( int joystick_id, Uint8 axis, double low, double high, double deadzone, double deadzone_at_ends ) const
 {
 	// Return the value of a joystick's axis, scaled to (low,high).
 	
-	std::map<Uint8, JoystickState>::iterator joy_iter = Joysticks.find( joystick_id );
+	std::map<Uint8, JoystickState>::const_iterator joy_iter = Joysticks.find( joystick_id );
 	if( joy_iter != Joysticks.end() )
 		return joy_iter->second.AxisScaled( axis, low, high, deadzone, deadzone_at_ends );
 
@@ -133,9 +159,9 @@ double JoystickManager::AxisScaled( int joystick_id, Uint8 axis, double low, dou
 }
 
 
-bool JoystickManager::ButtonDown( int joystick_id, Uint8 button )
+bool JoystickManager::ButtonDown( int joystick_id, Uint8 button ) const
 {
-	std::map<Uint8, JoystickState>::iterator joy_iter = Joysticks.find( joystick_id );
+	std::map<Uint8, JoystickState>::const_iterator joy_iter = Joysticks.find( joystick_id );
 	if( joy_iter != Joysticks.end() )
 		return joy_iter->second.ButtonDown( button );
 
@@ -143,9 +169,9 @@ bool JoystickManager::ButtonDown( int joystick_id, Uint8 button )
 }
 
 
-Uint8 JoystickManager::Hat( int joystick_id, Uint8 hat )
+Uint8 JoystickManager::Hat( int joystick_id, Uint8 hat ) const
 {
-	std::map<Uint8, JoystickState>::iterator joy_iter = Joysticks.find( joystick_id );
+	std::map<Uint8, JoystickState>::const_iterator joy_iter = Joysticks.find( joystick_id );
 	if( joy_iter != Joysticks.end() )
 		return joy_iter->second.Hat( hat );
 
@@ -153,12 +179,12 @@ Uint8 JoystickManager::Hat( int joystick_id, Uint8 hat )
 }
 
 
-bool JoystickManager::HatDir( int joystick_id, Uint8 hat, Uint8 dir )
+bool JoystickManager::HatDir( int joystick_id, Uint8 hat, Uint8 dir ) const
 {
 	// See if the hat switch is in this cardinal direction.
 	// This matches straight directions even if the hat is being pushed diagonally.
 
-	std::map<Uint8, JoystickState>::iterator joy_iter = Joysticks.find( joystick_id );
+	std::map<Uint8, JoystickState>::const_iterator joy_iter = Joysticks.find( joystick_id );
 	if( joy_iter != Joysticks.end() )
 		return joy_iter->second.HatDir( hat, dir );
 
@@ -166,7 +192,16 @@ bool JoystickManager::HatDir( int joystick_id, Uint8 hat, Uint8 dir )
 }
 
 
-std::string JoystickManager::Status( void )
+std::string JoystickManager::Name( int joystick_id ) const
+{
+	std::map<Uint8, JoystickState>::const_iterator joy_iter = Joysticks.find( joystick_id );
+	if( joy_iter != Joysticks.end() )
+		return joy_iter->second.Name;
+	return "";
+}
+
+
+std::string JoystickManager::Status( void ) const
 {
 	// Create a status string for all joysticks.
 	
@@ -176,7 +211,7 @@ std::string JoystickManager::Status( void )
 	snprintf( cstr, 1024, "Joysticks: %i", (int) Joysticks.size() );
 	return_string += cstr;
 	
-	for( std::map<Uint8, JoystickState>::iterator joy_iter = Joysticks.begin(); joy_iter != Joysticks.end(); joy_iter ++ )
+	for( std::map<Uint8, JoystickState>::const_iterator joy_iter = Joysticks.begin(); joy_iter != Joysticks.end(); joy_iter ++ )
 		return_string += "\n" + joy_iter->second.Status();
 
 	return return_string;

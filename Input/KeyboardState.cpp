@@ -28,12 +28,12 @@ void KeyboardState::TrackEvent( SDL_Event *event )
 }
 
 
-bool KeyboardState::KeyDown( SDLKey key )
+bool KeyboardState::KeyDown( SDLKey key ) const
 {
 	// Check if a key is down.
 	// Assume it is not down if its state has never been recorded.
 	
-	std::map<SDLKey, bool>::iterator key_iter = KeysDown.find( key );
+	std::map<SDLKey, bool>::const_iterator key_iter = KeysDown.find( key );
 	if( key_iter != KeysDown.end() )
 		return key_iter->second;
 	else
@@ -41,7 +41,7 @@ bool KeyboardState::KeyDown( SDLKey key )
 }
 
 
-std::string KeyboardState::Status( void )
+std::string KeyboardState::Status( void ) const
 {
 	// Create a status string for the keyboard.
 	
@@ -49,7 +49,7 @@ std::string KeyboardState::Status( void )
 	char cstr[ 1024 ] = "";
 	
 	return_string += "Keys down:";
-	for( std::map<SDLKey, bool>::iterator key_iter = KeysDown.begin(); key_iter != KeysDown.end(); key_iter ++ )
+	for( std::map<SDLKey, bool>::const_iterator key_iter = KeysDown.begin(); key_iter != KeysDown.end(); key_iter ++ )
 	{
 		if( key_iter->second )
 		{

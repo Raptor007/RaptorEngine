@@ -167,12 +167,22 @@ void LayerManager::MoveToTop( Layer *layer )
 }
 
 
-Layer *LayerManager::Find( const std::string &name )
+Layer *LayerManager::Find( const std::string &name, bool recursive )
 {
 	for( std::list<Layer*>::reverse_iterator layer_iter = Layers.rbegin(); layer_iter != Layers.rend(); layer_iter ++ )
 	{
-		if( (! (*layer_iter)->Removed) && ((*layer_iter)->Name == name) )
-			return *layer_iter;
+		if( ! (*layer_iter)->Removed )
+		{
+			if( (*layer_iter)->Name == name )
+				return *layer_iter;
+			
+			if( recursive )
+			{
+				Layer *found = (*layer_iter)->FindElement( name, true );
+				if( found )
+					return found;
+			}
+		}
 	}
 	
 	return NULL;

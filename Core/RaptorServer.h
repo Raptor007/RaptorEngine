@@ -58,6 +58,7 @@ public:
 	virtual void AcceptedClient( ConnectedClient *client );
 	virtual void DroppedClient( ConnectedClient *client );
 	virtual void SendUpdate( ConnectedClient *client, int8_t precision = 0 );
+	virtual bool SetPlayerProperty( Player *player, std::string name, std::string value );
 	
 	virtual void ChangeState( int state );
 	

@@ -15,7 +15,7 @@ class SaitekFIP : public SaitekDevice
 public:
 	size_t IntermediateSize;
 	unsigned char *IntermediateBuffer, Buffer[ 320*240*3 ];
-	bool Running, Drawing;
+	volatile bool Running, Drawing;
 	SDL_Thread *Thread;
 	
 	SaitekFIP( void *device_handle );

@@ -62,12 +62,12 @@ void MouseState::TrackEvent( SDL_Event *event )
 }
 
 
-bool MouseState::ButtonDown( Uint8 button )
+bool MouseState::ButtonDown( Uint8 button ) const
 {
 	// Check if a mouse button is down.
 	// Assume it is not down if its state has never been recorded.
 	
-	std::map<Uint8, bool>::iterator button_iter = ButtonsDown.find( button );
+	std::map<Uint8, bool>::const_iterator button_iter = ButtonsDown.find( button );
 	if( button_iter != ButtonsDown.end() )
 		return button_iter->second;
 	else
@@ -120,7 +120,7 @@ void MouseState::Draw( void )
 }
 
 
-std::string MouseState::Status( void )
+std::string MouseState::Status( void ) const
 {
 	// Create a status string for the mouse.
 	
@@ -131,7 +131,7 @@ std::string MouseState::Status( void )
 	return_string += cstr;
 
 	return_string += "Mouse buttons down:";
-	for( std::map<Uint8, bool>::iterator button_iter = ButtonsDown.begin(); button_iter != ButtonsDown.end(); button_iter ++ )
+	for( std::map<Uint8, bool>::const_iterator button_iter = ButtonsDown.begin(); button_iter != ButtonsDown.end(); button_iter ++ )
 	{
 		if( button_iter->second )
 		{

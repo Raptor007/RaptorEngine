@@ -39,6 +39,8 @@ RaptorGame::RaptorGame( std::string game, std::string version, RaptorServer *ser
 	State = Raptor::State::DISCONNECTED;
 	PlayerID = 0;
 	WaitFont = NULL;
+	ReadKeyboard = true;
+	ReadMouse = true;
 }
 
 
@@ -55,6 +57,12 @@ void RaptorGame::SetServer( RaptorServer *server )
 		Server->Console = &Console;
 		Server->Port = DefaultPort;
 	}
+}
+
+
+void RaptorGame::SetDefaultControls( void )
+{
+	Cfg.UnbindAll();
 }
 
 
@@ -75,6 +83,7 @@ void RaptorGame::Initialize( int argc, char **argv )
 	Cfg.Command( "version" );
 	
 	SetDefaults();
+	SetDefaultControls();
 	
 	Cfg.Load( "settings.cfg" );
 	Cfg.Load( "autoexec.cfg" );
@@ -116,6 +125,10 @@ void RaptorGame::Initialize( int argc, char **argv )
 		else if( strcmp( argv[ i ], "-host" ) == 0 )
 		{
 			host = true;
+		}
+		else if( strcmp( argv[ i ], "-windowed" ) == 0 )
+		{
+			Cfg.Settings[ "g_fullscreen" ] = "false";
 		}
 		else if( strcmp( argv[ i ], "-safe" ) == 0 )
 		{
@@ -229,6 +242,7 @@ void RaptorGame::Run( void )
 				Mouse.TrackEvent( &event );
 				Keys.TrackEvent( &event );
 				Joy.TrackEvent( &event );
+				Input.Update();
 				Console.TrackEvent( &event );
 				Layers.TrackEvent( &event );
 				
@@ -319,6 +333,10 @@ void RaptorGame::Run( void )
 			}
 			else
 			{
+				// VR failed to start.
+				if( vr_enable )
+					Cfg.Settings[ "vr_enable" ] = "false";
+				
 				// Mouse is aligned with the screen.
 				Mouse.SetOffset(0,0);
 				
@@ -434,7 +452,20 @@ bool RaptorGame::ProcessPacket( Packet *packet )
 			{
 				// The server thinks we should have this object, so we're out of sync!
 				// This means the rest of the update packet could be misaligned, so stop trying to parse it.
-				Console.Print( "Sync error: UPDATE: missing object " + Num::ToString((int)obj_id), TextConsole::MSG_ERROR );
+				std::string sync_error = std::string("Sync error: UPDATE: missing object ") + Num::ToString((int)obj_id);
+				if( Server->IsRunning() )
+				{
+					// If we are running the server, we can determine what kind of object the client is missing.
+					const GameObject *obj = Server->Data.GetObject( obj_id );
+					if( obj )
+					{
+						uint32_t type = obj->Type();
+						char type_str[ 5 ] = {0};
+						Endian::CopyBig( &type, type_str, 4 );
+						sync_error += std::string(" type ") + std::string(type_str);
+					}
+				}
+				Console.Print( sync_error, TextConsole::MSG_ERROR );
 				return true;
 			}
 		}
@@ -609,18 +640,26 @@ bool RaptorGame::ProcessPacket( Packet *packet )
 		Mix_Chunk *sound = Res.GetSound( packet->NextString() );
 		float music_volume = 1.f;
 		float sound_volume = 1.f;
+		bool attenuate = false;
 		
 		if( packet->Remaining() )
+		{
 			music_volume = Num::UnitFloatFrom8( packet->NextChar() );
+			attenuate = true;
+		}
+		
 		if( packet->Remaining() )
 			sound_volume = Num::UnitFloatFrom8( packet->NextChar() );
 		
 		if( sound )
 		{
 			int channel = Snd.Play( sound );
-			Snd.AttenuateFor = channel;
-			Snd.SoundAttenuate = sound_volume;
-			Snd.MusicAttenuate = music_volume;
+			if( attenuate && (channel >= 0) )
+			{
+				Snd.AttenuateFor = channel;
+				Snd.SoundAttenuate = sound_volume;
+				Snd.MusicAttenuate = music_volume;
+			}
 		}
 		
 		return true;
@@ -677,6 +716,39 @@ void RaptorGame::SendUpdate( int8_t precision )
 	
 	// Send the packet.
 	Net.Send( &update_packet );
+}
+
+
+bool RaptorGame::SetPlayerProperty( std::string name, std::string value )
+{
+	if( name == "name" )
+		Cfg.Settings[ "name" ] = value;
+	
+	Player *player = Data.GetPlayer( PlayerID );
+	if( ! player )
+		return false;
+	
+	if( player->Properties[ name ] != value )
+	{
+		if( name == "name" )
+			player->Name = value;
+		else
+			player->Properties[ name ] = value;
+		
+		if( State >= Raptor::State::CONNECTED )
+		{
+			Packet player_properties( Raptor::Packet::PLAYER_PROPERTIES );
+			player_properties.AddUShort( player->ID );
+			player_properties.AddUInt( 1 );
+			player_properties.AddString( name );
+			player_properties.AddString( value );
+			Net.Send( &player_properties );
+		}
+		
+		return true;
+	}
+	
+	return false;
 }
 
 
@@ -814,6 +886,7 @@ void Raptor::BrokenPipe( int arg )
 #ifdef WIN32
 #include <tchar.h>
 #include <sys/stat.h>
+#include <float.h>
 #endif
 
 #if defined(__APPLE__) && (__GNUC__ >= 4) && ((__GNUC__ > 4) || (__GNUC_MINOR__ > 0))
@@ -857,6 +930,13 @@ bool Raptor::PreMain( int bits )
 					SetDllDirectory( path );
 			}
 		}
+		
+		#ifdef _DEBUG
+			// Enable floating-point exceptions in debug mode.
+			_clearfp();
+			unsigned int state = _controlfp( 0, 0 );
+			_controlfp( state & ~(_EM_INVALID|_EM_ZERODIVIDE), _MCW_EM );
+		#endif
 		
 		// Prevent Windows DPI scaling from stupidly stretching things off-screen.
 		#ifndef _MSC_VER

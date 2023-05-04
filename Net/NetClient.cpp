@@ -18,7 +18,8 @@ NetClient::NetClient( void )
 	Connected = false;
 	Thread = NULL;
 	Socket = NULL;
-	NetRate = 30.0;
+	NetRate = 30.;
+	DisconnectTime = 30.;
 	PingRate = 4.;
 	Precision = 0;
 	BytesSent = 0;
@@ -61,7 +62,7 @@ NetClient::~NetClient()
 }
 
 
-int NetClient::Initialize( double net_rate, int8_t precision )
+bool NetClient::Initialize( double net_rate, int8_t precision )
 {
 	NetRate = net_rate;
 	Precision = precision;
@@ -70,17 +71,17 @@ int NetClient::Initialize( double net_rate, int8_t precision )
 	if( SDLNet_Init() < 0 )
 	{
 		fprintf( stderr, "SDLNet_Init: %s\n", SDLNet_GetError() );
-		return -1;
+		return false;
 	}
 	
 	Initialized = true;
-	return 0;
+	return true;
 }
 
 
-int NetClient::Connect( const char *host, const char *name, const char *password )
+bool NetClient::Connect( const char *host, const char *name, const char *password )
 {
-	int return_value = 0;
+	bool return_value = false;
 	
 	char *colon = NULL;
 	if( host )
@@ -105,7 +106,7 @@ int NetClient::Connect( const char *host, const char *name, const char *password
 }
 
 
-int NetClient::Connect( const char *hostname, int port, const char *name, const char *password )
+bool NetClient::Connect( const char *hostname, int port, const char *name, const char *password )
 {
 	Host = hostname;
 	
@@ -115,7 +116,7 @@ int NetClient::Connect( const char *hostname, int port, const char *name, const 
 		Port = Raptor::Game->DefaultPort;
 	
 	if( ! Initialized )
-		return -1;
+		return false;
 	
 	if( Connected )
 		DisconnectNice();
@@ -137,7 +138,7 @@ int NetClient::Connect( const char *hostname, int port, const char *name, const 
 	{
 		Raptor::Game->Console.Print( "Failed to resolve server hostname.", TextConsole::MSG_ERROR );
 		Raptor::Game->ChangeState( Raptor::State::DISCONNECTED );
-		return -1;
+		return false;
 	}
 	
 	// Open a connection with the IP provided.
@@ -145,7 +146,7 @@ int NetClient::Connect( const char *hostname, int port, const char *name, const 
 	{
 		Raptor::Game->Console.Print( "Failed to open socket to server.", TextConsole::MSG_ERROR );
 		Raptor::Game->ChangeState( Raptor::State::DISCONNECTED );
-		return -1;
+		return false;
 	}
 	
 	BytesSent = 0;
@@ -160,7 +161,7 @@ int NetClient::Connect( const char *hostname, int port, const char *name, const 
 		SDLNet_TCP_Close( Socket );
 		Socket = NULL;
 		Raptor::Game->ChangeState( Raptor::State::DISCONNECTED );
-		return -1;
+		return false;
 	}
 	
 	uint32_t ip_int = Endian::ReadBig32(&(ip.host));
@@ -180,12 +181,29 @@ int NetClient::Connect( const char *hostname, int port, const char *name, const 
 	ReconnectTime = 0;
 	ReconnectAttempts = 0;
 	
-	return 0;
+	return true;
 }
 
 
-int NetClient::Reconnect( const char *name, const char *password )
+bool NetClient::Reconnect( void )
 {
+	if( ! ReconnectAttempts )
+		ReconnectAttempts = 1;
+	
+	return Reconnect( Raptor::Game->Cfg.SettingAsString("name").c_str(), Raptor::Game->Cfg.SettingAsString("password").c_str() );
+}
+
+
+bool NetClient::Reconnect( const char *name, const char *password )
+{
+	// If we've never connected to anything, we cannot reconnect.
+	if( Host.empty() )
+	{
+		ReconnectTime = 0;
+		ReconnectAttempts = 0;
+		return false;
+	}
+	
 	if( ReconnectAttempts )
 	{
 		// Reset the time-to-reconnect clock and subtract one attempt.
@@ -196,7 +214,7 @@ int NetClient::Reconnect( const char *name, const char *password )
 		return Connect( Host.c_str(), Port, name, password );
 	}
 	
-	return -1;
+	return false;
 }
 
 
@@ -249,21 +267,18 @@ void NetClient::Cleanup( void )
 	{
 		Raptor::Game->ChangeState( Raptor::State::DISCONNECTED );
 		
-		if( ! Thread )
+		if( Socket && ! Thread ) // FIXME: This is probably leaving orphaned sockets.
 		{
 			// If the connection is open, close it.
-			if( Socket )
-			{
-				SDLNet_TCP_Close( Socket );
-				Socket = NULL;
-			}
-			
-			// This empties the incoming packet buffer.
-			ClearPackets();
-			
-			PingTimes.clear();
-			SentPings.clear();
+			SDLNet_TCP_Close( Socket );
+			Socket = NULL;
 		}
+		
+		// Empty the incoming packet buffer.  This locks the mutex, so it's okay to do while the thread finishes.
+		ClearPackets();
+		
+		PingTimes.clear();
+		SentPings.clear();
 	}
 }
 
@@ -332,6 +347,30 @@ bool NetClient::ProcessPacket( Packet *packet )
 		}
 	}
 	
+	else if( type == Raptor::Packet::RESYNC )
+	{
+		// The server hasn't received any of our responses for a while; reconnect with same PlayerID and state.
+		uint16_t player_id = packet->NextUShort();
+		
+		int state = Raptor::Game->State;
+		
+		bool reconnected = Raptor::Server->IsRunning();
+		if( (! reconnected) && (ReconnectClock.ElapsedSeconds() > 2.) )
+		{
+			Connected = false; // Prevent DisconnectNice in Connect, so the server keeps our Player.
+			reconnected = Reconnect();
+		}
+		
+		if( reconnected )
+		{
+			Packet resync( Raptor::Packet::RESYNC );
+			resync.AddUShort( player_id );
+			resync.AddInt( state );
+			Send( &resync );
+			// Server should respond with LOGIN packet to update PlayerID and restore state.
+		}
+	}
+	
 	else if( type == Raptor::Packet::PADDING )
 	{
 		// Always ignore padding packets.
@@ -347,10 +386,12 @@ bool NetClient::ProcessPacket( Packet *packet )
 	else if( type == Raptor::Packet::LOGIN )
 	{
 		Raptor::Game->PlayerID = packet->NextUShort();
-		if( Raptor::Game->State >= Raptor::State::CONNECTING )
-			Raptor::Game->ChangeState( Raptor::State::CONNECTED );
-		else
+		int state = packet->Remaining() ? packet->NextInt() : Raptor::State::CONNECTED;
+		
+		if( Raptor::Game->State < Raptor::State::CONNECTING )
 			DisconnectNice();
+		else if( Raptor::Game->State != state )
+			Raptor::Game->ChangeState( state );
 	}
 	
 	else if( type == Raptor::Packet::DISCONNECT )
@@ -379,23 +420,36 @@ bool NetClient::ProcessPacket( Packet *packet )
 }
 
 
-int NetClient::Send( Packet *packet )
+bool NetClient::Send( Packet *packet )
 {
 	if( ! Initialized )
-		return -1;
+		return false;
 	if( ! Connected )
-		return -1;
+		return false;
 	
-	if( SDLNet_TCP_Send( Socket, (void *) packet->Data, packet->Size() ) < (int) packet->Size() )
+	int sent = 0;
+	int retries = 1;
+	
+	while( sent < (int) packet->Size() )
 	{
-		DisconnectMessage = std::string("SDLNet_TCP_Send: ") + std::string(SDLNet_GetError());
-		Disconnect();
-		return -1;
+		int sent_now = SDLNet_TCP_Send( Socket, ((uint8_t*)( packet->Data )) + sent, packet->Size() - sent );
+		if( sent_now > 0 )
+		{
+			sent      += sent_now;
+			BytesSent += sent_now;
+			retries = 1;
+		}
+		else if( retries )
+			retries --;
+		else
+		{
+			DisconnectMessage = std::string("SDLNet_TCP_Send: ") + std::string(SDLNet_GetError());
+			Disconnect();
+			return false;
+		}
 	}
-	else
-		BytesSent += packet->Size();
 	
-	return 0;
+	return true;
 }
 
 
@@ -416,11 +470,10 @@ void NetClient::SendUpdates( void )
 		SendUpdate();
 		
 		double ping_elapsed = PingClock.ElapsedSeconds();
-		if( ping_elapsed >= (1. / PingRate) )
-		{
+		if( (ping_elapsed >= (1. / PingRate)) && SendPing() )
 			PingClock.Advance( ping_elapsed );
-			SendPing();
-		}
+		else if( DisconnectTime && (ping_elapsed >= DisconnectTime) )  // Disconnect if we have lost connection.
+			Disconnect();
 	}
 }
 
@@ -431,7 +484,7 @@ void NetClient::SendUpdate( void )
 }
 
 
-void NetClient::SendPing( void )
+bool NetClient::SendPing( void )
 {
 	uint8_t ping_id = 0;
 	bool found_available = false;
@@ -446,25 +499,6 @@ void NetClient::SendPing( void )
 		}
 	}
 	
-	if( ! found_available )
-	{
-		for( std::map<uint8_t,Clock>::iterator ping_iter = SentPings.begin(); ping_iter != SentPings.end(); )
-		{
-			std::map<uint8_t,Clock>::iterator ping_next = ping_iter;
-			ping_next ++;
-			
-			if( ping_iter->second.ElapsedSeconds() > 3. )
-			{
-				ping_id = ping_iter->first;
-				SentPings.erase( ping_iter );
-				found_available = true;
-				break;
-			}
-			
-			ping_iter = ping_next;
-		}
-	}
-	
 	if( found_available )
 	{
 		SentPings[ ping_id ].Reset();
@@ -473,6 +507,8 @@ void NetClient::SendPing( void )
 		ping.AddUChar( ping_id );
 		Send( &ping );
 	}
+	
+	return found_available;
 }
 
 
@@ -514,12 +550,13 @@ int NetClientThread( void *client )
 	NetClient *net_client = (NetClient *) client;
 	char data[ PACKET_BUFFER_SIZE ] = "";
 	PacketBuffer Buffer;
+	int retries = 3;
 	
 	while( net_client->Connected )
 	{
 		// Check for packets.
-		int size = 0;
-		if( ( size = SDLNet_TCP_Recv( net_client->Socket, data, PACKET_BUFFER_SIZE ) ) > 0 )
+		int size = SDLNet_TCP_Recv( net_client->Socket, data, PACKET_BUFFER_SIZE );
+		if( size > 0 )
 		{
 			if( ! net_client->Connected )
 				break;
@@ -533,10 +570,14 @@ int NetClientThread( void *client )
 				net_client->InBuffer.push( packet );
 				SDL_mutexV( net_client->Lock );
 			}
+			
+			retries = 3;
 		}
+		else if( (size < 0) && retries )
+			retries --;
 		else
 		{
-			// If 0 (disconnect) or -1 (error), stop listening.
+			// If 0 (disconnect) or multiple -1 (errors), stop listening.
 			if( size < 0 )
 				net_client->DisconnectMessage = std::string("SDLNet_TCP_Recv: ") + std::string(SDLNet_GetError());
 			net_client->Disconnect();

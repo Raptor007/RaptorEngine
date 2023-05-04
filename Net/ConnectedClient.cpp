@@ -95,13 +95,12 @@ void ConnectedClient::Disconnect( void )
 	
 	if( Connected )
 	{
-		char cstr[ 1024 ] = "";
-		snprintf( cstr, 1024, "Client dropped: %i.%i.%i.%i:%i", (IP & 0xFF000000) >> 24, (IP & 0x00FF0000) >> 16, (IP & 0x0000FF00) >> 8, IP & 0x000000FF, Port );
-		Raptor::Server->ConsolePrint( cstr );
-		
 		Connected = false;
-		Raptor::Server->DroppedClient( this );
+		DropPlayerID = PlayerID;
+		ResyncClock.Reset( 5. );  // Give a brief window before deleting the player to allow for resync.
 	}
+	else
+		ResyncClock.Reset();
 	
 	PlayerID = 0;
 	
@@ -111,6 +110,15 @@ void ConnectedClient::Disconnect( void )
 
 void ConnectedClient::Cleanup( void )
 {
+	if( DropPlayerID )
+	{
+		char cstr[ 1024 ] = "";
+		snprintf( cstr, 1024, "Client dropped: %i.%i.%i.%i:%i", (IP & 0xFF000000) >> 24, (IP & 0x00FF0000) >> 16, (IP & 0x0000FF00) >> 8, IP & 0x000000FF, Port );
+		Raptor::Server->ConsolePrint( cstr );
+		
+		Raptor::Server->DroppedClient( this );
+	}
+	
 	if( Socket )
 	{
 		SDLNet_TCP_Close( Socket );
@@ -207,6 +215,66 @@ bool ConnectedClient::ProcessPacket( Packet *packet )
 		}
 	}
 	
+	else if( type == Raptor::Packet::RESYNC )
+	{
+		// This client just reconnected and wants to restore their PlayerID and state.
+		uint16_t player_id = packet->NextUShort();
+		int state = packet->NextInt();
+		
+		if( ! player_id )
+		{
+			Player *my_temp_player = Raptor::Server->Data.GetPlayer( PlayerID );
+			if( my_temp_player )
+			{
+				// The client doesn't know their old PlayerID.  Search by Name.
+				for( std::map<uint16_t,Player*>::const_iterator player_iter = Raptor::Server->Data.Players.begin(); player_iter != Raptor::Server->Data.Players.end(); player_iter ++ )
+				{
+					if( (player_iter->second != my_temp_player) && (player_iter->second->Name == my_temp_player->Name) )
+					{
+						player_id = player_iter->first;
+						break;
+					}
+				}
+			}
+			// FIXME: If not found, could also search for clients with high PingClock.Elapsed and/or matching IP address.
+		}
+		
+		if( player_id && (player_id != PlayerID) && Raptor::Server->Data.GetPlayer(player_id) )
+		{
+			DropPlayerID = PlayerID;
+			PlayerID = player_id;
+			
+			// Get rid of player's old client(s) that lost connection.
+			for( std::list<ConnectedClient*>::iterator client_iter = Raptor::Server->Net.Clients.begin(); client_iter != Raptor::Server->Net.Clients.end(); client_iter ++ )
+			{
+				if( (*client_iter != this) && ((*client_iter)->PlayerID == player_id) )
+				{
+					(*client_iter)->PlayerID = 0;
+					(*client_iter)->Connected = false; // Prevent this Disconnect() from notifying the engine of a player leaving.
+					(*client_iter)->Disconnect();
+				}
+			}
+			for( std::list<ConnectedClient*>::iterator client_iter = Raptor::Server->Net.DisconnectedClients.begin(); client_iter != Raptor::Server->Net.DisconnectedClients.end(); client_iter ++ )
+			{
+				if( (*client_iter)->DropPlayerID == player_id )
+					(*client_iter)->DropPlayerID = 0;
+			}
+			
+			// Give old PlayerID to new client.
+			Packet login( Raptor::Packet::LOGIN );
+			login.AddUShort( PlayerID );
+			login.AddInt( state );
+			Send( &login );
+			
+			// Get rid of the temporary player.
+			Raptor::Server->Data.RemovePlayer( DropPlayerID );
+			Packet player_remove( Raptor::Packet::PLAYER_REMOVE );
+			player_remove.AddUShort( DropPlayerID );
+			Raptor::Server->Net.SendAll( &player_remove );
+			DropPlayerID = 0;
+		}
+	}
+	
 	else if( type == Raptor::Packet::PADDING )
 	{
 		// Always ignore padding packets.
@@ -236,6 +304,7 @@ bool ConnectedClient::ProcessPacket( Packet *packet )
 		std::string message = packet->NextString();
 		
 		Disconnect();
+		ResyncClock.Reset( 0. );  // Remove player immediately.
 	}
 	
 	else
@@ -296,13 +365,26 @@ bool ConnectedClient::SendNow( Packet *packet )
 	if( ! Connected )
 		return false;
 	
-	if( SDLNet_TCP_Send( Socket, (void *) packet->Data, packet->Size() ) < (int) packet->Size() )
+	int sent = 0;
+	int retries = OutThread ? 1 : 0;
+	
+	while( sent < (int) packet->Size() )
 	{
-		Disconnect();
-		return false;
+		int sent_now = SDLNet_TCP_Send( Socket, ((uint8_t*)( packet->Data )) + sent, packet->Size() - sent );
+		if( sent_now > 0 )
+		{
+			sent      += sent_now;
+			BytesSent += sent_now;
+			retries = OutThread ? 1 : 0;
+		}
+		else if( retries )
+			retries --;
+		else
+		{
+			Disconnect();
+			return false;
+		}
 	}
-	else
-		BytesSent += packet->Size();
 	
 	return true;
 }
@@ -333,7 +415,7 @@ void ConnectedClient::SendOthers( Packet *packet )
 }
 
 
-void ConnectedClient::SendPing( void )
+bool ConnectedClient::SendPing( void )
 {
 	uint8_t ping_id = 0;
 	bool found_available = false;
@@ -348,25 +430,6 @@ void ConnectedClient::SendPing( void )
 		}
 	}
 	
-	if( ! found_available )
-	{
-		for( std::map<uint8_t,Clock>::iterator ping_iter = SentPings.begin(); ping_iter != SentPings.end(); )
-		{
-			std::map<uint8_t,Clock>::iterator ping_next = ping_iter;
-			ping_next ++;
-			
-			if( ping_iter->second.ElapsedSeconds() > 3. )
-			{
-				ping_id = ping_iter->first;
-				SentPings.erase( ping_iter );
-				found_available = true;
-				break;
-			}
-			
-			ping_iter = ping_next;
-		}
-	}
-	
 	if( found_available )
 	{
 		SentPings[ ping_id ].Reset();
@@ -375,6 +438,22 @@ void ConnectedClient::SendPing( void )
 		ping.AddUChar( ping_id );
 		Send( &ping );
 	}
+	
+	return found_available;
+}
+
+
+bool ConnectedClient::SendResync( void )
+{
+	// Sometimes clients with flaky connections can receive data but not send replies; ask them to reconnect and resync.
+	
+	char cstr[ 1024 ] = "";
+	snprintf( cstr, 1024, "Sending resync to: %i.%i.%i.%i:%i", (IP & 0xFF000000) >> 24, (IP & 0x00FF0000) >> 16, (IP & 0x0000FF00) >> 8, IP & 0x000000FF, Port );
+	Raptor::Server->ConsolePrint( cstr );
+	
+	Packet resync( Raptor::Packet::RESYNC );
+	resync.AddUShort( PlayerID );
+	return Send( &resync );
 }
 
 
@@ -405,12 +484,13 @@ int ConnectedClient::ConnectedClientInThread( void *client )
 	char data[ PACKET_BUFFER_SIZE ] = "";
 	PacketBuffer Buffer;
 	Buffer.MaxPacketSize = 0x0007FFFF;
+	int retries = 3;
 	
 	while( connected_client->Connected )
 	{
 		// Check for packets.
-		int size = 0;
-		if( ( size = SDLNet_TCP_Recv( connected_client->Socket, data, PACKET_BUFFER_SIZE ) ) > 0 )
+		int size = SDLNet_TCP_Recv( connected_client->Socket, data, PACKET_BUFFER_SIZE );
+		if( size > 0 )
 		{
 			// If the main server thread has dropped this client, don't try to process the incoming packet.
 			if( ! connected_client->Connected )
@@ -430,10 +510,14 @@ int ConnectedClient::ConnectedClientInThread( void *client )
 				if( ! connected_client->InLock.Unlock() )
 					fprintf( stderr, "ConnectedClientInThread: connected_client->InLock.Unlock: %s\n", SDL_GetError() );
 			}
+			
+			retries = 3;
 		}
+		else if( (size < 0) && retries )
+			retries --;
 		else
 		{
-			// If 0 (disconnect) or -1 (error), stop listening.
+			// If 0 (disconnect) or multiple -1 (errors), stop listening.
 			connected_client->Disconnect();
 			break;
 		}

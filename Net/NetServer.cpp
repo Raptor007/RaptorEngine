@@ -15,7 +15,9 @@ NetServer::NetServer( void )
 	Listening = false;
 	Thread = NULL;
 	Socket = NULL;
-	NetRate = 30.0;
+	NetRate = 30.;
+	DisconnectTime = 30.;
+	ResyncTime = 0.;  // Send RESYNC packet after this long without response.  Disabled because it sometimes crashed the server, and probably isn't even helpful.
 	Precision = 0;
 }
 
@@ -41,7 +43,7 @@ NetServer::~NetServer()
 }
 
 
-int NetServer::Initialize( int port )
+bool NetServer::Initialize( int port )
 {
 	if( ! port )
 		port = Raptor::Server->Port;
@@ -50,7 +52,7 @@ int NetServer::Initialize( int port )
 	if( SDLNet_Init() < 0 )
 	{
 		fprintf( stderr, "SDLNet_Init: %s\n", SDLNet_GetError() );
-		return -1;
+		return false;
 	}
 	
 	Initialized = true;
@@ -60,14 +62,14 @@ int NetServer::Initialize( int port )
 	if( SDLNet_ResolveHost( &nonsense_ip, NULL, port ) < 0 )
 	{
 		fprintf( stderr, "SDLNet_ResolveHost: %s\n", SDLNet_GetError() );
-		return -1;
+		return false;
 	}
  	
 	// Open a connection with the "IP" provided (listen on the host's port).
 	if( !( Socket = SDLNet_TCP_Open(&nonsense_ip) ) )
 	{
 		fprintf( stderr, "SDLNet_TCP_Open: %s\n", SDLNet_GetError() );
-		return -1;
+		return false;
 	}
 	
 	// Start the listener thread.
@@ -77,10 +79,10 @@ int NetServer::Initialize( int port )
 		fprintf( stderr, "SDL_CreateThread: %s\n", SDLNet_GetError() );
 		Listening = false;
 		SDLNet_TCP_Close( Socket );
-		return -1;
+		return false;
 	}
 	
-	return 0;
+	return true;
 }
 
 
@@ -175,9 +177,9 @@ void NetServer::RemoveDisconnectedClients( void )
 		
 		ConnectedClient *client = *iter;
 		
-		if( client && (! client->InThread) && (! client->OutThread) )
+		if( client && (( (! client->InThread) && (! client->OutThread) && (client->ResyncClock.Progress() >= 1.) ) || (client->ResyncClock.ElapsedSeconds() >= 10.)) )
 		{
-			delete client;
+			delete client; // This also calls RaptorServer::DroppedClient.
 			*iter = NULL;
 			DisconnectedClients.erase( iter );
 		}
@@ -326,10 +328,19 @@ void NetServer::SendUpdates( void )
 				Raptor::Server->SendUpdate( client, client->Precision );
 				
 				double ping_elapsed = client->PingClock.ElapsedSeconds();
-				if( ping_elapsed >= (1. / client->PingRate) )
-				{
+				if( (ping_elapsed >= (1. / client->PingRate)) && client->SendPing() )
 					client->PingClock.Advance( ping_elapsed );
-					client->SendPing();
+				else if( DisconnectTime && (ping_elapsed >= DisconnectTime) )  // Kick clients that have lost connection.
+					client->Disconnect();
+				else if( ResyncTime && (ping_elapsed >= ResyncTime) )
+				{
+					double resync_elapsed = client->ResyncClock.ElapsedSeconds();
+					if( resync_elapsed >= ResyncTime )
+					{
+						// Sometimes clients with flaky connections can receive data but not send replies; ask them to reconnect and resync.
+						client->SendResync();
+						client->ResyncClock.Advance( resync_elapsed );
+					}
 				}
 			}
 		}

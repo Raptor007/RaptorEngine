@@ -32,12 +32,12 @@ public:
 	virtual ~MouseState();
 	
 	void TrackEvent( SDL_Event *event );
-	bool ButtonDown( Uint8 button );
+	bool ButtonDown( Uint8 button ) const;
 	void SetOffset( int x, int y );
 	
 	void SetCursor( Animation *cursor, int size );
 	void SetCursor( Animation *cursor, int size, int point_x, int point_y );
 	void Draw( void );
 	
-	std::string Status( void );
+	std::string Status( void ) const;
 };

@@ -98,8 +98,17 @@ void Pos3D::FixVectors( void )
 	Up.ScaleTo( 1. );
 	if( fabs(Fwd.Dot(&Up)) >= 1. )
 	{
-		Up.Set( Rand::Double(-1,1), Rand::Double(-1,1), Rand::Double(-1,1) );
-		Up.ScaleTo( 1. );
+		Right.ScaleTo( 1. );
+		if( fabs(Fwd.Dot(&Right)) >= 1. )
+		{
+			Up.Set( Rand::Double(-1,1), Rand::Double(-1,1), Rand::Double(-1,1) );
+			Up.ScaleTo( 1. );
+		}
+		else
+		{
+			Up.Copy( &Right );
+			Up.RotateAround( &Fwd, -90. );
+		}
 	}
 	UpdateRight();
 	Right.ScaleTo( 1. );
@@ -112,8 +121,17 @@ void Pos3D::FixVectorsKeepUp( void )
 	Up.ScaleTo( 1. );
 	if( fabs(Fwd.Dot(&Up)) >= 1. )
 	{
-		Fwd.Set( Rand::Double(-1,1), Rand::Double(-1,1), Rand::Double(-1,1) );
-		Fwd.ScaleTo( 1. );
+		Right.ScaleTo( 1. );
+		if( fabs(Fwd.Dot(&Right)) >= 1. )
+		{
+			Fwd.Set( Rand::Double(-1,1), Rand::Double(-1,1), Rand::Double(-1,1) );
+			Fwd.ScaleTo( 1. );
+		}
+		else
+		{
+			Fwd.Copy( &Right );
+			Fwd.RotateAround( &Up, 90. );
+		}
 	}
 	UpdateRight();
 	Right.ScaleTo( 1. );

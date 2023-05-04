@@ -251,7 +251,7 @@ void ListBox::Draw( void )
 	glPushMatrix();
 	glPushAttrib( GL_VIEWPORT_BIT );
 	Raptor::Game->Gfx.Setup2D( 0, 0, Rect.w - ScrollBarSize, Rect.h );
-	Raptor::Game->Gfx.SetViewport( CalcRect.x, Raptor::Game->Gfx.H - CalcRect.y - Rect.h, Rect.w - ScrollBarSize, Rect.h );
+	Raptor::Game->Gfx.SetViewport( CalcRect.x, CalcRect.y, Rect.w - ScrollBarSize, Rect.h );
 	
 	if( TextFont )
 	{
@@ -480,9 +480,9 @@ void ListBoxButton::UpdateRect( void )
 void ListBoxButton::Clicked( Uint8 button )
 {
 	ListBox *list_box = (ListBox*) Container;
-	if( (Action == 1) && list_box )
+	if( (Action == ListBox::SCROLL_UP) && list_box )
 		list_box->ScrollUp();
-	else if( (Action == 2) && list_box )
+	else if( (Action == ListBox::SCROLL_DOWN) && list_box )
 		list_box->ScrollDown();
 }
 

@@ -348,7 +348,7 @@ void RaptorServer::AcceptedClient( ConnectedClient *client )
 	client->Synchronized = true;
 	client->NetClock.Reset();
 	
-	if( player )
+	if( player ) // FIXME: Don't display this message on resync.
 	{
 		// Tell other players to display a message about the new player.
 		Packet message( Raptor::Packet::MESSAGE );
@@ -362,11 +362,18 @@ void RaptorServer::DroppedClient( ConnectedClient *client )
 {
 	client->Synchronized = false;
 	
-	Player *player = Data.GetPlayer( client->PlayerID );
+	// Before removing player, make sure they haven't resynced.
+	for( std::list<ConnectedClient*>::const_iterator client_iter = Net.Clients.begin(); client_iter != Net.Clients.end(); client_iter ++ )
+	{
+		if( (*client_iter)->Connected && ((*client_iter)->PlayerID == client->DropPlayerID) )
+			return;
+	}
+	
+	Player *player = Data.GetPlayer( client->DropPlayerID );
 	
 	// Tell other clients about the removed player.
 	Packet player_remove( Raptor::Packet::PLAYER_REMOVE );
-	player_remove.AddUShort( client->PlayerID );
+	player_remove.AddUShort( client->DropPlayerID );
 	Net.SendAllExcept( &player_remove, client );
 	
 	if( player )
@@ -378,7 +385,7 @@ void RaptorServer::DroppedClient( ConnectedClient *client )
 	}
 	
 	player = NULL;
-	Data.RemovePlayer( client->PlayerID );
+	Data.RemovePlayer( client->DropPlayerID );
 }
 
 
@@ -430,6 +437,32 @@ void RaptorServer::SendUpdate( ConnectedClient *client, int8_t precision )
 
 	// Send the packet.
 	client->Send( &update_packet );
+}
+
+
+bool RaptorServer::SetPlayerProperty( Player *player, std::string name, std::string value )
+{
+	if( ! player )
+		return false;
+	
+	if( player->Properties[ name ] != value )
+	{
+		if( name == "name" )
+			player->Name = value;
+		else
+			player->Properties[ name ] = value;
+		
+		Packet player_properties( Raptor::Packet::PLAYER_PROPERTIES );
+		player_properties.AddUShort( player->ID );
+		player_properties.AddUInt( 1 );
+		player_properties.AddString( name );
+		player_properties.AddString( value );
+		Net.SendAll( &player_properties );
+		
+		return true;
+	}
+	
+	return false;
 }
 
 

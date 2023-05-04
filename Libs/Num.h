@@ -32,6 +32,8 @@ namespace Num
 	int NextPower( int num, int base );
 	int NextPowerOfTwo( int input );
 	double SignedPow( double num, double exponent );
+	double Clamp( double num, double min, double max );
+	bool Valid( double num );
 	
 	double Avg( const std::list<double> &nums );
 	double Avg( const std::vector<double> &nums );

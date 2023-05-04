@@ -14,6 +14,7 @@
 #include "Rand.h"
 #include "Num.h"
 #include "File.h"
+#include "Math3D.h"
 #include "RaptorGame.h"
 
 
@@ -54,6 +55,22 @@ void Model::BecomeInstance( Model *other )
 	Width = other->GetWidth();
 	Height = other->GetHeight();
 	MaxRadius = other->GetMaxRadius();
+}
+
+
+void Model::BecomeCopy( Model *other )
+{
+	if( other != this )
+		BecomeInstance( other );
+	
+	for( std::map<std::string,ModelObject>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
+	{
+		for( std::map<std::string,ModelArrays>::iterator array_iter = obj_iter->second.Arrays.begin(); array_iter != obj_iter->second.Arrays.end(); array_iter ++ )
+			array_iter->second.BecomeCopy( &(array_iter->second) );
+	}
+	
+	for( std::map<std::string,ModelMaterial>::iterator mtl_iter = other->Materials.begin(); mtl_iter != other->Materials.end(); mtl_iter ++ )
+		mtl_iter->second.Arrays.BecomeCopy( &(mtl_iter->second.Arrays) );
 }
 
 
@@ -616,9 +633,9 @@ void Model::Draw( const Pos3D *pos, const std::set<std::string> *object_names, c
 				Vec3D modelspace_rotation_axis = obj_iter->second.GetExplosionRotationAxis( explosion_seed );
 				Vec3D worldspace_rotation_axis = (pos->Fwd * modelspace_rotation_axis.X) + (pos->Up * modelspace_rotation_axis.Y) + (pos->Right * modelspace_rotation_axis.Z);
 				
-				draw_pos.MoveAlong( &(pos->Fwd), explosion_motion.X );
-				draw_pos.MoveAlong( &(pos->Up), explosion_motion.Y );
-				draw_pos.MoveAlong( &(pos->Right), explosion_motion.Z );
+				draw_pos.MoveAlong( &(pos->Fwd),   explosion_motion.X * fwd_scale   );
+				draw_pos.MoveAlong( &(pos->Up),    explosion_motion.Y * up_scale    );
+				draw_pos.MoveAlong( &(pos->Right), explosion_motion.Z * right_scale );
 				
 				double explosion_rotation_rate = obj_iter->second.GetExplosionRotationRate( explosion_seed );
 				draw_pos.Fwd.RotateAround( &worldspace_rotation_axis, exploded * explosion_rotation_rate );
@@ -729,15 +746,220 @@ void Model::DrawWireframeAt( const Pos3D *pos, Color color, double scale, double
 }
 
 
+static void Model_SetHit( const std::vector< std::pair<ModelArrays,std::string> > *arrays, const GLdouble *face, std::string *hit )
+{
+	// Determine the name of the model object with this face.
+	if( arrays && face && hit )
+	{
+		for( std::vector< std::pair<ModelArrays,std::string> >::const_iterator array_iter = arrays->begin(); array_iter != arrays->end(); array_iter ++ )
+		{
+			if( array_iter->first.HasWorldSpaceVertex( face ) )
+			{
+				*hit = array_iter->second;
+				break;
+			}
+		}
+	}
+}
+
+
+double Model::DistanceFromLine( const Pos3D *pos, const std::set<std::string> *object_names, std::string *hit, double exploded, int explosion_seed, const Pos3D *pos2a, const Pos3D *pos2b, double block_size ) const
+{
+	Vec3D motion( pos2b->X - pos2a->X, pos2b->Y - pos2a->Y, pos2b->Z - pos2a->Z );
+	return DistanceFromSphere( pos, object_names, hit, exploded, explosion_seed, pos2a, &motion, 0., block_size );
+}
+
+
+double Model::DistanceFromSphere( const Pos3D *pos, const std::set<std::string> *object_names, std::string *hit, double exploded, int explosion_seed, const Pos3D *pos2, const Vec3D *moved2, double radius, double block_size ) const
+{
+	std::map< uint64_t, std::set<const GLdouble*> > blockmap;
+	std::vector< std::pair<ModelArrays,std::string> > arrays;
+	Pos3D pos2b( pos2 );
+	std::set<const GLdouble*> faces;
+	
+	if( ! block_size )
+		block_size = GetMaxTriangleEdge();
+	
+	MarkBlockMap( &blockmap, &arrays, pos, object_names, exploded, explosion_seed, block_size );
+	
+	std::set<uint64_t> blocks = Math3D::BlocksInRadius( pos2->X, pos2->Y, pos2->Z, block_size, radius );
+	
+	if( moved2 && moved2->Length() )
+	{
+		pos2b += *moved2;
+		uint64_t end_index = Math3D::BlockMapIndex( pos2b.X, pos2b.Y, pos2b.Z, block_size );
+		Pos3D intermediate( pos2 );
+		uint64_t index = Math3D::BlockMapIndex( intermediate.X, intermediate.Y, intermediate.Z, block_size );
+		
+		while( index != end_index )
+		{
+			Vec3D diff = pos2b - intermediate;
+			if( diff.Length() > block_size )
+				diff.ScaleTo( block_size );
+			intermediate += diff;
+			
+			std::set<uint64_t> add_blocks = Math3D::BlocksInRadius( intermediate.X, intermediate.Y, intermediate.Z, block_size, radius );
+			blocks.insert( add_blocks.begin(), add_blocks.end() );
+			
+			index = Math3D::BlockMapIndex( intermediate.X, intermediate.Y, intermediate.Z, block_size );
+		}
+	}
+	
+	for( std::set<uint64_t>::const_iterator block1 = blocks.begin(); block1 != blocks.end(); block1 ++ )
+	{
+		std::map< uint64_t, std::set<const GLdouble*> >::const_iterator block2 = blockmap.find( *block1 );
+		if( block2 != blockmap.end() )
+			faces.insert( block2->second.begin(), block2->second.end() );
+	}
+	
+	double min_dist = FLT_MAX;
+	const GLdouble *hit_face = NULL;
+	
+	for( std::set<const GLdouble*>::const_iterator face = faces.begin(); face != faces.end(); face ++ )
+	{
+		double dist = Math3D::LineSegDistFromFace( pos2, &pos2b, *face, 3 );
+		if( dist < min_dist )
+		{
+			min_dist = dist;
+			hit_face = *face;
+		}
+	}
+	
+	Model_SetHit( &arrays, hit_face, hit );
+	
+	return min_dist;
+}
+
+
+bool Model::CollidesWithSphere( const Pos3D *pos, const std::set<std::string> *object_names, std::string *hit, double exploded, int explosion_seed, const Pos3D *pos2, const Vec3D *moved2, double radius, double block_size ) const
+{
+	return (DistanceFromSphere( pos, object_names, hit, exploded, explosion_seed, pos2, moved2, radius, block_size ) <= radius);
+}
+
+
+bool Model::CollidesWithModel( const Pos3D *pos1, const std::set<std::string> *object_names1, std::string *hit1, double exploded1, int explosion_seed1, const Model *model2, const Pos3D *pos2, const std::set<std::string> *object_names2, std::string *hit2, double exploded2, int explosion_seed2, double block_size, bool check_faces ) const
+{
+	std::map< uint64_t, std::set<const GLdouble*> > blockmap1, blockmap2;
+	std::vector< std::pair<ModelArrays,std::string> > arrays1, arrays2;
+	
+	if( ! block_size )
+		block_size = std::max<double>( GetMaxTriangleEdge(), model2->GetMaxTriangleEdge() );
+	
+	MarkBlockMap( &blockmap1, &arrays1, pos1, object_names1, exploded1, explosion_seed1, block_size );
+	MarkBlockMap( &blockmap2, &arrays2, pos2, object_names2, exploded2, explosion_seed2, block_size );
+	
+	for( std::map< uint64_t, std::set<const GLdouble*> >::const_iterator block1 = blockmap1.begin(); block1 != blockmap1.end(); block1 ++ )
+	{
+		std::map< uint64_t, std::set<const GLdouble*> >::const_iterator block2 = blockmap2.find( block1->first );
+		if( block2 != blockmap2.end() )
+		{
+			// Both models marked the same block.
+			if( ! check_faces )
+				return true;
+			
+			for( std::set<const GLdouble*>::const_iterator face1 = block1->second.begin(); face1 != block1->second.end(); face1 ++ )
+			{
+				for( std::set<const GLdouble*>::const_iterator face2 = block2->second.begin(); face2 != block2->second.end(); face2 ++ )
+				{
+					Pos3D vertices[ 3 ];
+					
+					vertices[ 0 ].SetPos( (*face1)[ 0 ], (*face1)[ 1 ], (*face1)[ 2 ] );
+					vertices[ 1 ].SetPos( (*face1)[ 3 ], (*face1)[ 4 ], (*face1)[ 5 ] );
+					vertices[ 2 ].SetPos( (*face1)[ 6 ], (*face1)[ 7 ], (*face1)[ 8 ] );
+					if( Math3D::LineIntersectsFace( &(vertices[ 0 ]), &(vertices[ 1 ]), *face2 )
+					||  Math3D::LineIntersectsFace( &(vertices[ 1 ]), &(vertices[ 2 ]), *face2 )
+					||  Math3D::LineIntersectsFace( &(vertices[ 2 ]), &(vertices[ 0 ]), *face2 ) )
+					{
+						Model_SetHit( &arrays1, *face1, hit1 );
+						Model_SetHit( &arrays2, *face2, hit2 );
+						return true;
+					}
+					
+					vertices[ 0 ].SetPos( (*face2)[ 0 ], (*face2)[ 1 ], (*face2)[ 2 ] );
+					vertices[ 1 ].SetPos( (*face2)[ 3 ], (*face2)[ 4 ], (*face2)[ 5 ] );
+					vertices[ 2 ].SetPos( (*face2)[ 6 ], (*face2)[ 7 ], (*face2)[ 8 ] );
+					if( Math3D::LineIntersectsFace( &(vertices[ 0 ]), &(vertices[ 1 ]), *face1 )
+					||  Math3D::LineIntersectsFace( &(vertices[ 1 ]), &(vertices[ 2 ]), *face1 )
+					||  Math3D::LineIntersectsFace( &(vertices[ 2 ]), &(vertices[ 0 ]), *face1 ) )
+					{
+						Model_SetHit( &arrays1, *face1, hit1 );
+						Model_SetHit( &arrays2, *face2, hit2 );
+						return true;
+					}
+				}
+			}
+		}
+	}
+	
+	return false;
+}
+
+
+void Model::MarkBlockMap( std::map< uint64_t, std::set<const GLdouble*> > *blockmap, std::vector< std::pair<ModelArrays,std::string> > *keep_arrays, const Pos3D *pos, const std::set<std::string> *object_names, double exploded, int explosion_seed, double block_size ) const
+{
+	if( ! block_size )
+		block_size = GetMaxTriangleEdge();
+	
+	for( std::map<std::string,ModelObject>::const_iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
+	{
+		if( object_names && (object_names->find( obj_iter->first ) == object_names->end()) )
+			continue;
+		
+		Pos3D obj_pos( pos );
+		
+		if( exploded > 0. )
+		{
+			// Convert explosion vectors to worldspace.
+			Vec3D explosion_motion = obj_iter->second.GetExplosionMotion( explosion_seed ) * exploded;
+			Vec3D modelspace_rotation_axis = obj_iter->second.GetExplosionRotationAxis( explosion_seed );
+			Vec3D worldspace_rotation_axis = (pos->Fwd * modelspace_rotation_axis.X) + (pos->Up * modelspace_rotation_axis.Y) + (pos->Right * modelspace_rotation_axis.Z);
+			
+			obj_pos.MoveAlong( &(pos->Fwd),   explosion_motion.X );
+			obj_pos.MoveAlong( &(pos->Up),    explosion_motion.Y );
+			obj_pos.MoveAlong( &(pos->Right), explosion_motion.Z );
+			
+			double explosion_rotation_rate = obj_iter->second.GetExplosionRotationRate( explosion_seed );
+			obj_pos.Fwd.RotateAround(   &worldspace_rotation_axis, exploded * explosion_rotation_rate );
+			obj_pos.Up.RotateAround(    &worldspace_rotation_axis, exploded * explosion_rotation_rate );
+			obj_pos.Right.RotateAround( &worldspace_rotation_axis, exploded * explosion_rotation_rate );
+		}
+		
+		for( std::map<std::string,ModelArrays>::const_iterator array_iter = obj_iter->second.Arrays.begin(); array_iter != obj_iter->second.Arrays.end(); array_iter ++ )
+		{
+			if( array_iter->second.VertexCount )
+			{
+				keep_arrays->push_back( std::pair<ModelArrays,std::string>( ModelArrays(), obj_iter->first ) );
+				keep_arrays->back().first.BecomeInstance( &(array_iter->second) );
+				keep_arrays->back().first.MakeWorldSpace( &obj_pos );
+				
+				const GLdouble *worldspace_vertex_array = keep_arrays->back().first.WorldSpaceVertexArray;
+				size_t vertex_count = keep_arrays->back().first.VertexCount;
+				
+				for( size_t i = 0; i < vertex_count; i ++ )
+				{
+					double x = worldspace_vertex_array[ i * 3     ];
+					double y = worldspace_vertex_array[ i * 3 + 1 ];
+					double z = worldspace_vertex_array[ i * 3 + 2 ];
+					// Store a pointer to first vertex of the triangle face.
+					(*blockmap)[ Math3D::BlockMapIndex(x,y,z,block_size) ].insert( &( worldspace_vertex_array[ (i - (i%3)) * 3 ] ) );
+				}
+			}
+		}
+	}
+}
+
+
 void Model::Move( double fwd, double up, double right )
 {
-	// FIXME: What does this mean if we're using someone else's memory?
+	if( !( fwd || up || right ) )
+		return;
+	
+	BecomeCopy( this );
 	
 	for( std::map<std::string,ModelObject>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
 	{
 		for( std::map<std::string,ModelArrays>::iterator array_iter = obj_iter->second.Arrays.begin(); array_iter != obj_iter->second.Arrays.end(); array_iter ++ )
 		{
-			// FIXME: Vectorize and/or parallelize?
 			for( size_t i = 0; i < array_iter->second.VertexCount; i ++ )
 			{
 				array_iter->second.VertexArray[ i*3     ] += fwd;
@@ -745,6 +967,14 @@ void Model::Move( double fwd, double up, double right )
 				array_iter->second.VertexArray[ i*3 + 2 ] += right;
 			}
 		}
+		
+		obj_iter->second.CenterPoint.Move( fwd, up, right );
+		obj_iter->second.MinFwd   += fwd;
+		obj_iter->second.MaxFwd   += fwd;
+		obj_iter->second.MinUp    += up;
+		obj_iter->second.MaxUp    += up;
+		obj_iter->second.MinRight += right;
+		obj_iter->second.MaxRight += right;
 	}
 	
 	MakeMaterialArrays();
@@ -765,13 +995,15 @@ void Model::ScaleBy( double scale )
 
 void Model::ScaleBy( double fwd_scale, double up_scale, double right_scale )
 {
-	// FIXME: What does this mean if we're using someone else's memory?
+	if( (fwd_scale == 1.) && (up_scale == 1.) && (right_scale == 1.) )
+		return;
+	
+	BecomeCopy( this );
 	
 	for( std::map<std::string,ModelObject>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
 	{
 		for( std::map<std::string,ModelArrays>::iterator array_iter = obj_iter->second.Arrays.begin(); array_iter != obj_iter->second.Arrays.end(); array_iter ++ )
 		{
-			// FIXME: Vectorize and/or parallelize?
 			for( size_t i = 0; i < array_iter->second.VertexCount; i ++ )
 			{
 				array_iter->second.VertexArray[ i*3     ] *= fwd_scale;
@@ -980,6 +1212,20 @@ double Model::GetMaxRadius( void )
 }
 
 
+double Model::GetMaxTriangleEdge( void ) const
+{
+	double max_triangle_edge = 0.;
+	
+	for( std::map<std::string,ModelObject>::const_iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
+	{
+		if( obj_iter->second.MaxTriangleEdge > max_triangle_edge )
+			max_triangle_edge = obj_iter->second.MaxTriangleEdge;
+	}
+	
+	return max_triangle_edge;
+}
+
+
 size_t Model::ArrayCount( void ) const
 {
 	size_t count = 0;
@@ -1049,7 +1295,7 @@ ModelArrays::ModelArrays( const ModelArrays &other )
 	Allocated = false;
 	WorldSpaceVertexArray = NULL;
 	
-	BecomeCopy( &other );
+	BecomeInstance( &other );
 }
 
 
@@ -1067,72 +1313,79 @@ void ModelArrays::Clear( void )
 	{
 		if( VertexArray )
 			free( VertexArray );
-		
 		if( TexCoordArray )
 			free( TexCoordArray );
-		
 		if( NormalArray )
 			free( NormalArray );
+		Allocated = false;
 	}
 	
 	VertexArray = NULL;
 	TexCoordArray = NULL;
 	NormalArray = NULL;
-	Allocated = false;
 	
 	// Each instance is always responsible for its own WorldSpaceVertexArray.
 	if( WorldSpaceVertexArray )
+	{
 		free( WorldSpaceVertexArray );
-	WorldSpaceVertexArray = NULL;
+		WorldSpaceVertexArray = NULL;
+	}
 }
 
 
 void ModelArrays::BecomeCopy( const ModelArrays *other )
 {
+	if( (this == other) && Allocated )
+		return;
+	
+	// Tuck away these values before Clear in case we are copying ourself.
+	size_t vertex_count             = other->VertexCount;
+	const GLdouble *vertex_array    = other->VertexArray;
+	const GLfloat  *tex_coord_array = other->TexCoordArray;
+	const GLfloat  *normal_array    = other->NormalArray;
+	
 	Clear();
 	
-	VertexCount = other->VertexCount;
+	VertexCount = vertex_count;
 	
-	if( other->VertexArray )
+	if( vertex_array )
 	{
 		size_t vertex_array_mem = sizeof(GLdouble) * 3 * VertexCount;
 		VertexArray = (GLdouble*) malloc( vertex_array_mem );
 		if( VertexArray )
 		{
-			memcpy( VertexArray, other->VertexArray, vertex_array_mem );
+			memcpy( VertexArray, vertex_array, vertex_array_mem );
 			Allocated = true;
 		}
 	}
 	
-	if( other->TexCoordArray )
+	if( tex_coord_array )
 	{
 		size_t tex_coord_array_mem = sizeof(GLfloat) * 2 * VertexCount;
 		TexCoordArray = (GLfloat*) malloc( tex_coord_array_mem );
 		if( TexCoordArray )
 		{
-			memcpy( TexCoordArray, other->TexCoordArray, tex_coord_array_mem );
+			memcpy( TexCoordArray, tex_coord_array, tex_coord_array_mem );
 			Allocated = true;
 		}
 	}
 	
-	if( other->NormalArray )
+	if( normal_array )
 	{
 		size_t normal_array_mem = sizeof(GLfloat) * 3 * VertexCount;
 		NormalArray = (GLfloat*) malloc( normal_array_mem );
 		if( NormalArray )
 		{
-			memcpy( NormalArray, other->NormalArray, normal_array_mem );
+			memcpy( NormalArray, normal_array, normal_array_mem );
 			Allocated = true;
 		}
 	}
 }
 
 
-void ModelArrays::BecomeInstance( const ModelArrays *other, bool copy )
+void ModelArrays::BecomeInstance( const ModelArrays *other )
 {
-	if( copy )
-		BecomeCopy( other );
-	else
+	if( this != other )
 	{
 		Clear();
 		
@@ -1151,64 +1404,18 @@ void ModelArrays::Resize( size_t vertex_count )
 		;
 	else if( vertex_count )
 	{
-		// FIXME: What does this mean if another model is using our memory?
+		if( ! Allocated )
+			BecomeCopy( this );
 		
-		size_t old_vertex_count = VertexCount;
 		VertexCount = vertex_count;
 		
-		size_t vertex_array_mem = sizeof(GLdouble) * 3 * VertexCount;
-		size_t tex_coord_array_mem = sizeof(GLfloat) * 2 * VertexCount;
-		size_t normal_array_mem = sizeof(GLfloat) * 3 * VertexCount;
+		size_t vertex_array_mem    = sizeof(GLdouble) * 3 * VertexCount;
+		size_t tex_coord_array_mem = sizeof(GLfloat)  * 2 * VertexCount;
+		size_t normal_array_mem    = sizeof(GLfloat)  * 3 * VertexCount;
 		
-		if( VertexArray )
-		{
-			if( Allocated )
-				VertexArray = (GLdouble*) realloc( VertexArray, vertex_array_mem );
-			else
-			{
-				size_t old_mem = sizeof(GLdouble) * 3 * old_vertex_count;
-				GLdouble *old_ptr = VertexArray;
-				VertexArray = (GLdouble*) malloc( vertex_array_mem );
-				if( VertexArray )
-					memcpy( VertexArray, old_ptr, old_mem );
-			}
-		}
-		else
-			VertexArray = (GLdouble*) malloc( vertex_array_mem );
-		
-		if( TexCoordArray )
-		{
-			if( Allocated )
-				TexCoordArray = (GLfloat*) realloc( TexCoordArray, tex_coord_array_mem );
-			else
-			{
-				size_t old_mem = sizeof(GLfloat) * 2 * old_vertex_count;
-				GLfloat *old_ptr = TexCoordArray;
-				TexCoordArray = (GLfloat*) malloc( tex_coord_array_mem );
-				if( TexCoordArray )
-					memcpy( TexCoordArray, old_ptr, old_mem );
-			}
-		}
-		else
-			TexCoordArray = (GLfloat*) malloc( tex_coord_array_mem );
-		
-		if( NormalArray )
-		{
-			if( Allocated )
-				NormalArray = (GLfloat*) realloc( NormalArray, normal_array_mem );
-			else
-			{
-				size_t old_mem = sizeof(GLfloat) * 3 * old_vertex_count;
-				GLfloat *old_ptr = NormalArray;
-				NormalArray = (GLfloat*) malloc( normal_array_mem );
-				if( NormalArray )
-					memcpy( NormalArray, old_ptr, old_mem );
-			}
-		}
-		else
-			NormalArray = (GLfloat*) malloc( normal_array_mem );
-		
-		Allocated = true;
+		VertexArray   = (GLdouble*)( VertexArray   ? realloc( VertexArray,   vertex_array_mem )    : malloc( vertex_array_mem )    );
+		TexCoordArray = (GLfloat*)(  TexCoordArray ? realloc( TexCoordArray, tex_coord_array_mem ) : malloc( tex_coord_array_mem ) );
+		NormalArray   = (GLfloat*)(  NormalArray   ? realloc( NormalArray,   normal_array_mem )    : malloc( normal_array_mem )    );
 	}
 	else
 		Clear();
@@ -1274,23 +1481,21 @@ void ModelArrays::AddFaces( std::vector<ModelFace> &faces )
 	}
 	
 	
-	if( vertices.size() )
+	size_t vertices_size = vertices.size();
+	if( vertices_size )
 	{
 		// Get rid of the old worldspace array; it will be regenerated later if necessary.
 		if( WorldSpaceVertexArray )
 			free( WorldSpaceVertexArray );
 		WorldSpaceVertexArray = NULL;
 		
-		
 		// We have vertices to add, so we'll need to increase our allocations or make new ones.
 		size_t old_vertex_count = VertexCount;
-		Resize( VertexCount + vertices.size() );
+		Resize( VertexCount + vertices_size );
 		
 		
 		// Fill the new parts of the arrays.
-		// FIXME: Vectorize and/or parallelize?
 		
-		size_t vertices_size = vertices.size();
 		size_t tex_coords_size = tex_coords.size();
 		size_t normals_size = normals.size();
 		
@@ -1348,6 +1553,9 @@ void ModelArrays::AddFaces( std::vector<ModelFace> &faces )
 
 void ModelArrays::CalculateNormals( void )
 {
+	if( ! Allocated )
+		BecomeCopy( this );
+	
 	Vec3D a, b, c;
 	for( size_t i = 0; i < VertexCount; i += 3 )
 	{
@@ -1374,6 +1582,9 @@ void ModelArrays::CalculateNormals( void )
 
 void ModelArrays::ReverseNormals( void )
 {
+	if( ! Allocated )
+		BecomeCopy( this );
+	
 	Vec3D a, b, c;
 	for( size_t i = 0; i < VertexCount; i ++ )
 	{
@@ -1386,6 +1597,9 @@ void ModelArrays::ReverseNormals( void )
 
 void ModelArrays::SmoothNormals( void )
 {
+	if( ! Allocated )
+		BecomeCopy( this );
+	
 	for( size_t i = 0; i < VertexCount; i ++ )
 	{
 		Vec3D normal(0,0,0);
@@ -1430,7 +1644,6 @@ void ModelArrays::MakeWorldSpace( const Pos3D *pos, double fwd_scale, double up_
 		}
 		
 		// Translate from modelspace to worldspace.
-		// FIXME: Vectorize and/or parallelize?
 		for( size_t i = 0; i < VertexCount; i ++ )
 		{
 			Vec3D vertex( VertexArray[ i*3 ], VertexArray[ i*3 + 1 ], VertexArray[ i*3 + 2 ] );
@@ -1442,13 +1655,19 @@ void ModelArrays::MakeWorldSpace( const Pos3D *pos, double fwd_scale, double up_
 }
 
 
+bool ModelArrays::HasWorldSpaceVertex( const GLdouble *vertex ) const
+{
+	return WorldSpaceVertexArray && (vertex >= WorldSpaceVertexArray) && (vertex < WorldSpaceVertexArray + VertexCount * 3);
+}
+
+
 // ---------------------------------------------------------------------------
 
 
 ModelObject::ModelObject( void )
 {
 	CenterPoint.SetPos( 0., 0., 0. );
-	MaxRadius = 0.;
+	MinFwd = MaxFwd = MinUp = MaxUp = MinRight = MaxRight = MaxRadius = MaxTriangleEdge = 0.;
 	NeedsRecalc = false;
 }
 
@@ -1493,10 +1712,9 @@ void ModelObject::AddFaces( std::string mtl, std::vector<ModelFace> &faces )
 
 void ModelObject::Recalc( void )
 {
-	// FIXME: Vectorize and/or parallelize?
-	
 	CenterPoint.SetPos( 0., 0., 0. );
 	MaxRadius = 0.;
+	double max_triangle_edge_squared = 0.;
 	size_t vertex_count = 0;
 
 	MinFwd = FLT_MAX;
@@ -1531,6 +1749,26 @@ void ModelObject::Recalc( void )
 				MinRight = z;
 			if( z > MaxRight )
 				MaxRight = z;
+			
+			if( (i % 3) == 2 )
+			{
+				// Check each triangle for edge lengths.
+				double x1 = array_iter->second.VertexArray[ i*3 - 6 ];
+				double y1 = array_iter->second.VertexArray[ i*3 - 5 ];
+				double z1 = array_iter->second.VertexArray[ i*3 - 4 ];
+				double x2 = array_iter->second.VertexArray[ i*3 - 3 ];
+				double y2 = array_iter->second.VertexArray[ i*3 - 2 ];
+				double z2 = array_iter->second.VertexArray[ i*3 - 1 ];
+				double len_sq = (x1-x) * (x1-x) + (y1-y) * (y1-y) + (z1-z) * (z1-z);
+				if( len_sq > max_triangle_edge_squared )
+					max_triangle_edge_squared = len_sq;
+				len_sq        = (x2-x) * (x2-x) + (y2-y) * (y2-y) + (z2-z) * (z2-z);
+				if( len_sq > max_triangle_edge_squared )
+					max_triangle_edge_squared = len_sq;
+				len_sq        = (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2) + (z1-z2)*(z1-z2);
+				if( len_sq > max_triangle_edge_squared )
+					max_triangle_edge_squared = len_sq;
+			}
 		}
 	}
 	
@@ -1540,6 +1778,7 @@ void ModelObject::Recalc( void )
 		CenterPoint.X = (MinFwd + MaxFwd) / 2.;
 		CenterPoint.Y = (MinUp + MaxUp) / 2.;
 		CenterPoint.Z = (MinRight + MaxRight) / 2.;
+		MaxTriangleEdge = sqrt(max_triangle_edge_squared);
 		
 		for( std::map<std::string,ModelArrays>::iterator array_iter = Arrays.begin(); array_iter != Arrays.end(); array_iter ++ )
 		{
@@ -1562,6 +1801,7 @@ void ModelObject::Recalc( void )
 		MaxFwd = 0.;
 		MaxUp = 0.;
 		MaxRight = 0.;
+		MaxTriangleEdge = 0.;
 	}
 	
 	NeedsRecalc = false;
@@ -1638,7 +1878,7 @@ Vec3D ModelObject::GetExplosionMotion( int seed ) const
 {
 	/*
 	if( NeedsRecalc )
-		Recalc();
+		Recalc();  // FIXME: Commented-out because Recalc is not const.
 	*/
 	
 	// Generate a per-object seed based on the object name.
@@ -1648,9 +1888,12 @@ Vec3D ModelObject::GetExplosionMotion( int seed ) const
 	
 	// Generate a predictable motion axis, mostly away from object center, based on seed.
 	double center_motion_scale = 10. + ((seed*(seed+2)) % 300) / 10.;
-	return Vec3D( CenterPoint.X * center_motion_scale - 5. + 10. * ((seed*(seed+2)) % 344) / 343.,
-	              CenterPoint.Y * center_motion_scale - 5. + 10. * ((seed*(seed+4)) % 344) / 343.,
-	              CenterPoint.Z * center_motion_scale - 5. + 10. * ((seed*(seed+6)) % 344) / 343. );
+	double rx = 10. * ((seed*(seed+2)) % 344) / 343. - 5.;
+	double ry = 10. * ((seed*(seed+2)) % 344) / 343. - 5.;
+	double rz = 10. * ((seed*(seed+2)) % 344) / 343. - 5.;
+	return Vec3D( CenterPoint.X * (center_motion_scale + rx) + rx,
+	              CenterPoint.Y * (center_motion_scale + ry) + ry,
+	              CenterPoint.Z * (center_motion_scale + rz) + rz );
 }
 
 
@@ -1694,7 +1937,7 @@ ModelMaterial::ModelMaterial( const ModelMaterial &other )
 	Diffuse = other.Diffuse;
 	Specular = other.Specular;
 	Shininess = other.Shininess;
-	Arrays = other.Arrays;
+	Arrays.BecomeInstance( &(other.Arrays) );
 }
 
 

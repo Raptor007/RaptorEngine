@@ -5,6 +5,7 @@
 #include "JoystickState.h"
 
 #include <cmath>
+#include "RaptorGame.h"
 
 
 JoystickState::JoystickState( Uint8 id, SDL_Joystick *joystick, std::string name )
@@ -25,7 +26,10 @@ void JoystickState::TrackEvent( SDL_Event *event )
 	// Update joystick axis and button status.
 	
 	if( event->type == SDL_JOYAXISMOTION )
+	{
+		PrevAxes[ event->jaxis.axis ] = Axes[ event->jaxis.axis ];
 		Axes[ event->jaxis.axis ] = AxisScale( event->jaxis.value );
+	}
 	else if( event->type == SDL_JOYBUTTONDOWN )
 		ButtonsDown[ event->jbutton.button ] = true;
 	else if( event->type == SDL_JOYBUTTONUP )
@@ -34,6 +38,8 @@ void JoystickState::TrackEvent( SDL_Event *event )
 		Hats[ event->jhat.hat ] = event->jhat.value;
 	else if( event->type == SDL_JOYBALLMOTION )
 	{
+		PrevBallsX[ event->jball.ball ] = BallsX[ event->jball.ball ];
+		PrevBallsY[ event->jball.ball ] = BallsY[ event->jball.ball ];
 		BallsX[ event->jball.ball ] += event->jball.xrel;
 		BallsY[ event->jball.ball ] += event->jball.yrel;
 	}
@@ -51,27 +57,28 @@ double JoystickState::AxisScale( Sint16 value )
 }
 
 
-bool JoystickState::HasAxis( Uint8 axis )
+bool JoystickState::HasAxis( Uint8 axis ) const
 {
 	return (Axes.find( axis ) != Axes.end());
 }
 
 
-double JoystickState::Axis( Uint8 axis, double deadzone, double deadzone_at_ends )
+double JoystickState::Axis( Uint8 axis, double deadzone, double deadedge ) const
 {
 	// Check an axis value.
 	// Assume it is 0 if its state has never been recorded.
+	// All other Axis functions eventually call this one.
 	
-	std::map<Uint8, double>::iterator axis_iter = Axes.find( axis );
+	std::map<Uint8,double>::const_iterator axis_iter = Axes.find( axis );
 	if( axis_iter != Axes.end() )
 	{
 		double value = axis_iter->second;
 		
 		if( fabs(value) < deadzone )
 			value = 0.;
-		else if( value + deadzone_at_ends > 1. )
+		else if( value + deadedge > 1. )
 			value = 1.;
-		else if( value - deadzone_at_ends < -1. )
+		else if( value - deadedge < -1. )
 			value = -1.;
 		else
 		{
@@ -80,7 +87,7 @@ double JoystickState::Axis( Uint8 axis, double deadzone, double deadzone_at_ends
 				value -= deadzone;
 			else
 				value += deadzone;
-			value /= (1. - deadzone - deadzone_at_ends);
+			value /= (1. - deadzone - deadedge);
 		}
 		
 		return value;
@@ -90,21 +97,24 @@ double JoystickState::Axis( Uint8 axis, double deadzone, double deadzone_at_ends
 }
 
 
-double JoystickState::AxisScaled( Uint8 axis, double low, double high, double deadzone, double deadzone_at_ends )
+double JoystickState::AxisScaled( Uint8 axis, double low, double high, double deadzone, double deadedge ) const
 {
 	// Scale output to (low,high) range.
 	// This can also be used to invert an axis with low>high.
 	
-	return low + (high - low) * (Axis( axis, deadzone, deadzone_at_ends ) + 1.) / 2.;
+	if( ! HasAxis(axis) )
+		return 0.;
+	
+	return low + (high - low) * (Axis( axis, deadzone, deadedge ) + 1.) / 2.;
 }
 
 
-bool JoystickState::ButtonDown( Uint8 button )
+bool JoystickState::ButtonDown( Uint8 button ) const
 {
 	// Check if a key is down.
 	// Assume it is not down if its state has never been recorded.
 	
-	std::map<Uint8, bool>::iterator button_iter = ButtonsDown.find( button );
+	std::map<Uint8,bool>::const_iterator button_iter = ButtonsDown.find( button );
 	if( button_iter != ButtonsDown.end() )
 		return button_iter->second;
 	
@@ -112,11 +122,11 @@ bool JoystickState::ButtonDown( Uint8 button )
 }
 
 
-Uint8 JoystickState::Hat( Uint8 hat )
+Uint8 JoystickState::Hat( Uint8 hat ) const
 {
 	// Check the direction of a hat switch.
 	
-	std::map<Uint8, Uint8>::iterator hat_iter = Hats.find( hat );
+	std::map<Uint8,Uint8>::const_iterator hat_iter = Hats.find( hat );
 	if( hat_iter != Hats.end() )
 		return hat_iter->second;
 	
@@ -124,28 +134,34 @@ Uint8 JoystickState::Hat( Uint8 hat )
 }
 
 
-bool JoystickState::HatDir( Uint8 hat, Uint8 dir )
+bool JoystickState::HatDir( Uint8 hat, Uint8 dir ) const
 {
 	// See if the hat switch is in this cardinal direction.
 	// This matches straight directions even if the hat is being pushed diagonally.
 	
-	return Hat( hat ) & dir;
+	return dir ? (Hat( hat ) & dir) : ! Hat( hat );
 }
 
 
-std::string JoystickState::Status( void )
+std::string JoystickState::DeviceType( void ) const
+{
+	return Raptor::Game->Input.DeviceType( Name );
+}
+
+
+std::string JoystickState::Status( void ) const
 {
 	// Create a status string for this joystick.
 	
 	std::string return_string;
 	char cstr[ 1024 ] = "";
 	
-	snprintf( cstr, 1024, "Joystick %i: %s\n", ID, Name.c_str() );
+	snprintf( cstr, 1024, "Joystick %i: %s (%s)\n", ID, Name.c_str(), DeviceType().c_str() );
 	return_string += cstr;
 	
 	return_string += "Joy axes:";
 	bool first_axis = true;
-	for( std::map<Uint8, double>::iterator axis_iter = Axes.begin(); axis_iter != Axes.end(); axis_iter ++ )
+	for( std::map<Uint8,double>::const_iterator axis_iter = Axes.begin(); axis_iter != Axes.end(); axis_iter ++ )
 	{
 		if( first_axis )
 			first_axis = false;
@@ -158,7 +174,7 @@ std::string JoystickState::Status( void )
 	return_string += "\n";
 	
 	return_string += "Joy buttons down:";
-	for( std::map<Uint8, bool>::iterator button_iter = ButtonsDown.begin(); button_iter != ButtonsDown.end(); button_iter ++ )
+	for( std::map<Uint8,bool>::const_iterator button_iter = ButtonsDown.begin(); button_iter != ButtonsDown.end(); button_iter ++ )
 	{
 		if( button_iter->second )
 		{
@@ -170,7 +186,7 @@ std::string JoystickState::Status( void )
 	
 	return_string += "Joy hats:";
 	bool first_hat = true;
-	for( std::map<Uint8, Uint8>::iterator hat_iter = Hats.begin(); hat_iter != Hats.end(); hat_iter ++ )
+	for( std::map<Uint8,Uint8>::const_iterator hat_iter = Hats.begin(); hat_iter != Hats.end(); hat_iter ++ )
 	{
 		if( first_hat )
 			first_hat = false;
@@ -190,12 +206,16 @@ std::string JoystickState::Status( void )
 	if( BallsX.size() )
 	{
 		return_string += "\nJoy trackballs:";
-		for( std::map<Uint8, int>::const_iterator ball_iter = BallsX.begin(); ball_iter != BallsX.end(); ball_iter ++ )
+		for( std::map<Uint8,int>::const_iterator ball_x_iter = BallsX.begin(); ball_x_iter != BallsX.end(); ball_x_iter ++ )
 		{
-			if( ball_iter != BallsX.begin() )
+			if( ball_x_iter != BallsX.begin() )
 				return_string += ",";
 			
-			snprintf( cstr, 1024, " %i=%i,%i", ball_iter->first, ball_iter->second, BallsY[ ball_iter->first ] );
+			std::map<Uint8,int>::const_iterator ball_y_iter = BallsY.find( ball_x_iter->first );
+			if( ball_y_iter != BallsY.end() )
+				snprintf( cstr, 1024, " %i=%i,%i", ball_x_iter->first, ball_x_iter->second, ball_y_iter->second );
+			else
+				snprintf( cstr, 1024, " %i=%i,?", ball_x_iter->first, ball_x_iter->second );
 			return_string += cstr;
 		}
 	}

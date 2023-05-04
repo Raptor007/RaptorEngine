@@ -39,9 +39,10 @@ void HeadState::Initialize( void )
 
 void HeadState::StartVR( void )
 {
-	if( Raptor::Game->Gfx.VSync )
+	if( Raptor::Game->Gfx.VSync || ! Raptor::Game->Gfx.Framebuffers )
 	{
-		// Reduce VR stutter by disabling vsync to main monitor.
+		// Make sure we enable framebuffers, and reduce VR stutter by disabling vsync to main monitor.
+		Raptor::Game->Gfx.Framebuffers = true;
 		Raptor::Game->Gfx.VSync = false;
 		Raptor::Game->Gfx.Restart();
 	}
@@ -53,11 +54,7 @@ void HeadState::StartVR( void )
 	if( eError != vr::VRInitError_None )
 	{
 		m_pHMD = NULL;
-		
-		char buf[1024];
-		snprintf( buf, sizeof(buf), "Unable to init VR runtime: %s", vr::VR_GetVRInitErrorAsEnglishDescription(eError) );
-		Raptor::Game->Console.Print( std::string(buf), TextConsole::MSG_ERROR );
-		
+		Raptor::Game->Console.Print( std::string("Unable to init VR runtime: ") + std::string(vr::VR_GetVRInitErrorAsEnglishDescription(eError)), TextConsole::MSG_ERROR );
 		return;
 	}
 	
@@ -66,11 +63,7 @@ void HeadState::StartVR( void )
 	{
 		m_pHMD = NULL;
 		vr::VR_Shutdown();
-		
-		char buf[1024];
-		snprintf( buf, sizeof(buf), "Unable to get render model interface: %s", vr::VR_GetVRInitErrorAsEnglishDescription(eError) );
-		Raptor::Game->Console.Print( std::string(buf), TextConsole::MSG_ERROR );
-		
+		Raptor::Game->Console.Print( std::string("Unable to get render model interface: ") + std::string(vr::VR_GetVRInitErrorAsEnglishDescription(eError)), TextConsole::MSG_ERROR );
 		return;
 	}
 	
@@ -83,6 +76,15 @@ void HeadState::StartVR( void )
 		return;
 	
 	vr::VRCompositor()->SetTrackingSpace( vr::TrackingUniverseSeated );
+	
+	// Make sure we actually have a VR device connected.
+	vr::VRCompositor()->WaitGetPoses( m_rTrackedDevicePose, vr::k_unMaxTrackedDeviceCount, NULL, 0 );
+	if( ! m_rTrackedDevicePose[ vr::k_unTrackedDeviceIndex_Hmd ].bDeviceIsConnected )
+	{
+		Raptor::Game->Console.Print( "No VR headset detected.", TextConsole::MSG_ERROR );
+		StopVR();
+		return;
+	}
 	
 	VR = true;
 #endif

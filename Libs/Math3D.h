@@ -7,6 +7,7 @@
 #include "PlatformSpecific.h"
 
 #include <cstddef>
+#include <stdint.h>
 #include "Vec.h"
 #include "Pos.h"
 
@@ -34,4 +35,7 @@ namespace Math3D
 	double PointDistFromFace( const Pos3D *pt, const double *vertex_array, int vertex_count );
 	double LineSegDistFromFace( const Pos3D *end1, const Pos3D *end2, const double *vertex_array, int vertex_count );
 	bool LineIntersectsFace( const Pos3D *end1, const Pos3D *end2, const double *vertex_array, int vertex_count = 3, Pos3D *at = NULL );
+	
+	uint64_t BlockMapIndex( double x, double y, double z, double block_size );
+	std::set<uint64_t> BlocksInRadius( double x, double y, double z, double block_size, double radius );
 }

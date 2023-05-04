@@ -78,7 +78,7 @@ void Framebuffer::Initialize( void )
 		return;
 	
 	// If framebuffers are disabled, create a blank 2x2 texture instead.
-	if( ! Raptor::Game->Cfg.SettingAsBool( "g_framebuffers", true ) )
+	if( ! Raptor::Game->Gfx.Framebuffers )
 	{
 		glGenTextures( 1, &Texture );
 		glBindTexture( GL_TEXTURE_2D, Texture );
@@ -239,9 +239,9 @@ void Framebuffer::SetViewport( void )
 {
 	// Correct for VR offset.
 	if( OffsetX >= 0 )
-		glViewport( 0, 0, W + OffsetX, H );
+		glViewport( 0, 0, AllocW + OffsetX, AllocH );
 	else
-		glViewport( OffsetX, 0, W - OffsetX, H );
+		glViewport( OffsetX, 0, AllocW - OffsetX, AllocH );
 }
 
 
@@ -260,7 +260,7 @@ void Framebuffer::SetViewport( int x, int y, int w, int h )
 	}
 	
 	// Correct for VR offset.
-	glViewport( x + OffsetX / 2, y, w, h );
+	glViewport( x + OffsetX / 2, AllocH - y - h, w, h );  // 0,0 is top left for RaptorEngine but bottom left for OpenGL.
 }
 
 

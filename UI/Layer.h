@@ -67,6 +67,8 @@ public:
 	void MoveToTop( bool and_containers = true );
 	size_t RemoveOthersAbove( bool and_containers = false );
 	
+	Layer *FindElement( const std::string &name, bool recursive = true );
+	
 	void SizeToContainer( int buffer = 0 );
 	void SizeToElements( int max_buffer = 10 );
 	void Center( void );

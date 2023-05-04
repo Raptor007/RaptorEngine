@@ -29,6 +29,7 @@ class RaptorGame;
 #include "MouseState.h"
 #include "KeyboardState.h"
 #include "JoystickManager.h"
+#include "InputManager.h"
 #include "HeadState.h"
 
 #ifdef WIN32
@@ -61,6 +62,8 @@ public:
 	MouseState Mouse;
 	KeyboardState Keys;
 	JoystickManager Joy;
+	InputManager Input;
+	bool ReadKeyboard, ReadMouse;
 	HeadState Head;
 	
 	#ifdef WIN32
@@ -82,6 +85,7 @@ public:
 	
 	void SetServer( RaptorServer *server );
 	
+	virtual void SetDefaultControls( void );
 	virtual void SetDefaults( void );
 	virtual void Initialize( int argc = 0, char **argv = NULL );
 	virtual void Run( void );
@@ -94,6 +98,7 @@ public:
 	virtual bool HandleCommand( std::string cmd, std::vector<std::string> *params = NULL );
 	virtual bool ProcessPacket( Packet *packet );
 	virtual void SendUpdate( int8_t precision = 0 );
+	virtual bool SetPlayerProperty( std::string name, std::string value );
 	
 	virtual void ChangeState( int state );
 	virtual void Disconnected( void );

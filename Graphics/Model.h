@@ -16,6 +16,7 @@ class ModelMaterial;
 #include <map>
 #include <set>
 #include <utility>
+#include <stdint.h>
 #include "RaptorGL.h"
 #include "Vec.h"
 #include "Pos.h"
@@ -37,6 +38,7 @@ public:
 	
 	void Clear( void );
 	void BecomeInstance( Model *other );
+	void BecomeCopy( Model *other );
 	bool LoadOBJ( std::string filename, bool get_textures = true );
 	bool IncludeOBJ( std::string filename, bool get_textures = true );
 	void MakeMaterialArrays( void );
@@ -49,6 +51,12 @@ public:
 	void DrawObjectsAt( const std::list<std::string> *object_names, const Pos3D *pos, double scale = 1., double fwd_scale = 1., double up_scale = 1., double right_scale = 1. );
 	void DrawWireframeAt( const Pos3D *pos, Color color, double scale = 1., double fwd_scale = 1., double up_scale = 1., double right_scale = 1. );
 	
+	double DistanceFromLine( const Pos3D *pos, const std::set<std::string> *object_names, std::string *hit, double exploded, int explosion_seed, const Pos3D *pos2a, const Pos3D *pos2b, double block_size = 0. ) const;
+	double DistanceFromSphere( const Pos3D *pos, const std::set<std::string> *object_names, std::string *hit, double exploded, int explosion_seed, const Pos3D *pos2, const Vec3D *moved2, double radius, double block_size = 0. ) const;
+	bool CollidesWithSphere( const Pos3D *pos, const std::set<std::string> *object_names, std::string *hit, double exploded, int explosion_seed, const Pos3D *pos2, const Vec3D *moved2, double radius, double block_size = 0. ) const;
+	bool CollidesWithModel( const Pos3D *pos1, const std::set<std::string> *object_names1, std::string *hit1, double exploded1, int explosion_seed1, const Model *model2, const Pos3D *pos2, const std::set<std::string> *object_names2, std::string *hit2, double exploded2, int explosion_seed2, double block_size = 0., bool check_faces = true ) const;
+	void MarkBlockMap( std::map< uint64_t, std::set<const GLdouble*> > *blockmap, std::vector< std::pair<ModelArrays,std::string> > *keep_arrays, const Pos3D *pos, const std::set<std::string> *object_names, double exploded, int explosion_seed, double block_size = 0. ) const;
+	
 	void Move( double fwd, double up, double right );
 	void ScaleBy( double scale );
 	void ScaleBy( double fwd_scale, double up_scale, double right_scale );
@@ -60,6 +68,7 @@ public:
 	double Triagonal( void ) const;
 	double GetMaxDim( void );
 	double GetMaxRadius( void );
+	double GetMaxTriangleEdge( void ) const;
 	
 	size_t ArrayCount( void ) const;
 	size_t TriangleCount( void ) const;
@@ -95,13 +104,14 @@ public:
 	
 	void Clear( void );
 	void BecomeCopy( const ModelArrays *other );
-	void BecomeInstance( const ModelArrays *other, bool copy = true );  // FIXME: Copy shouldn't be necessary!
+	void BecomeInstance( const ModelArrays *other );
 	void Resize( size_t vertex_count );
 	void AddFaces( std::vector<ModelFace> &faces );
 	void CalculateNormals( void );
 	void ReverseNormals( void );
 	void SmoothNormals( void );
 	void MakeWorldSpace( const Pos3D *pos, double fwd_scale = 1., double up_scale = 1., double right_scale = 1. );
+	bool HasWorldSpaceVertex( const GLdouble *vertex ) const;
 };
 
 
@@ -113,8 +123,7 @@ public:
 	std::vector<Vec3D> Points;
 	std::vector< std::vector<Vec3D> > Lines;
 	Pos3D CenterPoint;
-	double MinFwd, MaxFwd, MinUp, MaxUp, MinRight, MaxRight;
-	double MaxRadius;
+	double MinFwd, MaxFwd, MinUp, MaxUp, MinRight, MaxRight, MaxRadius, MaxTriangleEdge;
 	
 	ModelObject( void );
 	ModelObject( const ModelObject &other );

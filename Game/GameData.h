@@ -25,6 +25,7 @@ class GameData
 public:
 	Identifier<uint32_t> GameObjectIDs;
 	std::map<uint32_t,GameObject*> GameObjects;
+	double AntiJitter, MaxFrameTime;
 	
 	Identifier<uint16_t> PlayerIDs;
 	std::map<uint16_t,Player*> Players;

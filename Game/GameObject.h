@@ -12,6 +12,7 @@ class GameObject;
 #include "Clock.h"
 #include "Packet.h"
 #include "GameData.h"
+#include "Player.h"
 
 
 class GameObject : public Pos3D
@@ -41,6 +42,7 @@ public:
 	virtual void ClientInit( void );
 	
 	virtual uint32_t Type( void ) const;
+	virtual Player *Owner( void ) const;
 	virtual bool PlayerShouldUpdateServer( void ) const;
 	virtual bool ServerShouldUpdatePlayer( void ) const;
 	virtual bool ServerShouldUpdateOthers( void ) const;
@@ -61,6 +63,7 @@ public:
 	virtual bool WillCollide( const GameObject *other, double dt, std::string *this_object = NULL, std::string *other_object = NULL ) const;
 	GameObject *Trace( double dt, double precision = 0.01 ) const;
 	virtual void Update( double dt );
+	virtual void SendUpdate( int8_t precision );
 	
 	virtual void Draw( void );
 	

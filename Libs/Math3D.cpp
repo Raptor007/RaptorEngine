@@ -395,3 +395,47 @@ bool Math3D::LineIntersectsFace( const Pos3D *end1, const Pos3D *end2, const dou
 	
 	return false;
 }
+
+
+uint64_t Math3D::BlockMapIndex( double x, double y, double z, double block_size )
+{
+	int64_t bx = x / block_size + ((x >= 0.) ? 0.5 : -0.5);
+	int64_t by = y / block_size + ((y >= 0.) ? 0.5 : -0.5);
+	int64_t bz = z / block_size + ((z >= 0.) ? 0.5 : -0.5);
+	return (bx & 0x00000000001FFFFF)
+	    | ((by & 0x00000000001FFFFF) << 21)
+	    | ((bz & 0x00000000003FFFFF) << 42);
+}
+
+
+std::set<uint64_t> Math3D::BlocksInRadius( double x, double y, double z, double block_size, double radius )
+{
+	std::set<uint64_t> blocks;
+	int steps = ceil( radius / block_size );
+	
+	for( int i = -steps; i <= steps; i ++ )
+	{
+		for( int j = -steps; j <= steps; j ++ )
+		{
+			for( int k = -steps; k <= steps; k ++ )
+			{
+				if( i && j && k )
+				{
+					// For any cube not along a cardinal axis, check if its nearest corner is within the radius.
+					double dx = (i + ((i<0) ? 0.5 : -0.5)) * block_size;
+					double dy = (j + ((j<0) ? 0.5 : -0.5)) * block_size;
+					double dz = (k + ((k<0) ? 0.5 : -0.5)) * block_size;
+					if( sqrt( dx*dx + dy*dy + dz*dz ) > radius )
+						continue;
+				}
+				
+				double cx = x + i * block_size;
+				double cy = y + j * block_size;
+				double cz = z + k * block_size;
+				blocks.insert( BlockMapIndex( cx, cy, cz, block_size ) );
+			}
+		}
+	}
+	
+	return blocks;
+}

@@ -21,6 +21,8 @@ TextBox::TextBox( SDL_Rect *rect, Font *font, uint8_t align ) : Layer( rect )
 	PassEsc = false;
 	TabDeselects = true;
 	PassTab = false;
+	PassExtendedKeys = true;
+	ClickOutDeselects = true;
 	
 	CursorAppearance = "|";
 	CenterCursor = true;
@@ -57,10 +59,16 @@ TextBox::TextBox( SDL_Rect *rect, Font *font, uint8_t align, std::string text ) 
 	ShiftIsDown = false;
 	TextFont = font;
 	Align = align;
+	
 	ReturnDeselects = false;
 	PassReturn = true;
 	EscDeselects = true;
 	PassEsc = false;
+	TabDeselects = true;
+	PassTab = false;
+	PassExtendedKeys = true;
+	ClickOutDeselects = true;
+	
 	CursorAppearance = "|";
 	CenterCursor = true;
 	
@@ -184,6 +192,18 @@ void TextBox::Draw( void )
 				TextFont->DrawText( CursorAppearance, x, y, Align, SelectedTextRed, SelectedTextGreen, SelectedTextBlue, SelectedTextAlpha );
 			}
 		}
+	}
+}
+
+
+void TextBox::TrackEvent( SDL_Event *event )
+{
+	Layer::TrackEvent( event );
+	
+	if( ClickOutDeselects && IsSelected() && (event->type == SDL_MOUSEBUTTONUP) && (event->button.button == SDL_BUTTON_LEFT) && ! MouseIsWithin )
+	{
+		Container->Selected = NULL;
+		Deselected();
 	}
 }
 
@@ -333,6 +353,8 @@ bool TextBox::KeyDown( SDLKey key )
 			InsertAtCursor( '?' );
 		else if( key <= 255 )
 			InsertAtCursor( (char) key );
+		else if( PassExtendedKeys && (key >= SDLK_F1) )
+			return false;
 		
 		return true;
 	}
@@ -348,26 +370,37 @@ bool TextBox::KeyUp( SDLKey key )
 		if( (key == SDLK_RETURN) || (key == SDLK_KP_ENTER) )
 		{
 			if( ReturnDeselects )
+			{
 				Container->Selected = NULL;
+				Deselected();
+			}
 			if( PassReturn )
 				return false;
 		}
 		else if( key == SDLK_ESCAPE )
 		{
 			if( EscDeselects )
+			{
 				Container->Selected = NULL;
+				Deselected();
+			}
 			if( PassEsc )
 				return false;
 		}
 		else if( key == SDLK_TAB )
 		{
 			if( TabDeselects )
+			{
 				Container->Selected = NULL;
+				Deselected();
+			}
 			if( PassTab )
 				return false;
 		}
 		else if( (key == SDLK_LSHIFT) || (key == SDLK_RSHIFT) || (key == SDLK_CAPSLOCK) )
 			ShiftIsDown = false;
+		else if( PassExtendedKeys && (key >= SDLK_F1) )
+			return false;
 		
 		return true;
 	}
@@ -403,5 +436,10 @@ void TextBox::UpdateCursor( void )
 
 
 void TextBox::Changed( void )
+{
+}
+
+
+void TextBox::Deselected( void )
 {
 }

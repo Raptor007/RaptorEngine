@@ -414,6 +414,28 @@ size_t Layer::RemoveOthersAbove( bool and_containers )
 }
 
 
+Layer *Layer::FindElement( const std::string &name, bool recursive )
+{
+	for( std::list<Layer*>::reverse_iterator layer_iter = Elements.rbegin(); layer_iter != Elements.rend(); layer_iter ++ )
+	{
+		if( ! (*layer_iter)->Removed )
+		{
+			if( (*layer_iter)->Name == name )
+				return *layer_iter;
+			
+			if( recursive )
+			{
+				Layer *found = (*layer_iter)->FindElement( name, true );
+				if( found )
+					return found;
+			}
+		}
+	}
+	
+	return NULL;
+}
+
+
 void Layer::SizeToContainer( int buffer )
 {
 	Rect.x = buffer;

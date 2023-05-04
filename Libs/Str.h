@@ -22,6 +22,8 @@ namespace CStr
 	bool AsBool( const char *str );
 	
 	int FindInsensitive( const char *str, const char *search_for );
+	bool BeginsWith( const char *str, const char *search_for );
+	bool EndsWith( const char *str, const char *search_for );
 	
 	class Less
 	{
@@ -55,6 +57,8 @@ namespace Str
 	bool AsBool( std::string str );
 	
 	int FindInsensitive( std::string str, std::string search_for );
+	bool BeginsWith( std::string str, std::string search_for );
+	bool EndsWith( std::string str, std::string search_for );
 	
 	std::string Escape( std::string str, const char *original, const char *escaped );
 	std::string Unescape( std::string str, const char *original, const char *escaped );

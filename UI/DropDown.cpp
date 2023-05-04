@@ -12,6 +12,7 @@ DropDown::DropDown( SDL_Rect *rect, Font *font, uint8_t align, int scroll_bar_si
 {
 	ScrollBarSize = scroll_bar_size;
 	MyListBox = NULL;
+	ClickOutEventHandle = false;
 }
 
 
@@ -115,19 +116,38 @@ void DropDown::SizeToText( void )
 }
 
 
+void DropDown::TrackEvent( SDL_Event *event )
+{
+	Layer::TrackEvent( event );
+	
+	if( MyListBox && (! MyListBox->ClickedScrollBar) && ((event->type == SDL_MOUSEBUTTONDOWN) || (event->type == SDL_MOUSEBUTTONUP)) && (event->button.button == SDL_BUTTON_LEFT) && ! MyListBox->MouseIsWithin )
+	{
+		EventsHandled.insert( event );
+		if( event->type == SDL_MOUSEBUTTONUP )
+			Close();
+	}
+}
+
+
 bool DropDown::HandleEvent( SDL_Event *event )
 {
 	bool handled = LabelledButton::HandleEvent( event );
 	
+	if( EventsHandled.count( event ) )
+	{
+		EventsHandled.erase( event );
+		return ClickOutEventHandle || handled;
+	}
+	
 	if( (! handled) && MyListBox && ! MouseIsWithin )
 	{
 		if( event->type == SDL_MOUSEBUTTONDOWN )
-			return true;
+			return ClickOutEventHandle;
 		else if( event->type == SDL_MOUSEBUTTONUP )
 		{
 			if( ! MyListBox->ClickedScrollBar )
 				Close();
-			return true;
+			return ClickOutEventHandle;
 		}
 	}
 	

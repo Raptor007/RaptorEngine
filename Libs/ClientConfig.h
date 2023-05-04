@@ -16,13 +16,13 @@ class ClientConfig;
 class ClientConfig
 {
 public:
-	std::map<SDLKey, uint8_t> KeyBinds;
-	std::map<Uint8, uint8_t> MouseBinds;
 	std::map<std::string, std::string> Settings;
 	
-	std::map<SDLKey, std::string> KeyNames;
-	std::map<Uint8, std::string> MouseNames;
-	std::map<uint8_t, std::string> ControlNames;
+	std::map<SDLKey,uint8_t> KeyBinds;
+	std::map<Uint8,uint8_t> MouseBinds;
+	std::map<std::string,std::map<Uint8,uint8_t> > JoyAxisBinds;
+	std::map<std::string,std::map<Uint8,uint8_t> > JoyButtonBinds;
+	std::map<std::string,std::map<Uint8,std::map<Uint8,uint8_t> > > JoyHatBinds;
 	
 	
 	ClientConfig( void );
@@ -43,23 +43,29 @@ public:
 	std::vector<double> SettingAsDoubles( std::string name ) const;
 	std::vector<int> SettingAsInts( std::string name ) const;
 	
-	bool Bind( SDL_Event *event, uint8_t control );
+	int8_t Bind( SDL_Event *event, uint8_t control );
+	bool Bind( std::string input, uint8_t control );
+	bool Unbind( std::string input );
 	void Unbind( uint8_t control );
 	void UnbindAll( void );
+	size_t SwapBinds( uint8_t control_a, uint8_t control_b );
 	
-	uint8_t GetControl( SDL_Event *event ) const;
+	uint8_t BoundControl( const SDL_Event *event, bool down_only = false ) const;
+	uint8_t BoundControl( std::string input ) const;
 	
 	std::string ControlName( uint8_t control ) const;
 	std::string KeyName( SDLKey key ) const;
 	std::string MouseName( Uint8 mouse ) const;
-	
 	uint8_t ControlID( std::string name ) const;
 	SDLKey KeyID( std::string name ) const;
 	Uint8 MouseID( std::string name ) const;
 	
+	uint8_t KeyBind( SDLKey key ) const;
+	uint8_t MouseBind( Uint8 button ) const;
+	uint8_t JoyAxisBind( std::string dev, Uint8 axis ) const;
+	uint8_t JoyButtonBind( std::string dev, Uint8 button ) const;
+	uint8_t JoyHatBind( std::string dev, Uint8 hat, Uint8 dir ) const;
 	
-	enum
-	{
-		UNBOUND = 0
-	};
+	bool HasControlBound( uint8_t control ) const;
+	std::vector<std::string> ControlBoundTo( uint8_t control ) const;
 };

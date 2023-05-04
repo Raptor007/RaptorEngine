@@ -28,7 +28,7 @@ public:
 	bool Initialized;
 	int W, H, RealW, RealH, DesktopW, DesktopH, BPP;
 	float AspectRatio;
-	bool Fullscreen, VSync;
+	bool Fullscreen, VSync, Framebuffers;
 	int FSAA, AF, ZBits;
 	double ZNear, ZFar;
 	Framebuffer *DrawTo;

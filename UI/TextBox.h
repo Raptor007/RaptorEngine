@@ -21,7 +21,7 @@ public:
 	bool ShiftIsDown;
 	Font *TextFont;
 	uint8_t Align;
-	bool ReturnDeselects, PassReturn, EscDeselects, PassEsc, TabDeselects, PassTab;
+	bool ReturnDeselects, PassReturn, EscDeselects, PassEsc, TabDeselects, PassTab, PassExtendedKeys, ClickOutDeselects;
 	float SelectedRed, SelectedGreen, SelectedBlue, SelectedAlpha;
 	float TextRed, TextGreen, TextBlue, TextAlpha;
 	float SelectedTextRed, SelectedTextGreen, SelectedTextBlue, SelectedTextAlpha;
@@ -33,6 +33,7 @@ public:
 	virtual ~TextBox();
 	
 	void Draw( void );
+	void TrackEvent( SDL_Event *event );
 	void MouseEnter( void );
 	void MouseLeave( void );
 	bool MouseDown( Uint8 button = SDL_BUTTON_LEFT );
@@ -43,7 +44,8 @@ public:
 	void InsertAtCursor( char character );
 	void UpdateCursor( void );
 	virtual void Changed( void );
-
+	virtual void Deselected( void );
+	
 private:
 	Clock CursorTimer;
 };

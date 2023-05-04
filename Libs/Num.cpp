@@ -142,6 +142,22 @@ double Num::SignedPow( double num, double exponent )
 }
 
 
+double Num::Clamp( double num, double min, double max )
+{
+	if( num > max )
+		return max;
+	if( num < min )
+		return min;
+	return num;
+}
+
+
+bool Num::Valid( double num )
+{
+	return (num == num);  // Detect floating-point NaN/IND.
+}
+
+
 int Num::NextPowerOfTwo( int input )
 {
 	int value = 1;
