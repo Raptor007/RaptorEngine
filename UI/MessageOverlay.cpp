@@ -19,6 +19,7 @@ MessageOverlay::MessageOverlay( Font *message_font ) : Layer()
 	
 	MessageLifetime = 5.;
 	MaxMessages = 10;
+	ScrollTime = 0.;
 	
 	UpdateRects();
 }
@@ -26,6 +27,25 @@ MessageOverlay::MessageOverlay( Font *message_font ) : Layer()
 
 MessageOverlay::~MessageOverlay()
 {
+}
+
+
+bool MessageOverlay::DrawsType( uint32_t type ) const
+{
+	return (DoNotDraw.find( type ) == DoNotDraw.end());
+}
+
+
+void MessageOverlay::SetTypeToDraw( uint32_t type, bool draw )
+{
+	if( draw )
+	{
+		std::set<uint32_t>::iterator type_iter = DoNotDraw.find( type );
+		if( type_iter != DoNotDraw.end() )
+			DoNotDraw.erase( type_iter );
+	}
+	else
+		DoNotDraw.insert( type );
 }
 
 
@@ -74,10 +94,14 @@ void MessageOverlay::Draw( void )
 	int count = 0;
 	for( std::deque<TextConsoleMessage*>::reverse_iterator message_iter = Raptor::Game->Msg.Messages.rbegin(); message_iter != Raptor::Game->Msg.Messages.rend(); message_iter ++ )
 	{
+		if( ! DrawsType( (*message_iter)->Type ) )
+			continue;
 		double elapsed_seconds = (*message_iter)->TimeStamp.ElapsedSeconds();
 		double a = 1.;
 		if( elapsed_seconds > MessageLifetime )
 			break;
+		if( ScrollTime && (elapsed_seconds < ScrollTime) && (message_iter == Raptor::Game->Msg.Messages.rbegin()) )
+			y += MessageFont->GetHeight() * (ScrollTime - elapsed_seconds) / ScrollTime;
 		if( elapsed_seconds > (MessageLifetime - 1.) )
 			a = MessageLifetime - elapsed_seconds;
 		

@@ -7,7 +7,15 @@ class Mutex;
 
 #include "PlatformSpecific.h"
 
-#include <SDL/SDL_thread.h>
+#ifdef SDL2
+	#include <SDL2/SDL.h>
+	#include <SDL2/SDL_thread.h>
+	#include <SDL2/SDL_mutex.h>
+#else
+	#include <SDL/SDL.h>
+	#include <SDL/SDL_thread.h>
+	#include <SDL/SDL_mutex.h>
+#endif
 
 
 class Mutex

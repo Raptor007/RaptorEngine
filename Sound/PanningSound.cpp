@@ -3,6 +3,7 @@
  */
 
 #include "PanningSound.h"
+
 #include <cmath>
 #include "Num.h"
 #include "Math2D.h"

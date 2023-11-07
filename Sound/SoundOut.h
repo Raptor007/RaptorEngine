@@ -11,12 +11,18 @@ class SoundOut;
 #include <map>
 #include <queue>
 #include <stdint.h>
-#include <SDL/SDL.h>
+#include "Clock.h"
 
-#ifdef __APPLE__
-	#include <SDL_mixer/SDL_mixer.h>
+#ifdef SDL2
+	#include <SDL2/SDL.h>
+	#include <SDL2/SDL_mixer.h>
 #else
-	#include <SDL/SDL_mixer.h>
+	#include <SDL/SDL.h>
+	#ifdef __APPLE__
+		#include <SDL_mixer/SDL_mixer.h>
+	#else
+		#include <SDL/SDL_mixer.h>
+	#endif
 #endif
 
 #include "PanningSound.h"
@@ -31,9 +37,10 @@ public:
 	float MasterVolume, SoundVolume, MusicVolume;
 	double DistScale;
 	Pos3D Cam;
-	//std::set<int> ActiveChannels;
+	std::set<int> ActiveChannels;
 	std::map<int, PanningSound> ActivePans;
 	std::map<uint32_t, int> ObjectPans;
+	std::map<uint32_t, Clock> RecentPans;
 	float SoundAttenuate, MusicAttenuate;
 	int AttenuateFor;
 	

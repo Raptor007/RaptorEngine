@@ -6,7 +6,6 @@
 
 #include <cstddef>
 #include <cmath>
-#include <SDL/SDL.h>
 #include "Endian.h"
 #include "Num.h"
 #include "ResourceManager.h"
@@ -56,6 +55,12 @@ Graphics::~Graphics()
 
 void Graphics::Initialize( void )
 {
+	#if ! SDL_VERSION_ATLEAST(2,0,0)
+		// Prevent black screen during gameplay if using sdl12-compat wrapper library.
+		char sdl_env_scaling[] = "SDL12COMPAT_OPENGL_SCALING=0";
+		SDL_putenv( sdl_env_scaling );
+	#endif
+	
 	// Initialize SDL.
 	if( SDL_Init( SDL_INIT_VIDEO ) != 0 )
 	{
@@ -64,16 +69,30 @@ void Graphics::Initialize( void )
 	};
 	
 	// Get the desktop resolution.
-	const SDL_VideoInfo *info = SDL_GetVideoInfo();
-	if( info )
-	{
-		DesktopW = info->current_w;
-		DesktopH = info->current_h;
-	}
+	#if SDL_VERSION_ATLEAST(2,0,0)
+	/*
+		// Disabled because I don't think we need this in SDL2, and it's possible querying index 0 will return an available mode that's higher-res than the current desktop!
+		SDL_DisplayMode mode;
+		if( SDL_GetDisplayMode( 0, 0, &mode ) == 0 )
+		{
+			DesktopW = mode.w;
+			DesktopH = mode.h;
+		}
+	*/
+	#else
+		const SDL_VideoInfo *info = SDL_GetVideoInfo();
+		if( info )
+		{
+			DesktopW = info->current_w;
+			DesktopH = info->current_h;
+		}
+	#endif
 	
-	// Default window position should be centered.
-	char sdl_env[] = "SDL_VIDEO_WINDOW_POS=center";
-	SDL_putenv( sdl_env );
+	#if ! SDL_VERSION_ATLEAST(2,0,0)
+		// Default window position should be centered.
+		char sdl_env_pos[] = "SDL_VIDEO_WINDOW_POS=center";
+		SDL_putenv( sdl_env_pos );
+	#endif
 	
 	// Initialize SDL_ttf for text rendering.
 	TTF_Init();
@@ -133,7 +152,18 @@ void Graphics::SetMode( int x, int y, int bpp, bool fullscreen, int fsaa, int af
 	SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
 	
 	// Set vsync.
-	SDL_GL_SetAttribute( SDL_GL_SWAP_CONTROL, VSync ? 1 : 0 );
+	#if SDL_VERSION_ATLEAST(2,0,0)
+		if( VSync )
+		{
+			// Try adaptive vsync first; fall back to normal vsync if unavailable.
+			if( SDL_GL_SetSwapInterval( -1 ) == -1 )
+				SDL_GL_SetSwapInterval( 1 );
+		}
+		else
+			SDL_GL_SetSwapInterval( 0 );
+	#else
+		SDL_GL_SetAttribute( SDL_GL_SWAP_CONTROL, VSync ? 1 : 0 );
+	#endif
 	
 	// Set minimum depth buffer.
 	SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, ZBits );
@@ -156,20 +186,39 @@ void Graphics::SetMode( int x, int y, int bpp, bool fullscreen, int fsaa, int af
 	
 	// Free the current screen.
 	if( Screen )
-		SDL_FreeSurface( Screen );
+	{
+		#if SDL_VERSION_ATLEAST(2,0,0)
+			SDL_DestroyWindow( Screen );
+		#else
+			SDL_FreeSurface( Screen );
+		#endif
+	}
 	
 	#ifndef __APPLE__
 		// Set the titlebar icon.
 		SDL_Surface *icon = SDL_LoadBMP( Raptor::Game->Res.Find("icon.bmp").c_str() );
 		if( icon )
 		{
-			SDL_WM_SetIcon( icon, NULL );
+			#if SDL_VERSION_ATLEAST(2,0,0)
+				SDL_SetWindowIcon( Screen, icon );
+			#else
+				SDL_WM_SetIcon( icon, NULL );
+			#endif
 			SDL_FreeSurface( icon );
 		}
 	#endif
 	
 	// Create a new screen.
-	Screen = SDL_SetVideoMode( x, y, bpp, SDL_OPENGL | SDL_ANYFORMAT | (Fullscreen ? SDL_FULLSCREEN : SDL_RESIZABLE) );
+	#if SDL_VERSION_ATLEAST(2,0,0)
+		Uint32 screen_flags = Fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : SDL_WINDOW_RESIZABLE;
+		if( Fullscreen && DesktopW && DesktopH && x && y && ((x < DesktopW) || (y < DesktopH)) )
+			screen_flags = SDL_WINDOW_FULLSCREEN;
+		Screen = SDL_CreateWindow( Raptor::Game->Game.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, x, y, SDL_WINDOW_OPENGL | screen_flags );
+		if( Screen )
+			SDL_GL_CreateContext( Screen );
+	#else
+		Screen = SDL_SetVideoMode( x, y, bpp, SDL_OPENGL | SDL_ANYFORMAT | (Fullscreen ? SDL_FULLSCREEN : SDL_RESIZABLE) );
+	#endif
 	
 	if( ! Screen )
 	{
@@ -197,12 +246,18 @@ void Graphics::SetMode( int x, int y, int bpp, bool fullscreen, int fsaa, int af
 	}
 	
 	// We successfully set the video mode, so pull the resolution from the SDL_Screen.
-	W = Screen->w;
-	H = Screen->h;
-	RealW = W;
-	RealH = H;
+	#if SDL_VERSION_ATLEAST(2,0,0)
+		SDL_GL_GetDrawableSize( Screen, &W, &H );
+		SDL_GetWindowSize( Screen, &RealW, &RealH );
+		BPP = SDL_BITSPERPIXEL( SDL_GetWindowPixelFormat( Screen ) );
+	#else
+		W = Screen->w;
+		H = Screen->h;
+		RealW = W;
+		RealH = H;
+		BPP = Screen->format->BitsPerPixel;
+	#endif
 	AspectRatio = (W && H) ? ((float)( W )) / ((float)( H )) : 1.f;
-	BPP = Screen->format->BitsPerPixel;
 	
 	// If we weren't able to use the requested anti-aliasing samples, update the setting.
 	int max_fsaa = 0;
@@ -239,7 +294,11 @@ void Graphics::SetMode( int x, int y, int bpp, bool fullscreen, int fsaa, int af
 	Raptor::Game->Res.ReloadGraphics();
 	
 	// Set the titlebar name.
-	SDL_WM_SetCaption( Raptor::Game->Game.c_str(), NULL );
+	#if SDL_VERSION_ATLEAST(2,0,0)
+		SDL_SetWindowTitle( Screen, Raptor::Game->Game.c_str() );
+	#else
+		SDL_WM_SetCaption( Raptor::Game->Game.c_str(), NULL );
+	#endif
 	
 	// Set the OpenGL state after creating the context with SDL_SetVideoMode.
 	glViewport( 0, 0, W, H );
@@ -316,7 +375,8 @@ bool Graphics::SelectDefaultFramebuffer( void )
 	}
 	else
 	{
-		glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+		if( glBindFramebuffer )
+			glBindFramebuffer( GL_FRAMEBUFFER, 0 );
 		W = RealW;
 		H = RealH;
 		AspectRatio = (W && H) ? ((float)( W )) / ((float)( H )) : 1.f;
@@ -357,7 +417,11 @@ void Graphics::Clear( GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha )
 
 void Graphics::SwapBuffers( void )
 {
+#if SDL_VERSION_ATLEAST(2,0,0)
+	SDL_GL_SwapWindow( Screen );
+#else
 	SDL_GL_SwapBuffers();
+#endif
 }
 
 
@@ -872,10 +936,18 @@ GLuint Graphics::MakeTexture( SDL_Surface *surface, GLint texture_filter, GLint 
 	// Convert to RGBA pixel format (required for SDL_image 1.2.8+).
 	if( (surface->format->BitsPerPixel != 32) || (surface->format->Rshift > surface->format->Bshift) )
 	{
-		#ifdef ENDIAN_BIG
-			SDL_PixelFormat format = { NULL, 32, 4, 0, 0, 0, 0, 0, 8, 16, 24, 0xFF000000, 0x00FF0000, 0x0000FF00, 0x000000FF, 0, 255 };
+		#if SDL_VERSION_ATLEAST(2,0,0)
+			#ifdef ENDIAN_BIG
+				SDL_PixelFormat format = { SDL_GetWindowPixelFormat( Screen ), NULL, 32, 4, 0,0, 0xFF000000, 0x00FF0000, 0x0000FF00, 0x000000FF, 0,0,0,0, 0,8,16,24, 0, NULL };
+			#else
+				SDL_PixelFormat format = { SDL_GetWindowPixelFormat( Screen ), NULL, 32, 4, 0,0, 0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000, 0,0,0,0, 0,8,16,24, 0, NULL };
+			#endif
 		#else
-			SDL_PixelFormat format = { NULL, 32, 4, 0, 0, 0, 0, 0, 8, 16, 24, 0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000, 0, 255 };
+			#ifdef ENDIAN_BIG
+				SDL_PixelFormat format = { NULL, 32, 4, 0,0,0,0, 0,8,16,24, 0xFF000000, 0x00FF0000, 0x0000FF00, 0x000000FF, 0, 255 };
+			#else
+				SDL_PixelFormat format = { NULL, 32, 4, 0,0,0,0, 0,8,16,24, 0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000, 0, 255 };
+			#endif
 		#endif
 		SDL_Surface *temp = SDL_ConvertSurface( surface, &format, SDL_SWSURFACE );
 		if( temp )

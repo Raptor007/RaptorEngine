@@ -34,7 +34,11 @@ NetServer::~NetServer()
 	// If the thread didn't finish, kill it.
 	if( Thread )
 	{
-		SDL_KillThread( Thread );
+		#if SDL_VERSION_ATLEAST(2,0,0)
+			SDL_DetachThread( Thread );
+		#else
+			SDL_KillThread( Thread );
+		#endif
 		Thread = NULL;
 	}
 	
@@ -74,7 +78,12 @@ bool NetServer::Initialize( int port )
 	
 	// Start the listener thread.
 	Listening = true;
-	if( !( Thread = SDL_CreateThread( NetServerThread, this ) ) )
+	#if SDL_VERSION_ATLEAST(2,0,0)
+		Thread = SDL_CreateThread( NetServerThread, "NetServer", this );
+	#else
+		Thread = SDL_CreateThread( NetServerThread, this );
+	#endif
+	if( ! Thread )
 	{
 		fprintf( stderr, "SDL_CreateThread: %s\n", SDLNet_GetError() );
 		Listening = false;
@@ -115,7 +124,11 @@ void NetServer::Disconnect( void )
 	
 	if( Thread )
 	{
-		SDL_KillThread( Thread );
+		#if SDL_VERSION_ATLEAST(2,0,0)
+			SDL_DetachThread( Thread );
+		#else
+			SDL_KillThread( Thread );
+		#endif
 		Thread = NULL;
 	}
 	

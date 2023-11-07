@@ -14,6 +14,7 @@
 #include "Rand.h"
 #include "Num.h"
 #include "File.h"
+#include "Math2D.h"
 #include "Math3D.h"
 #include "RaptorGame.h"
 
@@ -33,6 +34,7 @@ void Model::Clear( void )
 {
 	Objects.clear();
 	Materials.clear();
+	MaterialFiles.clear();
 	Length = 0.;
 	Width = 0.;
 	Height = 0.;
@@ -40,7 +42,7 @@ void Model::Clear( void )
 }
 
 
-void Model::BecomeInstance( Model *other )
+void Model::BecomeInstance( const Model *other )
 {
 	Clear();
 	
@@ -50,15 +52,16 @@ void Model::BecomeInstance( Model *other )
 	for( std::map<std::string,ModelMaterial>::const_iterator mtl_iter = other->Materials.begin(); mtl_iter != other->Materials.end(); mtl_iter ++ )
 		Materials[ mtl_iter->first ].BecomeInstance( &(mtl_iter->second) );
 	
-	// Force the original model to get length/width/height, so it only has to calculate once when spawning many copies.
-	Length = other->GetLength();
-	Width = other->GetWidth();
-	Height = other->GetHeight();
-	MaxRadius = other->GetMaxRadius();
+	MaterialFiles = other->MaterialFiles;
+	
+	Length = GetLength();
+	Width = GetWidth();
+	Height = GetHeight();
+	MaxRadius = GetMaxRadius();
 }
 
 
-void Model::BecomeCopy( Model *other )
+void Model::BecomeCopy( const Model *other )
 {
 	if( other != this )
 		BecomeInstance( other );
@@ -69,7 +72,7 @@ void Model::BecomeCopy( Model *other )
 			array_iter->second.BecomeCopy( &(array_iter->second) );
 	}
 	
-	for( std::map<std::string,ModelMaterial>::iterator mtl_iter = other->Materials.begin(); mtl_iter != other->Materials.end(); mtl_iter ++ )
+	for( std::map<std::string,ModelMaterial>::iterator mtl_iter = Materials.begin(); mtl_iter != Materials.end(); mtl_iter ++ )
 		mtl_iter->second.Arrays.BecomeCopy( &(mtl_iter->second.Arrays) );
 }
 
@@ -298,6 +301,8 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 						{
 							if( vertex_num < 0 )
 								vertex_num += vertices.size() + 1;
+							if( (size_t)vertex_num > vertices.size() )
+								continue;
 							
 							Objects[ obj ].Points.push_back( vertices[ vertex_num - 1 ] );
 						}
@@ -314,6 +319,8 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 						{
 							if( vertex_num < 0 )
 								vertex_num += vertices.size() + 1;
+							if( (size_t)vertex_num > vertices.size() )
+								continue;
 							
 							Objects[ obj ].Lines.back().push_back( vertices[ vertex_num - 1 ] );
 						}
@@ -332,6 +339,7 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 					if( elements.size() >= 2 )
 					{
 						std::string mtl_filename = elements.at( 1 );
+						MaterialFiles.push_back( mtl_filename );
 						
 						// Use local path if possible, otherwise ues ResourceManager SearchPath.
 						
@@ -520,6 +528,18 @@ void Model::SmoothNormals( void )
 		mtl_iter->second.SmoothNormals();
 	for( std::map<std::string,ModelObject>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
 		obj_iter->second.SmoothNormals();
+}
+
+
+void Model::Optimize( double vertex_tolerance, double normal_tolerance, double dot_tolerance )
+{
+	for( std::map<std::string,ModelMaterial>::iterator mtl_iter = Materials.begin(); mtl_iter != Materials.end(); mtl_iter ++ )
+		mtl_iter->second.Arrays.Optimize( vertex_tolerance, normal_tolerance, dot_tolerance );
+	for( std::map<std::string,ModelObject>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
+	{
+		for( std::map<std::string,ModelArrays>::iterator array_iter = obj_iter->second.Arrays.begin(); array_iter != obj_iter->second.Arrays.end(); array_iter ++ )
+			array_iter->second.Optimize( vertex_tolerance, normal_tolerance, dot_tolerance );
+	}
 }
 
 
@@ -733,8 +753,16 @@ void Model::DrawAt( const Pos3D *pos, double scale, double fwd_scale, double up_
 void Model::DrawObjectsAt( const std::list<std::string> *object_names, const Pos3D *pos, double scale, double fwd_scale, double up_scale, double right_scale )
 {
 	std::set<std::string> object_name_set;
-	for( std::list<std::string>::const_iterator obj_iter = object_names->begin(); obj_iter != object_names->end(); obj_iter ++ )
-		object_name_set.insert( *obj_iter );
+	if( object_names )
+	{
+		for( std::list<std::string>::const_iterator obj_iter = object_names->begin(); obj_iter != object_names->end(); obj_iter ++ )
+			object_name_set.insert( *obj_iter );
+	}
+	else
+	{
+		for( std::map<std::string,ModelObject>::const_iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
+			object_name_set.insert( obj_iter->first );
+	}
 	
 	Draw( pos, &object_name_set, NULL, 0., 0, scale * fwd_scale, scale * up_scale, scale * right_scale );
 }
@@ -812,15 +840,17 @@ double Model::DistanceFromSphere( const Pos3D *pos, const std::set<std::string> 
 			faces.insert( block2->second.begin(), block2->second.end() );
 	}
 	
-	double min_dist = FLT_MAX;
+	double min_dist = FLT_MAX, min_dist_pos2 = FLT_MAX;
 	const GLdouble *hit_face = NULL;
 	
 	for( std::set<const GLdouble*>::const_iterator face = faces.begin(); face != faces.end(); face ++ )
 	{
 		double dist = Math3D::LineSegDistFromFace( pos2, &pos2b, *face, 3 );
-		if( dist < min_dist )
+		double dist_pos2 = Math3D::FaceCenter( *face ).Dist( pos2 );
+		if( (dist < min_dist) || ((dist == min_dist) && (dist_pos2 < min_dist_pos2)) )
 		{
 			min_dist = dist;
+			min_dist_pos2 = dist_pos2;
 			hit_face = *face;
 		}
 	}
@@ -1551,6 +1581,58 @@ void ModelArrays::AddFaces( std::vector<ModelFace> &faces )
 }
 
 
+void ModelArrays::RemoveFace( size_t face_index )
+{
+	size_t first_vertex = face_index * 3;
+	if( (first_vertex + 2) >= VertexCount )
+		return;
+	
+	if( ! Allocated )
+		BecomeCopy( this );
+	
+	if( VertexArray )
+	{
+		for( size_t i = first_vertex; (i + 3) < VertexCount; i ++ )
+		{
+			VertexArray[ i*3     ] = VertexArray[ (i+3)*3     ];
+			VertexArray[ i*3 + 1 ] = VertexArray[ (i+3)*3 + 1 ];
+			VertexArray[ i*3 + 2 ] = VertexArray[ (i+3)*3 + 2 ];
+		}
+	}
+	
+	if( WorldSpaceVertexArray )
+	{
+		for( size_t i = first_vertex; (i + 3) < VertexCount; i ++ )
+		{
+			WorldSpaceVertexArray[ i*3     ] = WorldSpaceVertexArray[ (i+3)*3     ];
+			WorldSpaceVertexArray[ i*3 + 1 ] = WorldSpaceVertexArray[ (i+3)*3 + 1 ];
+			WorldSpaceVertexArray[ i*3 + 2 ] = WorldSpaceVertexArray[ (i+3)*3 + 2 ];
+		}
+	}
+	
+	if( TexCoordArray )
+	{
+		for( size_t i = first_vertex; (i + 3) < VertexCount; i ++ )
+		{
+			TexCoordArray[ i*2     ] = TexCoordArray[ (i+3)*2     ];
+			TexCoordArray[ i*2 + 1 ] = TexCoordArray[ (i+3)*2 + 1 ];
+		}
+	}
+	
+	if( NormalArray )
+	{
+		for( size_t i = first_vertex; (i + 3) < VertexCount; i ++ )
+		{
+			NormalArray[ i*3     ] = NormalArray[ (i+3)*3     ];
+			NormalArray[ i*3 + 1 ] = NormalArray[ (i+3)*3 + 1 ];
+			NormalArray[ i*3 + 2 ] = NormalArray[ (i+3)*3 + 2 ];
+		}
+	}
+	
+	Resize( VertexCount - 3 );
+}
+
+
 void ModelArrays::CalculateNormals( void )
 {
 	if( ! Allocated )
@@ -1627,6 +1709,74 @@ void ModelArrays::SmoothNormals( void )
 }
 
 
+void ModelArrays::Optimize( double vertex_tolerance, double normal_tolerance, double dot_tolerance )
+{
+	// 1. For each (unused) triangle, find others that share an edge and are on the same plane (within reason).
+	// 2. Continue recurisvely off every found triangle.
+	// 3. Any edge that is NOT shared with any other triangle of the group is on the outer edge of the shape.
+	// 4. Get the set of all outer edges, then find any that line up.  Combine those into a new set of edges.
+	// 5. From the new minimal outer edge shape, create a new minimal set of triangles to cover the shape.
+	// 6. Replace original triangles with optimized shape.  (Sanity check to make sure it's actually better?)
+	
+	std::vector<ModelTriangle> triangles;
+	for( size_t i = 0; i*3 < VertexCount; i ++ )
+		triangles.push_back( ModelTriangle( this, i ) );
+	
+	std::vector<ModelShape> shapes;
+	while( triangles.size() )
+		shapes.push_back( ModelShape( &triangles, vertex_tolerance, normal_tolerance ) );
+	
+	std::vector<ModelFace> faces;
+	for( std::vector<ModelShape>::const_iterator shape_iter = shapes.begin(); shape_iter != shapes.end(); shape_iter ++ )
+	{
+		// Get the set of all outer edges, then find any that line up.  Combine those into a new set of edges.
+		std::vector< std::vector<ModelVertex> > edges = shape_iter->OptimizedTriangles( vertex_tolerance, normal_tolerance, dot_tolerance );
+		
+		// If the new shape is no more efficient than the old, just keep the old.
+		if( edges.size() >= shape_iter->Triangles.size() )
+		{
+			for( std::vector<ModelTriangle>::const_iterator tri_iter = shape_iter->Triangles.begin(); tri_iter != shape_iter->Triangles.end(); tri_iter ++ )
+			{
+				std::vector<Vec3D> vertices, normals;
+				std::vector<Vec2D> tex_coords;
+				vertices.push_back  ( tri_iter->Vertices[ 0 ].Vertex   );
+				vertices.push_back  ( tri_iter->Vertices[ 1 ].Vertex   );
+				vertices.push_back  ( tri_iter->Vertices[ 2 ].Vertex   );
+				tex_coords.push_back( tri_iter->Vertices[ 0 ].TexCoord );
+				tex_coords.push_back( tri_iter->Vertices[ 1 ].TexCoord );
+				tex_coords.push_back( tri_iter->Vertices[ 2 ].TexCoord );
+				normals.push_back   ( tri_iter->Vertices[ 0 ].Normal   );
+				normals.push_back   ( tri_iter->Vertices[ 1 ].Normal   );
+				normals.push_back   ( tri_iter->Vertices[ 2 ].Normal   );
+				faces.push_back( ModelFace( vertices, tex_coords, normals ) );
+			}
+			continue;
+		}
+		
+		// From each new minimal outer edge shape, create a new minimal set of triangles to cover the shape.
+		for( std::vector< std::vector<ModelVertex> >::const_iterator edge = edges.begin(); edge != edges.end(); edge ++ )
+		{
+			std::vector<Vec3D> vertices, normals;
+			std::vector<Vec2D> tex_coords;
+			for( std::vector<ModelVertex>::const_iterator vertex_iter = edge->begin(); vertex_iter != edge->end(); vertex_iter ++ )
+			{
+				vertices.push_back  ( vertex_iter->Vertex   );
+				tex_coords.push_back( vertex_iter->TexCoord );
+				normals.push_back   ( vertex_iter->Normal   );
+			}
+			faces.push_back( ModelFace( vertices, tex_coords, normals ) );
+		}
+	}
+	
+	// Replace original triangles with optimized shape.
+	if( faces.size() )
+	{
+		Clear();
+		AddFaces( faces );
+	}
+}
+
+
 void ModelArrays::MakeWorldSpace( const Pos3D *pos, double fwd_scale, double up_scale, double right_scale )
 {
 	if( VertexCount )
@@ -1664,6 +1814,469 @@ bool ModelArrays::HasWorldSpaceVertex( const GLdouble *vertex ) const
 // ---------------------------------------------------------------------------
 
 
+bool ModelVertex::operator < ( const ModelVertex &other ) const
+{
+	return (Vertex < other.Vertex);
+}
+
+
+// ---------------------------------------------------------------------------
+
+
+ModelTriangle::ModelTriangle( const ModelArrays *arrays, size_t face_index )
+{
+	FaceIndex = face_index;
+	
+	if( arrays->VertexArray )
+	{
+		Vertices[ 0 ].Vertex.Set( arrays->VertexArray[ face_index * 9     ], arrays->VertexArray[ face_index * 9 + 1 ], arrays->VertexArray[ face_index * 9 + 2 ] );
+		Vertices[ 1 ].Vertex.Set( arrays->VertexArray[ face_index * 9 + 3 ], arrays->VertexArray[ face_index * 9 + 4 ], arrays->VertexArray[ face_index * 9 + 5 ] );
+		Vertices[ 2 ].Vertex.Set( arrays->VertexArray[ face_index * 9 + 6 ], arrays->VertexArray[ face_index * 9 + 7 ], arrays->VertexArray[ face_index * 9 + 8 ] );
+	}
+	if( arrays->TexCoordArray )
+	{
+		Vertices[ 0 ].TexCoord.Set( arrays->TexCoordArray[ face_index * 6     ], arrays->TexCoordArray[ face_index * 6 + 1 ] );
+		Vertices[ 1 ].TexCoord.Set( arrays->TexCoordArray[ face_index * 6 + 2 ], arrays->TexCoordArray[ face_index * 6 + 3 ] );
+		Vertices[ 2 ].TexCoord.Set( arrays->TexCoordArray[ face_index * 6 + 4 ], arrays->TexCoordArray[ face_index * 6 + 5 ] );
+	}
+	if( arrays->NormalArray )
+	{
+		Vertices[ 0 ].Normal.Set( arrays->NormalArray[ face_index * 9     ], arrays->NormalArray[ face_index * 9 + 1 ], arrays->NormalArray[ face_index * 9 + 2 ] );
+		Vertices[ 1 ].Normal.Set( arrays->NormalArray[ face_index * 9 + 3 ], arrays->NormalArray[ face_index * 9 + 4 ], arrays->NormalArray[ face_index * 9 + 5 ] );
+		Vertices[ 2 ].Normal.Set( arrays->NormalArray[ face_index * 9 + 6 ], arrays->NormalArray[ face_index * 9 + 7 ], arrays->NormalArray[ face_index * 9 + 8 ] );
+	}
+	
+	Vec3D a = Vertices[ 1 ].Vertex - Vertices[ 0 ].Vertex, b = Vertices[ 2 ].Vertex - Vertices[ 0 ].Vertex;
+	CalculatedNormal = a.Cross( b );
+	CalculatedNormal.ScaleTo( 1. );
+	int8_t normal_dir = Num::Sign( Vertices[ 0 ].Normal.Dot( &CalculatedNormal ) )
+	                  + Num::Sign( Vertices[ 1 ].Normal.Dot( &CalculatedNormal ) )
+	                  + Num::Sign( Vertices[ 2 ].Normal.Dot( &CalculatedNormal ) );
+	if( normal_dir < 0 )
+		CalculatedNormal.ScaleBy( -1. );
+}
+
+
+uint8_t ModelTriangle::SharesEdge( const ModelTriangle *other, double vertex_tolerance, double normal_tolerance, const Vec3D *normal ) const
+{
+	if( ! normal )
+		normal = &CalculatedNormal;
+	if( (*normal - other->CalculatedNormal).Length() > normal_tolerance )
+		return 0;
+	
+	bool corners[ 3 ] = { false, false, false };
+	for( size_t i = 0; i < 3; i ++ )
+	{
+		for( size_t j = 0; j < 3; j ++ )
+		{
+			if( (Vertices[ i ].Vertex - other->Vertices[ j ].Vertex).Length() <= vertex_tolerance )
+			{
+				corners[ i ] = true;
+				break;
+			}
+		}
+	}
+	
+	if( corners[ 0 ] && corners[ 1 ] && corners[ 2 ] )
+		return 0x7;
+	if( corners[ 0 ] && corners[ 1 ] )
+		return 0x1;
+	if( corners[ 1 ] && corners[ 2 ] )
+		return 0x2;
+	if( corners[ 2 ] && corners[ 0 ] )
+		return 0x4;
+	return 0;
+}
+
+
+// ---------------------------------------------------------------------------
+
+
+ModelEdge::ModelEdge( const ModelVertex &v1, const ModelVertex &v2, const Vec3D &u, const Vec3D &v, bool outside )
+{
+	Vertices[ 0 ] = v1;
+	Vertices[ 1 ] = v2;
+	OnPlane[ 0 ].X = v1.Vertex.Dot( u );
+	OnPlane[ 0 ].Y = v1.Vertex.Dot( v );
+	OnPlane[ 1 ].X = v2.Vertex.Dot( u );
+	OnPlane[ 1 ].Y = v2.Vertex.Dot( v );
+	Outside = outside;
+}
+
+
+bool ModelEdge::Intersects( const ModelEdge &other ) const
+{
+	// Consider them intersecting if they share both vertices.
+	if( ((OnPlane[ 0 ] == other.OnPlane[ 0 ]) && (OnPlane[ 1 ] == other.OnPlane[ 1 ])) || ((OnPlane[ 0 ] == other.OnPlane[ 1 ]) && (OnPlane[ 1 ] == other.OnPlane[ 0 ])) )
+		return true;
+	
+	// DON'T consider them intersecting if they share only one vertex.
+	if( (OnPlane[ 0 ] == other.OnPlane[ 0 ]) || (OnPlane[ 0 ] == other.OnPlane[ 1 ]) || (OnPlane[ 1 ] == other.OnPlane[ 0 ]) || (OnPlane[ 1 ] == other.OnPlane[ 1 ]) )
+		return false;
+	
+	return Math2D::LineIntersection( OnPlane[ 0 ].X, OnPlane[ 0 ].Y, OnPlane[ 1 ].X, OnPlane[ 1 ].Y, other.OnPlane[ 0 ].X, other.OnPlane[ 0 ].Y, other.OnPlane[ 1 ].X, other.OnPlane[ 1 ].Y );
+}
+
+
+bool ModelEdge::Intersects( const Vec2D &end1, const Vec2D &end2 ) const
+{
+	return Math2D::LineIntersection( OnPlane[ 0 ].X, OnPlane[ 0 ].Y, OnPlane[ 1 ].X, OnPlane[ 1 ].Y, end1.X, end1.Y, end2.X, end2.Y );
+}
+
+
+// ---------------------------------------------------------------------------
+
+
+ModelShape::ModelShape( std::vector<ModelTriangle> *triangles, double vertex_tolerance, double normal_tolerance )
+{
+	if( triangles && ! triangles->empty() )
+	{
+		Normal = triangles->begin()->CalculatedNormal;
+		
+		AddTriangles( *(triangles->begin()), triangles, vertex_tolerance, normal_tolerance );
+		
+		Min = Triangles.begin()->Vertices[ 0 ].Vertex;
+		Max = Min;
+		for( std::vector<ModelTriangle>::const_iterator tri_iter = Triangles.begin(); tri_iter != Triangles.end(); tri_iter ++ )
+		{
+			if( Min.X > tri_iter->Vertices[ 0 ].Vertex.X )
+				Min.X = tri_iter->Vertices[ 0 ].Vertex.X;
+			if( Min.Y > tri_iter->Vertices[ 0 ].Vertex.Y )
+				Min.Y = tri_iter->Vertices[ 0 ].Vertex.Y;
+			if( Min.Z > tri_iter->Vertices[ 0 ].Vertex.Z )
+				Min.Z = tri_iter->Vertices[ 0 ].Vertex.Z;
+			if( Max.X < tri_iter->Vertices[ 0 ].Vertex.X )
+				Max.X = tri_iter->Vertices[ 0 ].Vertex.X;
+			if( Max.Y < tri_iter->Vertices[ 0 ].Vertex.Y )
+				Max.Y = tri_iter->Vertices[ 0 ].Vertex.Y;
+			if( Max.Z < tri_iter->Vertices[ 0 ].Vertex.Z )
+				Max.Z = tri_iter->Vertices[ 0 ].Vertex.Z;
+			
+			if( Min.X > tri_iter->Vertices[ 1 ].Vertex.X )
+				Min.X = tri_iter->Vertices[ 1 ].Vertex.X;
+			if( Min.Y > tri_iter->Vertices[ 1 ].Vertex.Y )
+				Min.Y = tri_iter->Vertices[ 1 ].Vertex.Y;
+			if( Min.Z > tri_iter->Vertices[ 1 ].Vertex.Z )
+				Min.Z = tri_iter->Vertices[ 1 ].Vertex.Z;
+			if( Max.X < tri_iter->Vertices[ 1 ].Vertex.X )
+				Max.X = tri_iter->Vertices[ 1 ].Vertex.X;
+			if( Max.Y < tri_iter->Vertices[ 1 ].Vertex.Y )
+				Max.Y = tri_iter->Vertices[ 1 ].Vertex.Y;
+			if( Max.Z < tri_iter->Vertices[ 1 ].Vertex.Z )
+				Max.Z = tri_iter->Vertices[ 1 ].Vertex.Z;
+			
+			if( Min.X > tri_iter->Vertices[ 2 ].Vertex.X )
+				Min.X = tri_iter->Vertices[ 2 ].Vertex.X;
+			if( Min.Y > tri_iter->Vertices[ 2 ].Vertex.Y )
+				Min.Y = tri_iter->Vertices[ 2 ].Vertex.Y;
+			if( Min.Z > tri_iter->Vertices[ 2 ].Vertex.Z )
+				Min.Z = tri_iter->Vertices[ 2 ].Vertex.Z;
+			if( Max.X < tri_iter->Vertices[ 2 ].Vertex.X )
+				Max.X = tri_iter->Vertices[ 2 ].Vertex.X;
+			if( Max.Y < tri_iter->Vertices[ 2 ].Vertex.Y )
+				Max.Y = tri_iter->Vertices[ 2 ].Vertex.Y;
+			if( Max.Z < tri_iter->Vertices[ 2 ].Vertex.Z )
+				Max.Z = tri_iter->Vertices[ 2 ].Vertex.Z;
+		}
+		Center = (Min + Max) / 2.;
+	}
+}
+
+
+void ModelShape::AddTriangles( const ModelTriangle triangle, std::vector<ModelTriangle> *triangles, double vertex_tolerance, double normal_tolerance )
+{
+	Triangles.push_back( triangle );
+	
+	// For each (unmarked) triangle, find others that share an edge and are on the same plane (within reason).
+	std::vector<ModelTriangle> matches;
+	for( size_t i = 0; i < triangles->size(); i ++ )
+	{
+		const ModelTriangle *other_triangle = &((*triangles)[ i ]);
+		if( (triangle.Vertices[ 0 ].Vertex == other_triangle->Vertices[ 0 ].Vertex)
+		&&  (triangle.Vertices[ 1 ].Vertex == other_triangle->Vertices[ 1 ].Vertex)
+		&&  (triangle.Vertices[ 2 ].Vertex == other_triangle->Vertices[ 2 ].Vertex) )
+		{
+			triangles->erase( triangles->begin() + i );
+			i --;
+		}
+		else if( triangle.SharesEdge( other_triangle, vertex_tolerance, normal_tolerance, &Normal ) )
+			matches.push_back( *other_triangle );
+	}
+	
+	// Continue recurisvely off every found triangle.
+	for( std::vector<ModelTriangle>::const_iterator match = matches.begin(); match != matches.end(); match ++ )
+		AddTriangles( *match, triangles, vertex_tolerance, normal_tolerance );
+}
+
+
+std::vector< std::vector<ModelVertex> > ModelShape::AllEdges( double vertex_tolerance, double normal_tolerance ) const
+{
+	// Any edge that is NOT shared with any other triangle of the group is on the outer edge of the shape.
+	std::set< std::pair<ModelVertex,ModelVertex> > edges;
+	for( std::vector<ModelTriangle>::const_iterator tri_iter1 = Triangles.begin(); tri_iter1 != Triangles.end(); tri_iter1 ++ )
+	{
+		// FIXME: Does this correctly handle overlapping triangles along the edge of a shape?  (Should I even care if it does?)
+		uint8_t shared_edges = 0;
+		for( std::vector<ModelTriangle>::const_iterator tri_iter2 = Triangles.begin(); tri_iter2 != Triangles.end(); tri_iter2 ++ )
+		{
+			if( tri_iter1->FaceIndex != tri_iter2->FaceIndex )
+				shared_edges |= tri_iter1->SharesEdge( &*tri_iter2, vertex_tolerance, normal_tolerance, &Normal );
+		}
+		
+		if( (Triangles.size() > 1) && ! shared_edges ) // Sanity check: There should never be a lone triangle in a contiguous shape.
+			continue;
+		
+		if( !(shared_edges & 0x1) )
+			edges.insert( std::pair<ModelVertex,ModelVertex>( tri_iter1->Vertices[ 0 ], tri_iter1->Vertices[ 1 ] ) );
+		if( !(shared_edges & 0x2) )
+			edges.insert( std::pair<ModelVertex,ModelVertex>( tri_iter1->Vertices[ 1 ], tri_iter1->Vertices[ 2 ] ) );
+		if( !(shared_edges & 0x4) )
+			edges.insert( std::pair<ModelVertex,ModelVertex>( tri_iter1->Vertices[ 2 ], tri_iter1->Vertices[ 0 ] ) );
+	}
+	
+	// Sort the edge vertices going around the outside of the shape.
+	std::vector< std::vector<ModelVertex> > shapes;
+	shapes.push_back( std::vector<ModelVertex>() );
+	if( edges.size() )
+	{
+		shapes.back().push_back( edges.begin()->first );
+		shapes.back().push_back( edges.begin()->second );
+		edges.erase( edges.begin() );
+		
+		while( edges.size() )
+		{
+			double min_dist = FLT_MAX;
+			std::set< std::pair<ModelVertex,ModelVertex> >::iterator next_edge = edges.begin();
+			bool reverse = false;
+			
+			for( std::set< std::pair<ModelVertex,ModelVertex> >::iterator edge_iter = edges.begin(); edge_iter != edges.end(); edge_iter ++ )
+			{
+				double dist1 = (edge_iter->first.Vertex  - shapes.back().back().Vertex).Length();
+				double dist2 = (edge_iter->second.Vertex - shapes.back().back().Vertex).Length();
+				if( dist1 < min_dist )
+				{
+					min_dist = dist1;
+					next_edge = edge_iter;
+					reverse = false;
+				}
+				if( dist2 < min_dist )
+				{
+					min_dist = dist2;
+					next_edge = edge_iter;
+					reverse = true;
+				}
+			}
+			
+			const ModelVertex *first  = &(reverse ? next_edge->second : next_edge->first);
+			const ModelVertex *second = &(reverse ? next_edge->first : next_edge->second);
+			
+			if( min_dist > vertex_tolerance )
+			{
+				// There are hollow spaces in the shape that create multiple distinct edges.
+				shapes.push_back( std::vector<ModelVertex>() );
+				shapes.back().push_back( *first );
+			}
+			if( (first->Vertex - second->Vertex).Length() > vertex_tolerance )
+				shapes.back().push_back( *second );
+			edges.erase( next_edge );
+		}
+	}
+	return shapes;
+}
+
+
+std::vector<ModelVertex> ModelShape::OptimizeEdge( std::vector<ModelVertex> &vertices, double vertex_tolerance, double normal_tolerance, double dot_tolerance ) const
+{
+	if( vertices.size() >= 4 )
+	{
+		// Find any that line up, and remove the middle ones.
+		for( size_t i = 1; i + 1 < vertices.size(); i ++ )
+		{
+			Vec3D edge1 = (vertices[ i + 1 ].Vertex - vertices[ i ].Vertex).Unit();
+			Vec3D edge2 = (vertices[ i ].Vertex - vertices[ i - 1 ].Vertex).Unit();
+			
+			if( edge1.Dot( &edge2 ) >= (1. - dot_tolerance) )
+			{
+				vertices.erase( vertices.begin() + i );
+				i --;
+			}
+		}
+	}
+	
+	// Remove the last vertex if it's the same as the first (it probably is).
+	if( (vertices.size() >= 4) && ((vertices.front().Vertex - vertices.back().Vertex).Length() <= vertex_tolerance) )
+		vertices.pop_back();
+	
+	return vertices;
+}
+
+
+std::vector< std::vector<ModelVertex> > ModelShape::AllOptimizedEdges( double vertex_tolerance, double normal_tolerance, double dot_tolerance ) const
+{
+	std::vector< std::vector<ModelVertex> > all_edges = AllEdges( vertex_tolerance, normal_tolerance );
+	
+	for( std::vector< std::vector<ModelVertex> >::iterator shape_iter = all_edges.begin(); shape_iter != all_edges.end(); shape_iter ++ )
+		OptimizeEdge( *shape_iter, vertex_tolerance, normal_tolerance, dot_tolerance );
+	
+	return all_edges;
+}
+
+
+std::vector< std::vector<ModelVertex> > ModelShape::OptimizedTriangles( double vertex_tolerance, double normal_tolerance, double dot_tolerance ) const
+{
+	std::vector< std::vector<ModelVertex> > shapes;
+	if( ! Triangles.size() )
+		return shapes;
+	
+	std::vector< std::vector<ModelVertex> > all_edges = AllOptimizedEdges( vertex_tolerance, normal_tolerance, dot_tolerance );
+	
+	// No need to make a new triangulation if we already have just one triangle!  (And it would fail in my algorithm.)
+	if( (all_edges.size() == 1) && (all_edges[ 0 ].size() <= 3) )
+	{
+		bool reverse = false;
+		if( all_edges[ 0 ].size() == 3 )
+		{
+			// Make sure the winding is counter-clockwise.
+			Vec3D a = all_edges[ 0 ][ 1 ].Vertex - all_edges[ 0 ][ 0 ].Vertex, b = all_edges[ 0 ][ 2 ].Vertex - all_edges[ 0 ][ 0 ].Vertex;
+			Vec3D normal = a.Cross( b ).Unit();
+			int8_t normal_dir = Num::Sign( all_edges[ 0 ][ 0 ].Normal.Dot( &normal ) )
+			                  + Num::Sign( all_edges[ 0 ][ 1 ].Normal.Dot( &normal ) )
+			                  + Num::Sign( all_edges[ 0 ][ 2 ].Normal.Dot( &normal ) );
+			reverse = (normal_dir < 0);
+		}
+		
+		shapes.push_back( std::vector<ModelVertex>() );
+		if( reverse )
+		{
+			shapes.back().push_back( all_edges[ 0 ][ 2 ] );
+			shapes.back().push_back( all_edges[ 0 ][ 1 ] );
+			shapes.back().push_back( all_edges[ 0 ][ 0 ] );
+		}
+		else
+		{
+			for( std::vector<ModelVertex>::const_iterator vertex_iter = all_edges[ 0 ].begin(); vertex_iter != all_edges[ 0 ].end(); vertex_iter ++ )
+				shapes.back().push_back( *vertex_iter );
+		}
+		return shapes;
+	}
+	
+	Vec3D u = Normal.Cross( Triangles.begin()->Vertices[ 1 ].Vertex - Triangles.begin()->Vertices[ 0 ].Vertex ).Unit();
+	Vec3D v = Normal.Cross( u ).Unit();
+	
+	Vec3D outside_3d( Max.X + 100., Max.Y + 200., Max.Z + 300. );
+	Vec2D outside( outside_3d.Dot( u ), outside_3d.Dot( v ) );
+	
+	// Combine all the vertices and edges from the separate shapes (in case of hollow sections).
+	std::vector<ModelVertex> vertices;
+	std::vector<ModelEdge> edges;
+	for( std::vector< std::vector<ModelVertex> >::iterator shape_iter = all_edges.begin(); shape_iter != all_edges.end(); shape_iter ++ )
+	{
+		size_t first_shape_vertex = vertices.size();
+		
+		for( size_t i = 0; i < shape_iter->size(); i ++ )
+			vertices.push_back( shape_iter->at( i ) );
+		
+		for( size_t i = 0; i < shape_iter->size(); i ++ )
+		{
+			size_t j = i + 1;
+			if( j >= vertices.size() )
+				j = first_shape_vertex;
+			
+			edges.push_back( ModelEdge( vertices[ i ], vertices[ j ], u, v, true ) );
+			vertices[ i ].EdgeIndices.insert( edges.size() - 1 );
+			vertices[ j ].EdgeIndices.insert( edges.size() - 1 );
+		}
+	}
+	
+	// Add edges wherever possible without crossing another edge to triangulate the shape.
+	for( size_t i = 0; i < vertices.size(); i ++ )
+	{
+		for( size_t j = i + 1; j < vertices.size(); j ++ )
+		{
+			ModelEdge new_edge( vertices[ i ], vertices[ j ], u, v, false );
+			bool intersection = false;
+			for( size_t k = 0; k < edges.size(); k ++ )
+			{
+				if( new_edge.Intersects( edges[ k ] ) )
+				{
+					intersection = true;
+					break;
+				}
+			}
+			
+			if( ! intersection )
+			{
+				// Make sure this new line is within the original shape.
+				Vec2D mid = (new_edge.OnPlane[ 0 ] + new_edge.OnPlane[ 1 ]) / 2.;
+				size_t crossings = 0;
+				for( size_t k = 0; k < edges.size(); k ++ )
+				{
+					if( ! edges[ k ].Outside )
+						break;
+					if( edges[ k ].Intersects( outside, mid ) )
+						crossings ++;
+				}
+				
+				// Make sure we don't add triangles outside the shape.
+				if( (crossings % 2) == 0 )
+					continue;
+				
+				// Whenever we complete a triangle, add it as a new shape.
+				for( std::set<size_t>::const_iterator i_iter = vertices[ i ].EdgeIndices.begin(); i_iter != vertices[ i ].EdgeIndices.end(); i_iter ++ )
+				{
+					for( std::set<size_t>::const_iterator j_iter = vertices[ j ].EdgeIndices.begin(); j_iter != vertices[ j ].EdgeIndices.end(); j_iter ++ )
+					{
+						if( *i_iter == *j_iter )
+							continue;
+						std::set<ModelVertex> tri_vertices;
+						tri_vertices.insert( vertices[ i ] );
+						tri_vertices.insert( vertices[ j ] );
+						tri_vertices.insert( edges[ *i_iter ].Vertices[ 0 ] );
+						tri_vertices.insert( edges[ *i_iter ].Vertices[ 1 ] );
+						tri_vertices.insert( edges[ *j_iter ].Vertices[ 0 ] );
+						tri_vertices.insert( edges[ *j_iter ].Vertices[ 1 ] );
+						tri_vertices.erase( vertices[ i ] );
+						tri_vertices.erase( vertices[ j ] );
+						if( tri_vertices.size() == 1 )
+						{
+							// Make sure the winding is counter-clockwise.
+							Vec3D a = vertices[ i ].Vertex - vertices[ j ].Vertex, b = tri_vertices.begin()->Vertex - vertices[ j ].Vertex;
+							Vec3D normal = a.Cross( b ).Unit();
+							int8_t normal_dir = Num::Sign( vertices[ i ].Normal.Dot( &normal ) )
+							                  + Num::Sign( vertices[ j ].Normal.Dot( &normal ) )
+							                  + Num::Sign( tri_vertices.begin()->Normal.Dot( &normal ) );
+							bool reverse = (normal_dir < 0);
+							
+							shapes.push_back( std::vector<ModelVertex>() );
+							if( reverse )
+							{
+								shapes.back().push_back( vertices[ i ] );
+								shapes.back().push_back( vertices[ j ] );
+							}
+							else
+							{
+								shapes.back().push_back( vertices[ j ] );
+								shapes.back().push_back( vertices[ i ] );
+							}
+							shapes.back().push_back( *(tri_vertices.begin()) );
+						}
+					}
+				}
+				
+				edges.push_back( new_edge );
+				vertices[ i ].EdgeIndices.insert( edges.size() - 1 );
+				vertices[ j ].EdgeIndices.insert( edges.size() - 1 );
+			}
+		}
+	}
+	
+	return shapes;
+}
+
+
+// ---------------------------------------------------------------------------
+
+
 ModelObject::ModelObject( void )
 {
 	CenterPoint.SetPos( 0., 0., 0. );
@@ -1674,12 +2287,7 @@ ModelObject::ModelObject( void )
 
 ModelObject::ModelObject( const ModelObject &other )
 {
-	Arrays = other.Arrays;
-	Points = other.Points;
-	
-	CenterPoint = other.CenterPoint;
-	MaxRadius = other.MaxRadius;
-	NeedsRecalc = other.NeedsRecalc;
+	BecomeInstance( &other );
 }
 
 
@@ -1690,15 +2298,26 @@ ModelObject::~ModelObject()
 
 void ModelObject::BecomeInstance( const ModelObject *other )
 {
+	Name = other->Name;
+	
 	Arrays.clear();
 	for( std::map<std::string,ModelArrays>::const_iterator array_iter = other->Arrays.begin(); array_iter != other->Arrays.end(); array_iter ++ )
 		Arrays[ array_iter->first ].BecomeInstance( &(array_iter->second) );
 	
 	Points = other->Points;
+	Lines = other->Lines;
 	
-	Name = other->Name;
+	CenterPoint = other->CenterPoint;
+	MinFwd = other->MinFwd;
+	MaxFwd = other->MaxFwd;
+	MinUp = other->MinUp;
+	MaxUp = other->MaxUp;
+	MinRight = other->MinRight;
+	MaxRight = other->MaxRight;
+	MaxRadius = other->MaxRadius;
+	MaxTriangleEdge = other->MaxTriangleEdge;
 	
-	NeedsRecalc = true;
+	NeedsRecalc = other->NeedsRecalc;
 }
 
 

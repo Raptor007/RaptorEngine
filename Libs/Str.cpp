@@ -3,6 +3,7 @@
  */
 
 #include "Str.h"
+
 #include <cstdlib>
 #include <cstring>
 #include <algorithm>
@@ -73,6 +74,19 @@ int CStr::FindInsensitive( const char *str, const char *search_for )
 	size_t search_len = strlen(search_for);
 	int count = strlen(str) + 1 - search_len;
 	for( int i = 0; i < count; i ++ )
+	{
+		if( strncasecmp( str + i, search_for, search_len ) == 0 )
+			return i;
+	}
+	return -1;
+}
+
+
+int CStr::FindLastInsensitive( const char *str, const char *search_for )
+{
+	size_t search_len = strlen(search_for);
+	int count = strlen(str) + 1 - search_len;
+	for( int i = count - 1; i >= 0; i -- )
 	{
 		if( strncasecmp( str + i, search_for, search_len ) == 0 )
 			return i;
@@ -399,6 +413,12 @@ bool Str::AsBool( std::string str )
 int Str::FindInsensitive( std::string str, std::string search_for )
 {
 	return CStr::FindInsensitive( str.c_str(), search_for.c_str() );
+}
+
+
+int Str::FindLastInsensitive( std::string str, std::string search_for )
+{
+	return CStr::FindLastInsensitive( str.c_str(), search_for.c_str() );
 }
 
 

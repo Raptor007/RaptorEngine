@@ -6,6 +6,10 @@
 class Model;
 class ModelFace;
 class ModelArrays;
+class ModelVertex;   // Temporarily used while optimizing.
+class ModelTriangle; //
+class ModelEdge;     //
+class ModelShape;    //
 class ModelObject;
 class ModelMaterial;
 
@@ -30,6 +34,7 @@ class Model
 public:
 	std::map<std::string,ModelObject> Objects;
 	std::map<std::string,ModelMaterial> Materials;
+	std::vector<std::string> MaterialFiles;
 	double Length, Height, Width;
 	double MaxRadius;
 	
@@ -37,14 +42,15 @@ public:
 	virtual ~Model();
 	
 	void Clear( void );
-	void BecomeInstance( Model *other );
-	void BecomeCopy( Model *other );
+	void BecomeInstance( const Model *other );
+	void BecomeCopy( const Model *other );
 	bool LoadOBJ( std::string filename, bool get_textures = true );
 	bool IncludeOBJ( std::string filename, bool get_textures = true );
 	void MakeMaterialArrays( void );
 	void CalculateNormals( void );
 	void ReverseNormals( void );
 	void SmoothNormals( void );
+	void Optimize( double vertex_tolerance = 0., double normal_tolerance = 0.001, double dot_tolerance = 0.0001 );
 	
 	void Draw( const Pos3D *pos = NULL, const std::set<std::string> *object_names = NULL, const Color *wireframe = NULL, double exploded = 0., int explosion_seed = 0, double fwd_scale = 1., double up_scale = 1., double right_scale = 1. );
 	void DrawAt( const Pos3D *pos, double scale = 1., double fwd_scale = 1., double up_scale = 1., double right_scale = 1. );
@@ -107,11 +113,64 @@ public:
 	void BecomeInstance( const ModelArrays *other );
 	void Resize( size_t vertex_count );
 	void AddFaces( std::vector<ModelFace> &faces );
+	void RemoveFace( size_t face_index );
 	void CalculateNormals( void );
 	void ReverseNormals( void );
 	void SmoothNormals( void );
+	void Optimize( double vertex_tolerance = 0.0001, double normal_tolerance = 0.1, double dot_tolerance = 0.001 );
 	void MakeWorldSpace( const Pos3D *pos, double fwd_scale = 1., double up_scale = 1., double right_scale = 1. );
 	bool HasWorldSpaceVertex( const GLdouble *vertex ) const;
+};
+
+
+class ModelVertex
+{
+public:
+	Vec3D Vertex;
+	Vec2D TexCoord;
+	Vec3D Normal;
+	std::set<size_t> EdgeIndices;
+	bool operator < ( const ModelVertex &other ) const;
+};
+
+
+class ModelTriangle
+{
+public:
+	size_t FaceIndex;
+	ModelVertex Vertices[ 3 ];
+	Vec3D CalculatedNormal;
+	
+	ModelTriangle( const ModelArrays *arrays, size_t face_index );
+	uint8_t SharesEdge( const ModelTriangle *other, double vertex_tolerance, double normal_tolerance, const Vec3D *normal = NULL ) const;
+};
+
+
+class ModelEdge
+{
+public:
+	ModelVertex Vertices[ 2 ];
+	Vec2D OnPlane[ 2 ];
+	bool Outside;
+	
+	ModelEdge( const ModelVertex &v1, const ModelVertex &v2, const Vec3D &u, const Vec3D &v, bool outside );
+	bool Intersects( const ModelEdge &other ) const;
+	bool Intersects( const Vec2D &end1, const Vec2D &end2 ) const;
+};
+
+
+class ModelShape
+{
+public:
+	std::vector<ModelTriangle> Triangles;
+	Vec3D Normal, Center, Min, Max;
+	
+	ModelShape( std::vector<ModelTriangle> *triangles, double vertex_tolerance, double normal_tolerance );
+	void AddTriangles( const ModelTriangle triangle, std::vector<ModelTriangle> *triangles, double vertex_tolerance, double normal_tolerance );
+	std::vector< std::vector<ModelVertex> > AllEdges( double vertex_tolerance, double normal_tolerance ) const;
+	std::vector<ModelVertex> OptimizeEdge( std::vector<ModelVertex> &vertices, double vertex_tolerance, double normal_tolerance, double dot_tolerance ) const;
+	std::vector< std::vector<ModelVertex> > AllOptimizedEdges( double vertex_tolerance, double normal_tolerance, double dot_tolerance ) const;
+	std::vector< std::vector<ModelVertex> > OptimizedTriangles( double vertex_tolerance, double normal_tolerance, double dot_tolerance ) const;
 };
 
 

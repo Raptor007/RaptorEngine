@@ -8,7 +8,7 @@
 #include "RaptorGame.h"
 
 
-JoystickState::JoystickState( Uint8 id, SDL_Joystick *joystick, std::string name )
+JoystickState::JoystickState( Sint32 id, SDL_Joystick *joystick, std::string name )
 {
 	ID = id;
 	Joystick = joystick;
@@ -18,6 +18,19 @@ JoystickState::JoystickState( Uint8 id, SDL_Joystick *joystick, std::string name
 
 JoystickState::~JoystickState()
 {
+}
+
+
+void JoystickState::Clear( void )
+{
+	Axes.clear();
+	PrevAxes.clear();
+	ButtonsDown.clear();
+	Hats.clear();
+	BallsX.clear();
+	BallsY.clear();
+	PrevBallsX.clear();
+	PrevBallsY.clear();
 }
 
 
@@ -168,7 +181,7 @@ std::string JoystickState::Status( void ) const
 		else
 			return_string += ",";
 		
-		snprintf( cstr, 1024, " %i=%.4f", axis_iter->first, axis_iter->second );
+		snprintf( cstr, 1024, " %i=%.4f", axis_iter->first + 1, axis_iter->second );
 		return_string += cstr;
 	}
 	return_string += "\n";
@@ -178,7 +191,7 @@ std::string JoystickState::Status( void ) const
 	{
 		if( button_iter->second )
 		{
-			snprintf( cstr, 1024, " %i", button_iter->first );
+			snprintf( cstr, 1024, " %i", button_iter->first + 1 );
 			return_string += cstr;
 		}
 	}
@@ -193,7 +206,7 @@ std::string JoystickState::Status( void ) const
 		else
 			return_string += ",";
 		
-		snprintf( cstr, 1024, " %i=%i%s%s%s%s%s%s", hat_iter->first, hat_iter->second,
+		snprintf( cstr, 1024, " %i=%i%s%s%s%s%s%s", hat_iter->first + 1, hat_iter->second,
 		          hat_iter->second ? "(" : "",
 		          hat_iter->second & SDL_HAT_UP ? "U" : "",
 		          hat_iter->second & SDL_HAT_DOWN ? "D" : "",
@@ -213,9 +226,9 @@ std::string JoystickState::Status( void ) const
 			
 			std::map<Uint8,int>::const_iterator ball_y_iter = BallsY.find( ball_x_iter->first );
 			if( ball_y_iter != BallsY.end() )
-				snprintf( cstr, 1024, " %i=%i,%i", ball_x_iter->first, ball_x_iter->second, ball_y_iter->second );
+				snprintf( cstr, 1024, " %i=%i,%i", ball_x_iter->first + 1, ball_x_iter->second, ball_y_iter->second );
 			else
-				snprintf( cstr, 1024, " %i=%i,?", ball_x_iter->first, ball_x_iter->second );
+				snprintf( cstr, 1024, " %i=%i,?", ball_x_iter->first + 1, ball_x_iter->second );
 			return_string += cstr;
 		}
 	}

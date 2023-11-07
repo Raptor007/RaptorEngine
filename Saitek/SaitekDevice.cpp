@@ -1,6 +1,7 @@
 #ifdef WIN32
 
 #include "SaitekDevice.h"
+
 #include <cmath>
 #include <fstream>
 #include "SaitekManager.h"

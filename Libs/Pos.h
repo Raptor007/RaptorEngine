@@ -66,13 +66,15 @@ public:
 	std::multimap<double,Pos3D*> Nearest( const std::vector<Pos3D*> *others, size_t max_size );
 	std::multimap<double,Pos3D*> Nearest( const std::list<Pos3D*> *others, size_t max_size );
 	
-	virtual Pos3D &operator +=( const Vec3D &vec );
-	virtual Pos3D &operator -=( const Vec3D &vec );
-	virtual Pos3D &operator +=( const Pos3D &other );
-	virtual Pos3D &operator -=( const Pos3D &other );
+	virtual Pos3D &operator = ( const Pos3D &other );
 	
-	virtual const Pos3D operator+( const Vec3D &other ) const;
-	virtual const Pos3D operator-( const Vec3D &other ) const;
+	virtual Pos3D &operator += ( const Vec3D &vec );
+	virtual Pos3D &operator -= ( const Vec3D &vec );
+	virtual Pos3D &operator += ( const Pos3D &other );
+	virtual Pos3D &operator -= ( const Pos3D &other );
 	
-	virtual const Vec3D operator-( const Pos3D &other ) const;
+	virtual const Pos3D operator + ( const Vec3D &other ) const;
+	virtual const Pos3D operator - ( const Vec3D &other ) const;
+	
+	virtual const Vec3D operator - ( const Pos3D &other ) const;
 };

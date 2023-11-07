@@ -17,12 +17,15 @@ public:
 	Font *MessageFont;
 	double MessageLifetime;
 	int MaxMessages;
+	double ScrollTime;
+	std::set<uint32_t> DoNotDraw;
 	
 	MessageOverlay( Font *message_font );
 	virtual ~MessageOverlay();
 	
-	void Initialize( void );
-	void UpdateRects( void );
+	bool DrawsType( uint32_t type ) const;
+	void SetTypeToDraw( uint32_t type, bool draw );
 	
+	void UpdateRects( void );
 	void Draw( void );
 };

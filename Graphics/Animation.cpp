@@ -3,6 +3,7 @@
  */
 
 #include "Animation.h"
+
 #include <stdexcept>
 #include <fstream>
 #include <math.h>

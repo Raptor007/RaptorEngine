@@ -3,10 +3,15 @@
  */
 
 #include "Math2D.h"
+
 #include <cstddef>
-#include "Num.h"
 #include <cmath>
 #include <algorithm>
+#include "Num.h"
+
+#ifdef SDL2
+	#include <SDL2/SDL_stdinc.h>
+#endif
 
 
 #ifndef EPSILON
@@ -156,8 +161,13 @@ bool Math2D::LineIntersection( double a1x, double a1y, double a2x, double a2y, d
 	double b1b2px = b1y - b2y;
 	double b1b2py = b2x - b1x;
 	
-	// The distance along the a1a2 vector is the dot product here.
-	double t = DotProduct( b1b2px, b1b2py, a1b1x, a1b1y ) / DotProduct( b1b2px, b1b2py, a1a2x, a1a2y );
+	// Make sure we aren't getting divide-by-zero from parallel lines.
+	double denominator = DotProduct( b1b2px, b1b2py, a1a2x, a1a2y );
+	if( ! denominator )
+		return false;
+	
+	// Determine the distance along the a1a2 vector.	
+	double t = DotProduct( b1b2px, b1b2py, a1b1x, a1b1y ) / denominator;
 	
 	// Calculate the intersect point.
 	double result_x = a1x + t * a1a2x;

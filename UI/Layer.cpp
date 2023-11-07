@@ -246,6 +246,15 @@ bool Layer::HandleEvent( SDL_Event *event )
 		mouse_is_down = false;
 		mouse_button = event->button.button;
 	}
+#if SDL_VERSION_ATLEAST(2,0,0)
+	else if( (event->type == SDL_MOUSEWHEEL) && event->wheel.y && WithinCalcRect( event->wheel.mouseX, event->wheel.mouseY ) )
+	{
+		// For now, convert to MouseDown and MouseUp, and never consider it handled.
+		mouse_button = (event->wheel.y > 0) ? SDL_BUTTON_WHEELUP : SDL_BUTTON_WHEELDOWN;
+		MouseDown( mouse_button );
+		MouseUp( mouse_button );
+	}
+#endif
 	else if( event->type == SDL_KEYDOWN )
 	{
 		handled = KeyDown( event->key.keysym.sym );

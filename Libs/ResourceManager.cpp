@@ -5,17 +5,28 @@
 #include "ResourceManager.h"
 
 #include <cstddef>
+#include <cmath>
 #include <fstream>
-#include <SDL/SDL_rwops.h>
 #include "Str.h"
 #include "File.h"
 #include "Endian.h"
 #include "RaptorGame.h"
 
+#ifdef SDL2
+	#include <SDL2/SDL_rwops.h>
+#else
+	#include <SDL/SDL_rwops.h>
+#endif
+
 
 // Used for decoding data as it is read by RWops.
-static int (*RWFileRead)( SDL_RWops *context, void *ptr, int size, int maxnum ) = NULL;
-static int RWDatFileRead( SDL_RWops *context, void *ptr, int size, int maxnum )
+#if SDL_VERSION_ATLEAST(2,0,0)
+	#define _SDL_RW_PARAM size_t
+#else
+	#define _SDL_RW_PARAM int
+#endif
+static _SDL_RW_PARAM (*RWFileRead)( SDL_RWops *context, void *ptr, _SDL_RW_PARAM size, _SDL_RW_PARAM maxnum ) = NULL;
+static _SDL_RW_PARAM RWDatFileRead( SDL_RWops *context, void *ptr, _SDL_RW_PARAM size, _SDL_RW_PARAM maxnum )
 {
 	int bytes = RWFileRead( context, ptr, size, maxnum );
 	for( int i = 0; i < bytes; i ++ )
@@ -198,6 +209,17 @@ Shader *ResourceManager::GetShader( const std::string &name )
 	}
 	
 	return shader;
+}
+
+
+bool ResourceManager::ShadersNeedReload( void ) const
+{
+	for( std::map<std::string, Shader*>::const_iterator it = Shaders.begin(); it != Shaders.end(); it ++ )
+	{
+		if( ! it->second->Ready() )
+			return true;
+	}
+	return false;
 }
 
 
@@ -479,7 +501,11 @@ Mix_Music *ResourceManager::LoadMusic( const std::string &name )
 		{
 			RWFileRead = rw->read;
 			rw->read = RWDatFileRead;
-			music = Mix_LoadMUS_RW( rw );
+			#if SDL_VERSION_ATLEAST(2,0,0)
+				music = Mix_LoadMUS_RW( rw, 1 );
+			#else
+				music = Mix_LoadMUS_RW( rw );
+			#endif
 		}
 	}
 	else

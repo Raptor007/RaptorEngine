@@ -8,7 +8,13 @@ class Window;
 #include "PlatformSpecific.h"
 
 #include <stdexcept>
-#include <SDL/SDL.h>
+
+#ifdef SDL2
+	#include <SDL2/SDL.h>
+#else
+	#include <SDL/SDL.h>
+#endif
+
 #include "Layer.h"
 #include "Graphics.h"
 

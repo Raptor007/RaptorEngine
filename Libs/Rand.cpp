@@ -3,10 +3,12 @@
  */
 
 #include "Rand.h"
+
 #include <stdlib.h>
+#include <algorithm>
 
 
-int Rand::Max = RAND_MAX;
+int Rand::Max = std::min<int>( RAND_MAX, 0x7FFF );
 
 
 void Rand::Seed( unsigned int seed )

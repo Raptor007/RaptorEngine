@@ -5,7 +5,7 @@
 #include "ClientConsole.h"
 
 #include <cstddef>
-#include <SDL/SDL.h>
+#include <cmath>
 #include "RaptorGame.h"
 #include "Str.h"
 
@@ -215,7 +215,6 @@ bool ClientConsole::HandleEvent( SDL_Event *event )
 			
 			return true;
 		}
-		
 		else if( ((event->type == SDL_KEYDOWN) || (event->type == SDL_KEYUP)) && (event->key.keysym.sym == SDLK_DOWN) )
 		{
 			if( event->type == SDL_KEYDOWN )
@@ -262,6 +261,17 @@ bool ClientConsole::HandleEvent( SDL_Event *event )
 			return true;
 		}
 		
+#if SDL_VERSION_ATLEAST(2,0,0)
+		else if( (event->type == SDL_MOUSEWHEEL) && event->wheel.y )
+		{
+			if( event->wheel.y > 0 )
+				ScrollUp();
+			else
+				ScrollDown();
+			
+			return true;
+		}
+#else
 		else if( ((event->type == SDL_MOUSEBUTTONDOWN) || (event->type == SDL_MOUSEBUTTONUP)) && (event->button.button == SDL_BUTTON_WHEELUP) )
 		{
 			if( event->type == SDL_MOUSEBUTTONDOWN )
@@ -269,7 +279,6 @@ bool ClientConsole::HandleEvent( SDL_Event *event )
 			
 			return true;
 		}
-		
 		else if( ((event->type == SDL_MOUSEBUTTONDOWN) || (event->type == SDL_MOUSEBUTTONUP)) && (event->button.button == SDL_BUTTON_WHEELDOWN) )
 		{
 			if( event->type == SDL_MOUSEBUTTONDOWN )
@@ -277,6 +286,7 @@ bool ClientConsole::HandleEvent( SDL_Event *event )
 			
 			return true;
 		}
+#endif
 		
 		else if( ((event->type == SDL_KEYDOWN) || (event->type == SDL_KEYUP)) && (event->key.keysym.sym == SDLK_PAGEUP) )
 		{
@@ -285,7 +295,6 @@ bool ClientConsole::HandleEvent( SDL_Event *event )
 			
 			return true;
 		}
-		
 		else if( ((event->type == SDL_KEYDOWN) || (event->type == SDL_KEYUP)) && (event->key.keysym.sym == SDLK_PAGEDOWN) )
 		{
 			if( event->type == SDL_KEYDOWN )
@@ -301,7 +310,6 @@ bool ClientConsole::HandleEvent( SDL_Event *event )
 			
 			return true;
 		}
-		
 		else if( ((event->type == SDL_KEYDOWN) || (event->type == SDL_KEYUP)) && (event->key.keysym.sym == SDLK_END) )
 		{
 			if( event->type == SDL_KEYDOWN )

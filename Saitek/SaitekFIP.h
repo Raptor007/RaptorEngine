@@ -6,8 +6,15 @@ class SaitekFIP;
 #include <string>
 #include <vector>
 #include "SaitekDevice.h"
-#include <SDL/SDL_thread.h>
 #include "Framebuffer.h"
+
+#ifdef SDL2
+	#include <SDL2/SDL.h>
+	#include <SDL2/SDL_thread.h>
+#else
+	#include <SDL/SDL.h>
+	#include <SDL/SDL_thread.h>
+#endif
 
 
 class SaitekFIP : public SaitekDevice

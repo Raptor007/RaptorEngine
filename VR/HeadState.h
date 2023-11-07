@@ -12,7 +12,19 @@ class HeadState;
 #include <cstddef>
 
 #ifndef NO_VR
-#include <openvr.h>
+	#if ! defined(HAVE_NULLPTR) && (! defined(__GNUC__) || (__GNUC__ < 12))
+		#if defined(__GNUC__) && (__GNUC__ >= 5)
+			#define nullptr __null
+		#else
+			#define nullptr NULL
+		#endif
+	#endif
+	
+	#include <openvr.h>
+	
+	#ifdef nullptr
+		#undef nullptr
+	#endif
 #endif
 
 

@@ -78,3 +78,12 @@ void Camera::Copy( const Pos3D *pos )
 	SetUpVec(  Offset.Up.Dot( &x_vec), Offset.Up.Dot( &y_vec), Offset.Up.Dot( &z_vec) );
 	SetFwdVec( Offset.Fwd.Dot(&x_vec), Offset.Fwd.Dot(&y_vec), Offset.Fwd.Dot(&z_vec) );
 }
+
+
+Camera &Camera::operator = ( const Camera &other )
+{
+	Pos3D::Copy( &other );
+	FOV = other.FOV;
+	Offset.Copy( &other.Offset );
+	return *this;
+}

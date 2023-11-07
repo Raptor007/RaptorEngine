@@ -3,8 +3,15 @@
  */
 
 #include "Num.h"
+
+#include <cstdio>
+#include <cstring>
 #include <cmath>
 #include <algorithm>
+
+#ifdef SDL2
+	#include <SDL2/SDL_stdinc.h>
+#endif
 
 
 std::string Num::ToString( int num )

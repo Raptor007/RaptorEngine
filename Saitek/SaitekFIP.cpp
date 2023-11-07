@@ -1,6 +1,7 @@
 #ifdef WIN32
 
 #include "SaitekFIP.h"
+
 #include <cstdlib>
 #include <cmath>
 #include "RaptorGL.h"
@@ -36,7 +37,12 @@ void SaitekFIP::Begin( void )
 	LEDRateLimit = 0.05;
 	
 	Running = true;
-	Thread = SDL_CreateThread( UpdateThread, this );
+	
+	#if SDL_VERSION_ATLEAST(2,0,0)
+		Thread = SDL_CreateThread( UpdateThread, "SaitekFIP", this );
+	#else
+		Thread = SDL_CreateThread( UpdateThread, this );
+	#endif
 	
 	RegisterCallbacks();
 }

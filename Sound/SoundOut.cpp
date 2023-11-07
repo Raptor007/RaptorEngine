@@ -3,6 +3,7 @@
  */
 
 #include "SoundOut.h"
+
 #include <cmath>
 #include <algorithm>
 #include <stdexcept>
@@ -92,10 +93,8 @@ int SoundOut::Play( Mix_Chunk *sound )
 	
 	int channel = Mix_PlayChannelTimed( -1, sound, 0, -1 );
 	
-	/*
 	if( channel >= 0 )
 		ActiveChannels.insert( channel );
-	*/
 	
 	UpdateVolumes();
 	
@@ -211,6 +210,7 @@ int SoundOut::PlayFromObject( Mix_Chunk *sound, uint32_t object_id, double loudn
 		{
 			ActivePans[ channel ] = PanningSound( channel, object_id, loudness );
 			ObjectPans[ object_id ] = channel;
+			RecentPans[ object_id ].Reset();
 		}
 	}
 	
@@ -241,6 +241,17 @@ int SoundOut::SetPos( int channel, double x, double y, double z )
 
 void SoundOut::Update( const Pos3D *cam )
 {
+	for( std::set<int>::const_iterator channel_iter = ActiveChannels.begin(); channel_iter != ActiveChannels.end(); )
+	{
+		std::set<int>::const_iterator channel_next = channel_iter;
+		channel_next ++;
+		
+		if( ! IsPlaying( *channel_iter ) )
+			ActiveChannels.erase( channel_iter );
+		
+		channel_iter = channel_next;
+	}
+	
 	UpdateVolumes();
 	
 	
@@ -269,10 +280,25 @@ void SoundOut::Update( const Pos3D *cam )
 				}
 				
 				ActivePans.erase( this_pan );
+				// Remember: Don't delete from RecentPans here so we can know how long ago a sound last played for any object.
 			}
 			
 			this_pan = next_pan;
 		}
+	}
+	
+	
+	// Forget last sound time of any objects that no longer exist.
+	
+	for( std::map<uint32_t, Clock>::iterator this_pan = RecentPans.begin(); this_pan != RecentPans.end(); )
+	{
+		std::map<uint32_t, Clock>::iterator next_pan = this_pan;
+		next_pan ++;
+		
+		if( ! Raptor::Game->Data.GetObject( this_pan->first ) )
+			RecentPans.erase( this_pan );
+		
+		this_pan = next_pan;
 	}
 	
 	
@@ -369,12 +395,20 @@ void SoundOut::UpdateVolumes( void )
 	
 	if( Initialized )
 	{
-		Mix_Volume( -1, MasterVolume * SoundVolume * SoundAttenuate * MIX_MAX_VOLUME + 0.25f );
-		Mix_VolumeMusic( MasterVolume * MusicVolume * MusicAttenuate * MIX_MAX_VOLUME + 0.25f );
-		
-		// If we're reducing other volumes to hear something better, don't reduce it too!
 		if( AttenuateFor >= 0 )
-			Mix_Volume( AttenuateFor, MasterVolume * MIX_MAX_VOLUME + 0.25f );
+		{
+			for( std::set<int>::const_iterator channel_iter = ActiveChannels.begin(); channel_iter != ActiveChannels.end(); channel_iter ++ )
+			{
+				if( *channel_iter == AttenuateFor )
+					Mix_Volume( AttenuateFor, MasterVolume * MIX_MAX_VOLUME + 0.25f );
+				else
+					Mix_Volume( *channel_iter, MasterVolume * SoundVolume * SoundAttenuate * MIX_MAX_VOLUME + 0.25f );
+			}
+		}
+		else
+			Mix_Volume( -1, MasterVolume * SoundVolume * SoundAttenuate * MIX_MAX_VOLUME + 0.25f );
+		
+		Mix_VolumeMusic( MasterVolume * MusicVolume * MusicAttenuate * MIX_MAX_VOLUME + 0.25f );
 	}
 }
 
@@ -500,8 +534,6 @@ void SoundOut::QueueMusicSubdir( std::string dir )
 	{
 		while( struct dirent *dir_entry_p = readdir(dir_p) )
 		{
-			if( ! dir_entry_p->d_name )
-				continue;
 			if( dir_entry_p->d_name[ 0 ] == '.' )
 				continue;
 			

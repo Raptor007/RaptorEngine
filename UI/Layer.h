@@ -9,7 +9,13 @@ class Layer;
 #include <cstddef>
 #include <list>
 #include <string>
-#include <SDL/SDL.h>
+
+#ifdef SDL2
+	#include <SDL2/SDL.h>
+	#define SDLKey int
+#else
+	#include <SDL/SDL.h>
+#endif
 
 
 class Layer

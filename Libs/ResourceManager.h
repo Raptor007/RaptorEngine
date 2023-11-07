@@ -12,15 +12,22 @@ class DecryptedResource;
 #include <deque>
 #include <string>
 #include "RaptorGL.h"
-#include <SDL/SDL.h>
-#include <SDL/SDL_thread.h>
 
-#ifdef __APPLE__
-	#include <SDL_image/SDL_image.h>
-	#include <SDL_mixer/SDL_mixer.h>
+#ifdef SDL2
+	#include <SDL2/SDL.h>
+	#include <SDL2/SDL_thread.h>
+	#include <SDL2/SDL_image.h>
+	#include <SDL2/SDL_mixer.h>
 #else
-	#include <SDL/SDL_image.h>
-	#include <SDL/SDL_mixer.h>
+	#include <SDL/SDL.h>
+	#include <SDL/SDL_thread.h>
+	#ifdef __APPLE__
+		#include <SDL_image/SDL_image.h>
+		#include <SDL_mixer/SDL_mixer.h>
+	#else
+		#include <SDL/SDL_image.h>
+		#include <SDL/SDL_mixer.h>
+	#endif
 #endif
 
 #include "Framebuffer.h"
@@ -52,6 +59,8 @@ public:
 	Mix_Music *GetMusic( const std::string &name );
 	Font *GetFont( const std::string &name, int point_size );
 	Shader *GetShader( const std::string &name );
+	
+	bool ShadersNeedReload( void ) const;
 	
 	void DeleteGraphics( void );
 	void ReloadGraphics( void );

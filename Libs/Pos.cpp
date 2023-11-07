@@ -387,7 +387,16 @@ std::multimap<double,Pos3D*> Pos3D::Nearest( const std::list<Pos3D*> *others, si
 }
 
 
-Pos3D &Pos3D::operator +=( const Vec3D &vec )
+Pos3D &Pos3D::operator = ( const Pos3D &other )
+{
+	SetPos( other.X, other.Y, other.Z );
+	SetFwdVec( other.Fwd.X, other.Fwd.Y, other.Fwd.Z );
+	SetUpVec( other.Up.X, other.Up.Y, other.Up.Z );
+	return *this;
+}
+
+
+Pos3D &Pos3D::operator += ( const Vec3D &vec )
 {
 	X += vec.X;
 	Y += vec.Y;
@@ -396,7 +405,7 @@ Pos3D &Pos3D::operator +=( const Vec3D &vec )
 }
 
 
-Pos3D &Pos3D::operator -=( const Vec3D &vec )
+Pos3D &Pos3D::operator -= ( const Vec3D &vec )
 {
 	X -= vec.X;
 	Y -= vec.Y;
@@ -405,7 +414,7 @@ Pos3D &Pos3D::operator -=( const Vec3D &vec )
 }
 
 
-Pos3D &Pos3D::operator +=( const Pos3D &other )
+Pos3D &Pos3D::operator += ( const Pos3D &other )
 {
 	X += other.X;
 	Y += other.Y;
@@ -414,7 +423,7 @@ Pos3D &Pos3D::operator +=( const Pos3D &other )
 }
 
 
-Pos3D &Pos3D::operator -=( const Pos3D &other )
+Pos3D &Pos3D::operator -= ( const Pos3D &other )
 {
 	X -= other.X;
 	Y -= other.Y;
@@ -423,19 +432,19 @@ Pos3D &Pos3D::operator -=( const Pos3D &other )
 }
 
 
-const Pos3D Pos3D::operator+( const Vec3D &other ) const
+const Pos3D Pos3D::operator + ( const Vec3D &other ) const
 {
 	return Pos3D(this) += other;
 }
 
 
-const Pos3D Pos3D::operator-( const Vec3D &other ) const
+const Pos3D Pos3D::operator - ( const Vec3D &other ) const
 {
 	return Pos3D(this) -= other;
 }
 
 
-const Vec3D Pos3D::operator-( const Pos3D &other ) const
+const Vec3D Pos3D::operator - ( const Pos3D &other ) const
 {
 	return Vec3D( X - other.X, Y - other.Y, Z - other.Z );
 }

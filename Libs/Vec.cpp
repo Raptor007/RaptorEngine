@@ -128,6 +128,14 @@ Vec2D Vec2D::ReflectAnySide( const Vec2D *normal ) const
 }
 
 
+Vec2D &Vec2D::operator = ( const Vec2D &other )
+{
+	X = other.X;
+	Y = other.Y;
+	return *this;
+}
+
+
 Vec2D &Vec2D::operator += ( const Vec2D &other )
 {
 	X += other.X;
@@ -189,6 +197,12 @@ bool Vec2D::operator < ( const Vec2D &other ) const
 	if( Y != other.Y )
 		return (Y < other.Y);
 	return false;
+}
+
+
+bool Vec2D::operator == ( const Vec2D &other ) const
+{
+	return (X == other.X) && (Y == other.Y);
 }
 
 
@@ -371,6 +385,15 @@ Vec3D Vec3D::ReflectAnySide( const Vec3D *normal ) const
 }
 
 
+Vec3D &Vec3D::operator = ( const Vec3D &other )
+{
+	X = other.X;
+	Y = other.Y;
+	Z = other.Z;
+	return *this;
+}
+
+
 Vec3D &Vec3D::operator += ( const Vec3D &other )
 {
 	X += other.X;
@@ -436,4 +459,10 @@ bool Vec3D::operator < ( const Vec3D &other ) const
 	if( Z != other.Z )
 		return (Z < other.Z);
 	return false;
+}
+
+
+bool Vec3D::operator == ( const Vec3D &other ) const
+{
+	return (X == other.X) && (Y == other.Y) && (Z == other.Z);
 }

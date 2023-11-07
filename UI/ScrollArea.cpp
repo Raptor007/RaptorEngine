@@ -3,6 +3,7 @@
  */
 
 #include "ScrollArea.h"
+
 #include <cstddef>
 #include "RaptorGame.h"
 
@@ -237,7 +238,14 @@ bool ScrollArea::HandleEvent( SDL_Event *event )
 	else if( ((event->type == SDL_MOUSEBUTTONDOWN) || (event->type == SDL_MOUSEBUTTONUP)) && ! WithinCalcRect( event->button.x, event->button.y ) )
 		return false;
 	
-	return Layer::HandleEvent( event );
+	bool handled = Layer::HandleEvent( event );
+	
+	#if SDL_VERSION_ATLEAST(2,0,0)
+		if( (event->type == SDL_MOUSEWHEEL) && event->wheel.y && WithinCalcRect( event->wheel.mouseX, event->wheel.mouseY ) )
+			return true;
+	#endif
+	
+	return handled;
 }
 
 

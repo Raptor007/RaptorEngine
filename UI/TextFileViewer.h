@@ -9,7 +9,13 @@ class TextFileViewerCloseButton;
 #include "PlatformSpecific.h"
 #include "Window.h"
 #include <cstddef>
-#include <SDL/SDL.h>
+
+#ifdef SDL2
+	#include <SDL2/SDL.h>
+#else
+	#include <SDL/SDL.h>
+#endif
+
 #include "Font.h"
 #include "ListBox.h"
 #include "LabelledButton.h"

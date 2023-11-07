@@ -12,9 +12,14 @@ class RaptorGame;
 #include <signal.h>
 #include <map>
 #include <list>
-#include "RaptorGL.h"
-#include <SDL/SDL.h>
 
+#ifdef SDL2
+	#include <SDL2/SDL.h>
+#else
+	#include <SDL/SDL.h>
+#endif
+
+#include "RaptorGL.h"
 #include "RaptorDefs.h"
 #include "Graphics.h"
 #include "ShaderManager.h"
@@ -85,8 +90,10 @@ public:
 	
 	void SetServer( RaptorServer *server );
 	
+	virtual void SetDefaultJoyTypes( void );
 	virtual void SetDefaultControls( void );
 	virtual void SetDefaults( void );
+	
 	virtual void Initialize( int argc = 0, char **argv = NULL );
 	virtual void Run( void );
 	
@@ -96,6 +103,7 @@ public:
 	
 	virtual bool HandleEvent( SDL_Event *event );
 	virtual bool HandleCommand( std::string cmd, std::vector<std::string> *params = NULL );
+	virtual void MessageReceived( std::string text, uint32_t type = TextConsole::MSG_NORMAL );
 	virtual bool ProcessPacket( Packet *packet );
 	virtual void SendUpdate( int8_t precision = 0 );
 	virtual bool SetPlayerProperty( std::string name, std::string value );

@@ -6,10 +6,10 @@
 
 #include "PlatformSpecific.h"
 
-#include <SDL/SDL.h>
 #include <string>
 #include <list>
 #include <vector>
+#include <stdint.h>
 
 
 namespace Num

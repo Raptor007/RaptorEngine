@@ -18,6 +18,7 @@ GameData::GameData( void )
 {
 	AntiJitter = 0.999;
 	MaxFrameTime = 0.125;  // Assume dropping below 8 FPS is a momentary hiccup.
+	TimeScale = 1.;
 }
 
 
@@ -113,6 +114,7 @@ void GameData::Clear( void )
 	Players.clear();
 	PlayerIDs.Clear();
 	Properties.clear();
+	TimeScale = 1.;
 }
 
 
@@ -309,7 +311,7 @@ void GameData::Update( double dt )
 	AntiJitter = Raptor::Game->Cfg.SettingAsDouble("net_anti_jitter",0.999);
 	
 	for( std::map<uint32_t,GameObject*>::iterator obj_iter = GameObjects.begin(); obj_iter != GameObjects.end(); obj_iter ++ )
-		obj_iter->second->Update( dt );
+		obj_iter->second->Update( dt );  // NOTE: Do not multiply by TimeScale here; dt will be scaled by the game's Update method.
 	
 	for( std::list<Effect>::iterator effect_iter = Effects.begin(); effect_iter != Effects.end(); )
 	{
@@ -322,6 +324,9 @@ void GameData::Update( double dt )
 		
 		effect_iter = effect_next;
 	}
+	
+	TimeScale = PropertyAsDouble("time_scale",1.);
+	MaxFrameTime = 0.125 * TimeScale;
 }
 
 

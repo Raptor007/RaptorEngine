@@ -48,7 +48,8 @@ void Shader::Load( std::string filename, std::map<std::string,std::string> defs 
 	
 	Clear();
 	
-	if( ! Raptor::Game->Cfg.SettingAsBool( "g_shader_enable", true ) )
+	// Make sure shaders are enabled and available.
+	if( ! (Raptor::Game->Cfg.SettingAsBool("g_shader_enable",true) && glCreateProgram) )
 		return;
 	
 	ProgramHandle = glCreateProgram();
@@ -87,13 +88,13 @@ void Shader::Load( std::string filename, std::map<std::string,std::string> defs 
 }
 
 
-bool Shader::Ready( void )
+bool Shader::Ready( void ) const
 {
 	return ProgramHandle;
 }
 
 
-bool Shader::Active( void )
+bool Shader::Active( void ) const
 {
 	if( ProgramHandle )
 	{
@@ -268,7 +269,7 @@ ShaderComponent::ShaderComponent( ShaderComponentType type, std::string filename
 		if( ShaderHandle )
 		{
 			// First add definitions.
-			SourceCode = "#version 110\n";
+			SourceCode = std::string("#version ") + Raptor::Game->Cfg.SettingAsString("g_shader_version","110") + std::string("\n");
 			for( std::map<std::string,std::string>::iterator def_iter = defs.begin(); def_iter != defs.end(); def_iter ++ )
 			{
 				if( ! def_iter->second.empty() )

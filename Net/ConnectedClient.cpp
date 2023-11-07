@@ -34,14 +34,24 @@ ConnectedClient::ConnectedClient( TCPsocket socket, double net_rate, int8_t prec
 	Connected = true;
 	
 	// Start the listener thread.
-	if( !( InThread = SDL_CreateThread( ConnectedClientInThread, this ) ) )
+	#if SDL_VERSION_ATLEAST(2,0,0)
+		InThread = SDL_CreateThread( ConnectedClientInThread, "ConnectedClientIn", this );
+	#else
+		InThread = SDL_CreateThread( ConnectedClientInThread, this );
+	#endif
+	if( ! InThread )
 	{
 		fprintf( stderr, "ConnectedClient::ConnectedClient: SDL_CreateThread(ConnectedClientInThread): %s\n", SDLNet_GetError() );
 		Connected = false;
 	}
 	
 	// Start the sender thread.
-	if( !( OutThread = SDL_CreateThread( ConnectedClientOutThread, this ) ) )
+	#if SDL_VERSION_ATLEAST(2,0,0)
+		OutThread = SDL_CreateThread( ConnectedClientOutThread, "ConnectedClientOut", this );
+	#else
+		OutThread = SDL_CreateThread( ConnectedClientOutThread, this );
+	#endif
+	if( ! OutThread )
 		fprintf( stderr, "ConnectedClient::ConnectedClient: SDL_CreateThread(ConnectedClientOutThread): %s\n", SDLNet_GetError() );
 }
 
@@ -58,12 +68,20 @@ ConnectedClient::~ConnectedClient()
 	// If either thread didn't finish, kill it.
 	if( InThread )
 	{
-		SDL_KillThread( InThread );
+		#if SDL_VERSION_ATLEAST(2,0,0)
+			SDL_DetachThread( InThread );
+		#else
+			SDL_KillThread( InThread );
+		#endif
 		InThread = NULL;
 	}
 	if( OutThread )
 	{
-		SDL_KillThread( OutThread );
+		#if SDL_VERSION_ATLEAST(2,0,0)
+			SDL_DetachThread( OutThread );
+		#else
+			SDL_KillThread( OutThread );
+		#endif
 		OutThread = NULL;
 	}
 	

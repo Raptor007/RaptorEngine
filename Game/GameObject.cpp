@@ -175,6 +175,7 @@ void GameObject::AddToUpdatePacket( Packet *packet, int8_t precision )
 void GameObject::ReadFromUpdatePacket( Packet *packet, int8_t precision )
 {
 	PrevPos.Copy( this );
+	PrevMotionVector.Copy( &MotionVector );
 	
 	X = packet->NextDouble();
 	Y = packet->NextDouble();
@@ -220,14 +221,18 @@ void GameObject::ReadFromUpdatePacket( Packet *packet, int8_t precision )
 	}
 	FixVectors();
 	
-	if( SmoothPos && Data && Data->AntiJitter && (Dist(&PrevPos) < SMOOTH_RADIUS) && MotionVector.Length() )
+	// Remove jitter from delayed position updates by moving object forward to predicted position.
+	double speed = MotionVector.Length();
+	if( SmoothPos && Data && Data->AntiJitter && (Dist(&PrevPos) < SMOOTH_RADIUS) && speed )
 	{
-		// Remove jitter from delayed position updates.
-		Vec3D unit_motion = MotionVector;
-		unit_motion.ScaleTo( 1. );
+		Vec3D unit_motion = MotionVector.Unit();
 		double dist_behind = PrevPos.DistAlong( &unit_motion, this );
 		if( dist_behind > 0. )
+		{
+			if( speed * 1.001 < PrevMotionVector.Length() )
+				dist_behind *= std::min<double>( 0.5, speed / 100. );  // Reduce rubber-banding when stopping.
 			MoveAlong( &unit_motion, dist_behind * Data->AntiJitter );
+		}
 	}
 }
 
@@ -244,19 +249,14 @@ void GameObject::ReadFromUpdatePacketFromServer( Packet *packet, int8_t precisio
 	ReadFromUpdatePacket( packet, precision );
 	PlayerID = packet->NextUShort();
 	
-	if( SmoothPos && (Dist(&PrevPos) < SMOOTH_RADIUS) )
+	// Further reduce jitter by averaging anti-jittered received position with previous predicted position.
+	if( SmoothPos && Data && Data->AntiJitter && (Dist(&PrevPos) < SMOOTH_RADIUS) )
 	{
-		// Average received with calculated to reduce jitter.
-		X += PrevPos.X;
-		Y += PrevPos.Y;
-		Z += PrevPos.Z;
-		X /= 2.;
-		Y /= 2.;
-		Z /= 2.;
-		Fwd += PrevPos.Fwd;
-		Fwd /= 2.;
-		Up += PrevPos.Up;
-		Up /= 2.;
+		X   = (X   + PrevPos.X   * Data->AntiJitter) / (1. + Data->AntiJitter);
+		Y   = (Y   + PrevPos.Y   * Data->AntiJitter) / (1. + Data->AntiJitter);
+		Z   = (Z   + PrevPos.Z   * Data->AntiJitter) / (1. + Data->AntiJitter);
+		Fwd = (Fwd + PrevPos.Fwd * Data->AntiJitter) / (1. + Data->AntiJitter);
+		Up  = (Up  + PrevPos.Up  * Data->AntiJitter) / (1. + Data->AntiJitter);
 		FixVectors();
 	}
 }
@@ -331,6 +331,7 @@ GameObject *GameObject::Trace( double dt, double precision ) const
 void GameObject::Update( double dt )
 {
 	PrevPos.Copy( this );
+	PrevMotionVector.Copy( &MotionVector );
 	
 	// Limit over-prediction from momentary hiccups, such as when loading assets mid-game.
 	if( (dt > Data->MaxFrameTime) && (Data->MaxFrameTime > 0.) )

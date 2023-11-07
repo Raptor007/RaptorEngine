@@ -44,7 +44,11 @@ NetClient::~NetClient()
 	// If the thread didn't finish, kill it.
 	if( Thread )
 	{
-		SDL_KillThread( Thread );
+		#if SDL_VERSION_ATLEAST(2,0,0)
+			SDL_DetachThread( Thread );
+		#else
+			SDL_KillThread( Thread );
+		#endif
 		Thread = NULL;
 	}
 	
@@ -154,7 +158,12 @@ bool NetClient::Connect( const char *hostname, int port, const char *name, const
 	
 	// Start the listener thread.
 	Connected = true;
-	if( !( Thread = SDL_CreateThread( NetClientThread, this ) ) )
+	#if SDL_VERSION_ATLEAST(2,0,0)
+		Thread = SDL_CreateThread( NetClientThread, "NetClient", this );
+	#else
+		Thread = SDL_CreateThread( NetClientThread, this );
+	#endif
+	if( ! Thread )
 	{
 		fprintf( stderr, "SDL_CreateThread: %s\n", SDLNet_GetError() );
 		Connected = false;

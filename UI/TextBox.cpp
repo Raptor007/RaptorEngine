@@ -292,9 +292,10 @@ bool TextBox::KeyDown( SDLKey key )
 			Cursor = Text.length();
 		else if( (key == SDLK_LSHIFT) || (key == SDLK_RSHIFT) || (key == SDLK_CAPSLOCK) )
 			ShiftIsDown = true;
-		
-		else if( (key >= SDLK_KP0) && (key <= SDLK_KP9) )
-			InsertAtCursor( ((char) key) + '0'-SDLK_KP0 );
+		else if( (key >= SDLK_KP1) && (key <= SDLK_KP9) )  // NOTE: For some reason SDL2 puts KP0 after KP9.
+			InsertAtCursor( ((char) key) + '1'-SDLK_KP1 );
+		else if( key == SDLK_KP0 )
+			InsertAtCursor( '0' );
 		else if( key == SDLK_KP_PERIOD )
 			InsertAtCursor( '.' );
 		else if( key == SDLK_KP_MINUS )

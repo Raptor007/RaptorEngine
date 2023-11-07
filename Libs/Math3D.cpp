@@ -3,9 +3,14 @@
  */
 
 #include "Math3D.h"
-#include "Num.h"
+
 #include <cmath>
 #include <cfloat>
+#include "Num.h"
+
+#ifdef SDL2
+	#include <SDL2/SDL_stdinc.h>
+#endif
 
 
 #ifndef EPSILON

@@ -5,6 +5,7 @@
 #include "ClientConfig.h"
 
 #include <cstring>
+#include <cmath>
 #include <fstream>
 #include <stdexcept>
 #include <algorithm>
@@ -13,7 +14,6 @@
 #include "RaptorGame.h"
 
 #include "Math3D.h"
-#include <cmath>
 #include <cfloat>
 
 
@@ -23,7 +23,6 @@
 
 ClientConfig::ClientConfig( void )
 {
-	SetDefaults();
 }
 
 
@@ -43,8 +42,8 @@ void ClientConfig::SetDefaults( void )
 	
 	// Default client settings.
 	
-	Settings[ "g_res_fullscreen_x" ] = "0";
-	Settings[ "g_res_fullscreen_y" ] = "0";
+	Settings[ "g_res_fullscreen_x" ] = Num::ToString( Raptor::Game->Gfx.DesktopW );
+	Settings[ "g_res_fullscreen_y" ] = Num::ToString( Raptor::Game->Gfx.DesktopH );
 	Settings[ "g_res_windowed_x" ] = "1280";
 	Settings[ "g_res_windowed_y" ] = "720";
 	Settings[ "g_fullscreen" ] = "true";
@@ -53,7 +52,11 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "g_mipmap" ] = "true";
 	Settings[ "g_af" ] = "16";
 	Settings[ "g_texture_maxres" ] = "0";
+#if SDL_VERSION_ATLEAST(2,0,0)
+	Settings[ "g_bpp" ] = "24";
+#else
 	Settings[ "g_bpp" ] = "32";
+#endif
 	Settings[ "g_zbits" ] = "24";
 	Settings[ "g_znear" ] = "0.125";
 	Settings[ "g_zfar" ] = "15000";
@@ -61,6 +64,7 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "g_framebuffers" ] = "true";
 	Settings[ "g_framebuffers_anyres" ] = "true";
 	Settings[ "g_shader_enable" ] = "true";
+	Settings[ "g_shader_version" ] = "110";
 	Settings[ "g_shader_light_quality" ] = "2";
 	Settings[ "g_shader_point_lights" ] = "4";
 	
@@ -69,9 +73,9 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "s_depth" ] = "16";
 	Settings[ "s_buffer" ] = "4096";
 	Settings[ "s_mix_channels" ] = "64";
-	Settings[ "s_volume" ] = "0.25";
+	Settings[ "s_volume" ] = "0.4";
 	Settings[ "s_effect_volume" ] = "0.5";
-	Settings[ "s_music_volume" ] = "0.75";
+	Settings[ "s_music_volume" ] = "0.9";
 	
 	Settings[ "vr_enable" ] = "false";
 	Settings[ "vr_mirror" ] = "true";
@@ -87,7 +91,7 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "joy_smooth_z" ] = "0.5";
 	Settings[ "joy_smooth_pedals" ] = "0";
 	Settings[ "joy_smooth_thumbsticks" ] = "2";
-	Settings[ "joy_smooth_triggers" ] = "0.75";
+	Settings[ "joy_smooth_triggers" ] = "0.5";
 	
 	#ifdef WIN32
 		Settings[ "saitek_enable" ] = "true";
@@ -277,7 +281,30 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 				
 				else if( cmd == "unbindall" )
 				{
-					UnbindAll();
+					if( elements.size() >= 1 )
+					{
+						for( size_t i = 0; i < elements.size(); i ++ )
+						{
+							if( elements.at(i) == "keys" )
+								KeyBinds.clear();
+							else if( elements.at(i) == "mouse" )
+								MouseBinds.clear();
+							else
+							{
+								std::map<std::string,std::map<Uint8,uint8_t> >::iterator axes = JoyAxisBinds.find( elements.at(i) );
+								if( axes != JoyAxisBinds.end() )
+									JoyAxisBinds.erase( axes );
+								std::map<std::string,std::map<Uint8,uint8_t> >::iterator buttons = JoyButtonBinds.find( elements.at(i) );
+								if( buttons != JoyButtonBinds.end() )
+									JoyButtonBinds.erase( buttons );
+								std::map<std::string,std::map<Uint8,std::map<Uint8,uint8_t> > >::iterator hats = JoyHatBinds.find( elements.at(i) );
+								if( hats != JoyHatBinds.end() )
+									JoyHatBinds.erase( hats );
+							}
+						}
+					}
+					else
+						UnbindAll();
 				}
 				
 				else if( cmd == "bind_defaults" )
@@ -315,6 +342,35 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 				else if( cmd == "joy_refresh" )
 				{
 					Raptor::Game->Joy.Refresh();
+				}
+				
+				else if( cmd == "joy_class" )
+				{
+					if( elements.size() >= 1 )
+						Raptor::Game->Input.DeviceTypes.insert( elements.at(0) );
+					else
+						Raptor::Game->Console.Print( "Usage: joy_class <name>", TextConsole::MSG_ERROR );
+				}
+				
+				else if( cmd == "joy_delete" )
+				{
+					if( elements.size() >= 1 )
+					{
+						std::set<std::string>::iterator dev = Raptor::Game->Input.DeviceTypes.find( elements.at(0) );
+						if( dev != Raptor::Game->Input.DeviceTypes.end() )
+							Raptor::Game->Input.DeviceTypes.erase( dev );
+						std::map<std::string,std::map<Uint8,uint8_t> >::iterator axes = JoyAxisBinds.find( elements.at(0) );
+						if( axes != JoyAxisBinds.end() )
+							JoyAxisBinds.erase( axes );
+						std::map<std::string,std::map<Uint8,uint8_t> >::iterator buttons = JoyButtonBinds.find( elements.at(0) );
+						if( buttons != JoyButtonBinds.end() )
+							JoyButtonBinds.erase( buttons );
+						std::map<std::string,std::map<Uint8,std::map<Uint8,uint8_t> > >::iterator hats = JoyHatBinds.find( elements.at(0) );
+						if( hats != JoyHatBinds.end() )
+							JoyHatBinds.erase( hats );
+					}
+					else
+						Raptor::Game->Console.Print( "Usage: joy_delete <name>", TextConsole::MSG_ERROR );
 				}
 				
 			#ifdef WIN32
@@ -416,7 +472,12 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 					char cstr[ 1024 ] = "";
 					
 					Raptor::Game->Console.Print( Raptor::Game->Game + " " + Raptor::Game->Version );
-					snprintf( cstr, sizeof(cstr), "Architecture: %i-bit %s Endian", (int) sizeof(void*) * 8, Endian::Big() ? "Big" : "Little" );
+					#if SDL_VERSION_ATLEAST(2,0,0)
+						const char *sdl_version = "SDL2";
+					#else
+						const char *sdl_version = "SDL1";
+					#endif
+					snprintf( cstr, sizeof(cstr), "Architecture: %i-bit %s Endian, %s", (int) sizeof(void*) * 8, Endian::Big() ? "Big" : "Little", sdl_version );
 					Raptor::Game->Console.Print( cstr );
 					
 					Raptor::Game->Console.Print( Raptor::Game->Keys.Status() );
@@ -575,7 +636,8 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 					{
 						std::string sv_cmd = elements.at(0);
 						std::vector<std::string> sv_params = elements;
-						sv_params.erase( sv_params.begin() );
+						while( sv_params.at(0) == "sv" )
+							sv_params.erase( sv_params.begin() );
 						
 						if( Raptor::Server->HandleCommand( sv_cmd, &sv_params ) )
 							;
@@ -695,7 +757,7 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 							snprintf( cstr, sizeof(cstr), "Server FPS: %.0f", 1. / Raptor::Server->FrameTime );
 							Raptor::Game->Console.Print( cstr );
 						}
-						else if( cmd == "who" )
+						else if( sv_cmd == "who" )
 						{
 							for( std::map<uint16_t,Player*>::const_iterator player_iter = Raptor::Server->Data.Players.begin(); player_iter != Raptor::Server->Data.Players.end(); player_iter ++ )
 								Raptor::Game->Console.Print( player_iter->second->Name );
@@ -721,22 +783,27 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 							if( elements.size() >= 2 )
 							{
 								int new_state = Raptor::Server->State;
-								if( elements.at(1) == "++" )
-									new_state ++;
-								else if( elements.at(1) == "--" )
-									new_state --;
-								else if( (elements.at(1) == "+=") && (elements.size() >= 3) )
+								if( ((elements.at(1) == "+=") || (elements.at(1) == "+")) && (elements.size() >= 3) )
 									new_state += atoi( elements.at(2).c_str() );
-								else if( (elements.at(1) == "-=") && (elements.size() >= 3) )
+								else if( ((elements.at(1) == "-=") || (elements.at(1) == "-")) && (elements.size() >= 3) )
 									new_state -= atoi( elements.at(2).c_str() );
+								else if( (elements.at(1) == "++") || (elements.at(1) == "+") )
+									new_state ++;
+								else if( (elements.at(1) == "--") || (elements.at(1) == "-") )
+									new_state --;
 								else
 									new_state = atoi( elements.at(1).c_str() );
 								
-								char cstr[ 1024 ] = "";
-								snprintf( cstr, sizeof(cstr), "Changing server from state %i to %i.", Raptor::Server->State, new_state );
-								Raptor::Game->Console.Print( cstr );
-								
-								Raptor::Server->ChangeState( new_state );
+								if( new_state >= Raptor::State::CONNECTED )
+								{
+									char cstr[ 1024 ] = "";
+									snprintf( cstr, sizeof(cstr), "Changing server from state %i to %i.", Raptor::Server->State, new_state );
+									Raptor::Game->Console.Print( cstr );
+									
+									Raptor::Server->ChangeState( new_state );
+								}
+								else
+									Raptor::Game->Console.Print( "Invalid state requested: " + Num::ToString(new_state), TextConsole::MSG_ERROR );
 							}
 							else
 							{
@@ -819,6 +886,10 @@ void ClientConfig::Save( std::string filename ) const
 	{
 		for( std::map<std::string, std::string>::const_iterator setting_iter = Settings.begin(); setting_iter != Settings.end(); setting_iter ++ )
 			fprintf( output, "set \"%s\" \"%s\"\n", Str::Escape( setting_iter->first, ORIGINAL, ESCAPED ).c_str(), Str::Escape( setting_iter->second, ORIGINAL, ESCAPED ).c_str() );
+		
+		if( JoyAxisBinds.size() || JoyButtonBinds.size() || JoyHatBinds.size() )
+			for( std::set<std::string>::const_iterator dev_iter = Raptor::Game->Input.DeviceTypes.begin(); dev_iter != Raptor::Game->Input.DeviceTypes.end(); dev_iter ++ )
+				fprintf( output, "joy_class \"%s\"\n", dev_iter->c_str() );
 		
 		if( Raptor::Game->Input.ControlNames.size() > 1 )
 			fprintf( output, "\nunbindall\n" );
@@ -962,6 +1033,14 @@ int8_t ClientConfig::Bind( SDL_Event *event, uint8_t control )
 		MouseBinds[ event->button.button ] = control;
 		return 1;
 	}
+#if SDL_VERSION_ATLEAST(2,0,0)
+	else if( (event->type == SDL_MOUSEWHEEL) && event->wheel.y )
+	{
+		Uint8 mouse_button = (event->wheel.y > 0) ? SDL_BUTTON_WHEELUP : SDL_BUTTON_WHEELDOWN;
+		MouseBinds[ mouse_button ] = control;
+		return 1;
+	}
+#endif
 	else if( (event->type == SDL_JOYAXISMOTION)
 	&&       (event->jaxis.value >= 16384)
 	&&       (event->jaxis.value > Raptor::Game->Joy.Joysticks[ event->jaxis.which ].PrevAxes[ event->jaxis.axis ]) )
@@ -1353,6 +1432,10 @@ uint8_t ClientConfig::BoundControl( const SDL_Event *event, bool down_only ) con
 {
 	if( (event->type == SDL_KEYDOWN) || ((event->type == SDL_KEYUP) && ! down_only) )
 	{
+#if SDL_VERSION_ATLEAST(2,0,0)
+		if( event->key.repeat )
+			return 0;
+#endif
 		std::map<SDLKey, uint8_t>::const_iterator bind = KeyBinds.find( event->key.keysym.sym );
 		if( bind != KeyBinds.end() )
 			return bind->second;
@@ -1364,6 +1447,16 @@ uint8_t ClientConfig::BoundControl( const SDL_Event *event, bool down_only ) con
 		if( bind != MouseBinds.end() )
 			return bind->second;
 	}
+	
+#if SDL_VERSION_ATLEAST(2,0,0)
+	else if( (event->type == SDL_MOUSEWHEEL) && event->wheel.y )
+	{
+		Uint8 mouse_button = (event->wheel.y > 0) ? SDL_BUTTON_WHEELUP : SDL_BUTTON_WHEELDOWN;
+		std::map<Uint8, uint8_t>::const_iterator bind = MouseBinds.find( mouse_button );
+		if( bind != MouseBinds.end() )
+			return bind->second;
+	}
+#endif
 	
 	else if( event->type == SDL_JOYAXISMOTION )
 	{

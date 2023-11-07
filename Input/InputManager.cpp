@@ -4,10 +4,10 @@
 
 #include "InputManager.h"
 
-#include "RaptorGame.h"
-#include "Num.h"
 #include <cmath>
 #include <climits>
+#include "RaptorGame.h"
+#include "Num.h"
 
 
 InputManager::InputManager( void )
@@ -156,12 +156,7 @@ InputManager::InputManager( void )
 	MouseNames[ SDL_BUTTON_X1 ] = "Mouse4";
 	MouseNames[ SDL_BUTTON_X2 ] = "Mouse5";
 	
-	DeviceTypes.insert( "Joy" );
-	DeviceTypes.insert( "Xbox" );
-	DeviceTypes.insert( "Pedal" );
-	DeviceTypes.insert( "Throttle" );
-	DeviceTypes.insert( "MFD" );
-	DeviceTypes.insert( "Wheel" );
+	ResetDeviceTypes();
 	
 	ControlNames[ 0 ] = "Unbound";
 }
@@ -169,6 +164,30 @@ InputManager::InputManager( void )
 
 InputManager::~InputManager()
 {
+}
+
+
+// ---------------------------------------------------------------------------
+
+
+void InputManager::ResetDeviceTypes( void )
+{
+	DeviceTypes.clear();
+	
+	DeviceTypes.insert( "Joy" );
+	DeviceTypes.insert( "Xbox" );
+	DeviceTypes.insert( "Pedal" );
+	DeviceTypes.insert( "Throttle" );
+	DeviceTypes.insert( "Wheel" );
+	
+	#if SDL_VERSION_ATLEAST(2,0,0)
+		// SDL2 does not normalize joystick axis mappings across devices; use separate binds for different layouts.
+		DeviceTypes.insert( "X52" );
+		DeviceTypes.insert( "SideWinder" );
+	#else
+		// SDL2 does not detect F16 MFD button panels as joysticks, but SDL1 does.
+		DeviceTypes.insert( "MFD" );
+	#endif
 }
 
 
@@ -212,7 +231,11 @@ std::string InputManager::MouseName( Uint8 button ) const
 	if( iter != MouseNames.end() )
 		return iter->second;
 	
-	return std::string("Mouse") + Num::ToString( (button >= SDL_BUTTON_X1) ? (button - 2) : button );
+	#if SDL_VERSION_ATLEAST(2,0,0)
+		return std::string("Mouse") + Num::ToString(button);
+	#else
+		return std::string("Mouse") + Num::ToString( (button >= SDL_BUTTON_X1) ? (button - 2) : button );
+	#endif
 }
 
 
@@ -228,7 +251,11 @@ Uint8 InputManager::MouseID( std::string name ) const
 	if( Str::BeginsWith( name, "Mouse" ) )
 	{
 		int button = atoi( name.c_str() + 5 );
-		return (button >= 4) ? (button + 2) : button;
+		#if SDL_VERSION_ATLEAST(2,0,0)
+			return button;
+		#else
+			return (button >= 4) ? (button + 2) : button;
+		#endif
 	}
 	
 	return 0;
@@ -269,7 +296,7 @@ std::string InputManager::JoyHatName( std::string dev, Uint8 hat, Uint8 dir ) co
 
 bool InputManager::ParseJoyAxis( std::string input, std::string *dev_ptr, Uint8 *axis_ptr ) const
 {
-	int axis_index = Str::FindInsensitive( input, "Axis" );
+	int axis_index = Str::FindLastInsensitive( input, "Axis" );
 	if( axis_index >= 1 )
 	{
 		std::string dev = input.substr( 0, axis_index );
@@ -289,7 +316,7 @@ bool InputManager::ParseJoyAxis( std::string input, std::string *dev_ptr, Uint8 
 
 bool InputManager::ParseJoyButton( std::string input, std::string *dev_ptr, Uint8 *button_ptr ) const
 {
-	int button_index = Str::FindInsensitive( input, "Button" );
+	int button_index = Str::FindLastInsensitive( input, "Button" );
 	if( button_index >= 1 )
 	{
 		std::string dev = input.substr( 0, button_index );
@@ -309,7 +336,7 @@ bool InputManager::ParseJoyButton( std::string input, std::string *dev_ptr, Uint
 
 bool InputManager::ParseJoyHat( std::string input, std::string *dev_ptr, Uint8 *hat_ptr, Uint8 *dir_ptr ) const
 {
-	int hat_index = Str::FindInsensitive( input, "Hat" );
+	int hat_index = Str::FindLastInsensitive( input, "Hat" );
 	if( hat_index >= 1 )
 	{
 		std::string dev = input.substr( 0, hat_index );
@@ -481,7 +508,7 @@ void InputManager::Update( void )
 		}
 	}
 	
-	for( std::map<Uint8,JoystickState>::const_iterator joy = Raptor::Game->Joy.Joysticks.begin(); joy != Raptor::Game->Joy.Joysticks.end(); joy ++ )
+	for( std::map<Sint32,JoystickState>::const_iterator joy = Raptor::Game->Joy.Joysticks.begin(); joy != Raptor::Game->Joy.Joysticks.end(); joy ++ )
 	{
 		for( std::map<std::string,std::map<Uint8,uint8_t> >::const_iterator dev = Raptor::Game->Cfg.JoyButtonBinds.begin(); dev != Raptor::Game->Cfg.JoyButtonBinds.end(); dev ++ )
 		{
@@ -515,7 +542,7 @@ void InputManager::Update( void )
 		}
 	}
 	
-	for( std::map<Uint8,JoystickState>::const_iterator joy = Raptor::Game->Joy.Joysticks.begin(); joy != Raptor::Game->Joy.Joysticks.end(); joy ++ )
+	for( std::map<Sint32,JoystickState>::const_iterator joy = Raptor::Game->Joy.Joysticks.begin(); joy != Raptor::Game->Joy.Joysticks.end(); joy ++ )
 	{
 		std::string joy_device_type = DeviceType( joy->second.Name );
 		for( std::map<std::string,std::map<Uint8,uint8_t> >::const_iterator dev = Raptor::Game->Cfg.JoyAxisBinds.begin(); dev != Raptor::Game->Cfg.JoyAxisBinds.end(); dev ++ )
@@ -547,11 +574,19 @@ void InputManager::Update( void )
 					double deadzone = 0., deadedge = 0., exponent = 1.;
 					if( joy_device_type == "Xbox" )
 					{
-						if( bind->first == 2 ) // Triggers
+#if SDL_VERSION_ATLEAST(2,0,0)
+						if( bind->first >= 4 ) // Triggers
+						{
+							deadedge = Raptor::Game->Cfg.SettingAsDouble( "joy_deadzone_triggers", 0.02 );
+							exponent = 1. + Raptor::Game->Cfg.SettingAsDouble( "joy_smooth_triggers", 0.75 );
+						}
+#else
+						if( bind->first == 2 ) // Triggers (Combined)
 						{
 							deadzone = Raptor::Game->Cfg.SettingAsDouble( "joy_deadzone_triggers", 0.02 );
 							exponent = 1. + Raptor::Game->Cfg.SettingAsDouble( "joy_smooth_triggers", 0.75 );
 						}
+#endif
 						else
 						{
 							deadzone = Raptor::Game->Cfg.SettingAsDouble( "joy_deadzone_thumbsticks", 0.1 );
@@ -565,9 +600,27 @@ void InputManager::Update( void )
 					}
 					else if( joy_device_type == "Throttle" )
 						deadedge = Raptor::Game->Cfg.SettingAsDouble( "joy_deadzone", 0.03 );
+					else if( joy_device_type == "Wheel" )
+					{
+						if( bind->first == 0 ) // Steering Wheel
+						{
+							deadzone = Raptor::Game->Cfg.SettingAsDouble( "joy_deadzone", 0.03 );
+							exponent = 1. + Raptor::Game->Cfg.SettingAsDouble( "joy_smooth" );
+						}
+						else // Pedals
+						{
+							deadedge = Raptor::Game->Cfg.SettingAsDouble( "joy_deadzone", 0.03 );
+							exponent = 1. + Raptor::Game->Cfg.SettingAsDouble( "joy_smooth_pedals" );
+						}
+					}
 					else // Joy
 					{
-						if( bind->first == 2 ) // Throttle
+						#if SDL_VERSION_ATLEAST(2,0,0)
+							Uint8 throttle_axis = (joy_device_type == "SideWinder") ? 3 : 2;
+						#else
+							Uint8 throttle_axis = 2;
+						#endif
+						if( bind->first == throttle_axis ) // Throttle
 							deadedge = Raptor::Game->Cfg.SettingAsDouble( "joy_deadzone", 0.03 );
 						else
 							deadzone = Raptor::Game->Cfg.SettingAsDouble( "joy_deadzone", 0.03 );
@@ -576,7 +629,7 @@ void InputManager::Update( void )
 							exponent = 1. + Raptor::Game->Cfg.SettingAsDouble( "joy_smooth_x" );
 						else if( bind->first == 1 )
 							exponent = 1. + Raptor::Game->Cfg.SettingAsDouble( "joy_smooth_y", 0.125 );
-						else if( bind->first == 3 )
+						else if( bind->first != throttle_axis ) // Twist
 							exponent = 1. + Raptor::Game->Cfg.SettingAsDouble( "joy_smooth_z", 0.5 );
 					}
 					
@@ -601,7 +654,7 @@ bool InputManager::HasControlAxis( uint8_t control ) const
 		{
 			if( bind->second == control )
 			{
-				for( std::map<Uint8,JoystickState>::const_iterator joy = Raptor::Game->Joy.Joysticks.begin(); joy != Raptor::Game->Joy.Joysticks.end(); joy ++ )
+				for( std::map<Sint32,JoystickState>::const_iterator joy = Raptor::Game->Joy.Joysticks.begin(); joy != Raptor::Game->Joy.Joysticks.end(); joy ++ )
 				{
 					if( DeviceType( joy->second.Name ) != dev_iter->first )
 						continue;

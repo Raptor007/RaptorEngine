@@ -4,14 +4,24 @@
 
 #define RAPTORGAME_CPP
 
-#include "RaptorGame.h"
+#include "PlatformSpecific.h"
 
-#include "RaptorDefs.h"
-#include "Rand.h"
-#include "Num.h"
-#include "Notification.h"
-#include <cmath>
+#include <cstdio>
 
+#ifdef WIN32
+#include <tchar.h>
+#include <sys/stat.h>
+#include <float.h>
+#include <winbase.h>
+#endif
+
+#if defined(__APPLE__) && (__GNUC__ >= 4) && ((__GNUC__ > 4) || (__GNUC_MINOR__ > 0))
+#include <libproc.h>
+#include <unistd.h>
+#include <string>
+#endif
+
+class RaptorGame;
 
 namespace Raptor
 {
@@ -20,7 +30,105 @@ namespace Raptor
 	
 	void Terminate( int arg );
 	void BrokenPipe( int arg );
+	
+	bool PreMain( int bits );
 }
+
+bool Raptor::PreMain( int bits )
+{
+	#ifdef WIN32
+		TCHAR path[MAX_PATH+20] = L"";
+		TCHAR *path_append = path;
+		
+		#ifndef _DEBUG
+			// Get the path to the executable.
+			GetModuleFileName( 0, path, MAX_PATH+20 );
+			path_append = _tcsrchr( path, L'\\' );
+			if( path_append )
+				path_append ++;
+			else
+				path_append = path;
+			path_append[ 0 ] = L'\0';
+			
+			// Set executable path as the working directory (fixes drag-and-drop).
+			SetCurrentDirectory( path );
+		#endif
+		
+		if( bits )
+		{
+			// Set the DLL directory to Bin32/Bin64 (or ..\BinXX if that exists instead).
+			TCHAR bin_dir[ 16 ] = L"Bin32";
+			_stprintf( bin_dir, L"Bin%i", bits );
+			_stprintf( path_append, L"%ls", bin_dir );
+			struct _stat stat_buffer;
+			if( (_tstat( path, &stat_buffer ) == 0) && (stat_buffer.st_mode & S_IFDIR) )
+				SetDllDirectory( path );
+			else
+			{
+				_stprintf( path_append, L"..\\%ls", bin_dir );
+				if( (_tstat( path, &stat_buffer ) == 0) && (stat_buffer.st_mode & S_IFDIR) )
+					SetDllDirectory( path );
+			}
+		}
+		
+		#ifdef _DEBUG
+			// Enable floating-point exceptions in debug mode.
+			_clearfp();
+			unsigned int state = _controlfp( 0, 0 );
+			_controlfp( state & ~(_EM_INVALID|_EM_ZERODIVIDE), _MCW_EM );
+		#endif
+		
+		// Prevent Windows DPI scaling from stupidly stretching things off-screen.
+		#ifndef _MSC_VER
+			FARPROC SetProcessDPIAware = GetProcAddress( LoadLibraryA("user32.dll"), "SetProcessDPIAware" );
+			if( SetProcessDPIAware )
+		#endif
+		SetProcessDPIAware();
+	#endif
+	
+	#if defined(__APPLE__) && defined(PROC_PIDPATHINFO_MAXSIZE) && !defined(_DEBUG)
+		// Fix the working directory for Mac OS X Intel64.
+		char exe_path[ PROC_PIDPATHINFO_MAXSIZE ] = "";
+		pid_t pid = getpid();
+		if( proc_pidpath( pid, exe_path, sizeof(exe_path) ) > 0 )
+		{
+			char *real_path = realpath( exe_path, NULL );
+			std::string path;
+			if( real_path )
+			{
+				path = real_path;
+				free( real_path );
+				real_path = NULL;
+			}
+			else
+				path = exe_path;
+			
+			size_t index = path.rfind( ".app/Contents/MacOS/" );
+			if( index != std::string::npos )
+			{
+				path = path.substr( 0, index );
+				index = path.rfind( "/" );
+				if( index != std::string::npos )
+				{
+					path = path.substr( 0, index );
+					chdir( path.c_str() );
+				}
+			}
+		}
+	#endif
+	
+	return true;
+}
+
+// ---------------------------------------------------------------------------
+
+#include "RaptorGame.h"
+
+#include <cmath>
+#include "RaptorDefs.h"
+#include "Rand.h"
+#include "Num.h"
+#include "Notification.h"
 
 
 RaptorGame::RaptorGame( std::string game, std::string version, RaptorServer *server )
@@ -57,6 +165,12 @@ void RaptorGame::SetServer( RaptorServer *server )
 		Server->Console = &Console;
 		Server->Port = DefaultPort;
 	}
+}
+
+
+void RaptorGame::SetDefaultJoyTypes( void )
+{
+	Input.ResetDeviceTypes();
 }
 
 
@@ -258,8 +372,13 @@ void RaptorGame::Run( void )
 				{
 					if( event.type == SDL_QUIT )
 						Quit();
+#if SDL_VERSION_ATLEAST(2,0,0)
+					else if( event.type == SDL_WINDOWEVENT_RESIZED )
+						Gfx.SetMode( event.window.data1, event.window.data2 );
+#else
 					else if( event.type == SDL_VIDEORESIZE )
 						Gfx.SetMode( event.resize.w, event.resize.h );
+#endif
 					else if( (event.type == SDL_KEYUP) && (event.key.keysym.sym == Console.ToggleKey) )
 						Console.ToggleActive();
 				}
@@ -420,6 +539,13 @@ bool RaptorGame::HandleEvent( SDL_Event *event )
 bool RaptorGame::HandleCommand( std::string cmd, std::vector<std::string> *params )
 {
 	return false;
+}
+
+
+void RaptorGame::MessageReceived( std::string text, uint32_t type )
+{
+	Raptor::Game->Console.Print( text, type );
+	Raptor::Game->Msg.Print( text, type );
 }
 
 
@@ -631,8 +757,7 @@ bool RaptorGame::ProcessPacket( Packet *packet )
 		uint32_t msg_type = 0;
 		if( packet->Remaining() )
 			msg_type = packet->NextUInt();
-		Raptor::Game->Console.Print( message, msg_type );
-		Raptor::Game->Msg.Print( message, msg_type );
+		Raptor::Game->MessageReceived( message, msg_type );
 	}
 	
 	else if( type == Raptor::Packet::PLAY_SOUND )
@@ -879,103 +1004,3 @@ void Raptor::BrokenPipe( int arg )
 	}
 }
 
-
-// ---------------------------------------------------------------------------
-
-
-#ifdef WIN32
-#include <tchar.h>
-#include <sys/stat.h>
-#include <float.h>
-#endif
-
-#if defined(__APPLE__) && (__GNUC__ >= 4) && ((__GNUC__ > 4) || (__GNUC_MINOR__ > 0))
-#include <libproc.h>
-#include <unistd.h>
-#endif
-
-bool Raptor::PreMain( int bits )
-{
-	#ifdef WIN32
-		TCHAR path[MAX_PATH+20] = L"";
-		TCHAR *path_append = path;
-		
-		#ifndef _DEBUG
-			// Get the path to the executable.
-			GetModuleFileName( 0, path, MAX_PATH+20 );
-			path_append = _tcsrchr( path, L'\\' );
-			if( path_append )
-				path_append ++;
-			else
-				path_append = path;
-			path_append[ 0 ] = L'\0';
-			
-			// Set executable path as the working directory (fixes drag-and-drop).
-			SetCurrentDirectory( path );
-		#endif
-		
-		if( bits )
-		{
-			// Set the DLL directory to Bin32/Bin64 (or ..\BinXX if that exists instead).
-			TCHAR bin_dir[ 16 ] = L"Bin32";
-			_stprintf( bin_dir, L"Bin%i", bits );
-			_stprintf( path_append, L"%ls", bin_dir );
-			struct _stat stat_buffer;
-			if( (_tstat( path, &stat_buffer ) == 0) && (stat_buffer.st_mode & S_IFDIR) )
-				SetDllDirectory( path );
-			else
-			{
-				_stprintf( path_append, L"..\\%ls", bin_dir );
-				if( (_tstat( path, &stat_buffer ) == 0) && (stat_buffer.st_mode & S_IFDIR) )
-					SetDllDirectory( path );
-			}
-		}
-		
-		#ifdef _DEBUG
-			// Enable floating-point exceptions in debug mode.
-			_clearfp();
-			unsigned int state = _controlfp( 0, 0 );
-			_controlfp( state & ~(_EM_INVALID|_EM_ZERODIVIDE), _MCW_EM );
-		#endif
-		
-		// Prevent Windows DPI scaling from stupidly stretching things off-screen.
-		#ifndef _MSC_VER
-			FARPROC SetProcessDPIAware = GetProcAddress( LoadLibraryA("user32.dll"), "SetProcessDPIAware" );
-			if( SetProcessDPIAware )
-		#endif
-		SetProcessDPIAware();
-	#endif
-	
-	#if defined(__APPLE__) && defined(PROC_PIDPATHINFO_MAXSIZE) && !defined(_DEBUG)
-		// Fix the working directory for Mac OS X Intel64.
-		char exe_path[ PROC_PIDPATHINFO_MAXSIZE ] = "";
-		pid_t pid = getpid();
-		if( proc_pidpath( pid, exe_path, sizeof(exe_path) ) > 0 )
-		{
-			char *real_path = realpath( exe_path, NULL );
-			std::string path;
-			if( real_path )
-			{
-				path = real_path;
-				free( real_path );
-				real_path = NULL;
-			}
-			else
-				path = exe_path;
-			
-			size_t index = path.rfind( ".app/Contents/MacOS/" );
-			if( index != std::string::npos )
-			{
-				path = path.substr( 0, index );
-				index = path.rfind( "/" );
-				if( index != std::string::npos )
-				{
-					path = path.substr( 0, index );
-					chdir( path.c_str() );
-				}
-			}
-		}
-	#endif
-	
-	return true;
-}

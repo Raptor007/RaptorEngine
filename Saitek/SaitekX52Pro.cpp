@@ -1,6 +1,7 @@
 #ifdef WIN32
 
 #include "SaitekX52Pro.h"
+
 #include <fstream>
 #include "SaitekManager.h"
 

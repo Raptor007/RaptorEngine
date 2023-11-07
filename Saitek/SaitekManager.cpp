@@ -1,13 +1,19 @@
 #ifdef WIN32
 
 #include "SaitekManager.h"
+
 #include <cstdio>
 #include <cstdlib>
 #include <map>
 #include "SaitekDevice.h"
 #include "SaitekX52Pro.h"
 #include "SaitekFIP.h"
-#include <SDL/SDL.h>
+
+#ifdef SDL2
+	#include <SDL2/SDL.h>
+#else
+	#include <SDL/SDL.h>
+#endif
 
 
 namespace Saitek

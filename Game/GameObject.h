@@ -31,6 +31,7 @@ public:
 	double YawRate;
 	
 	Pos3D PrevPos;
+	Vec3D PrevMotionVector;
 	bool SmoothPos;
 	
 	

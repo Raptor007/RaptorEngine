@@ -11,7 +11,12 @@ class ClientConsole;
 #include "Clock.h"
 #include "Font.h"
 #include "TextBox.h"
-#include <SDL/SDL.h>
+
+#ifdef SDL2
+	#include <SDL2/SDL.h>
+#else
+	#include <SDL/SDL.h>
+#endif
 
 
 class ClientConsole : public TextConsole, public Layer

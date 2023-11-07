@@ -9,13 +9,18 @@ class JoystickState;
 #include <cstddef>
 #include <string>
 #include <map>
-#include <SDL/SDL.h>
+
+#ifdef SDL2
+	#include <SDL2/SDL.h>
+#else
+	#include <SDL/SDL.h>
+#endif
 
 
 class JoystickState
 {
 public:
-	uint8_t ID;
+	Sint32 ID;
 	SDL_Joystick *Joystick;
 	std::string Name;
 	std::map<Uint8, double> Axes, PrevAxes;
@@ -23,9 +28,10 @@ public:
 	std::map<Uint8, Uint8> Hats;
 	std::map<Uint8, int> BallsX, BallsY, PrevBallsX, PrevBallsY;
 	
-	JoystickState( uint8_t id = 255, SDL_Joystick *joystick = NULL, std::string name = "Joystick" );
+	JoystickState( Sint32 id = -1, SDL_Joystick *joystick = NULL, std::string name = "Joystick" );
 	virtual ~JoystickState();
 	
+	void Clear( void );
 	void TrackEvent( SDL_Event *event );
 	static double AxisScale( Sint16 value );
 	

@@ -4,6 +4,7 @@
 
 #include "Window.h"
 
+#include <cmath>
 #include "RaptorGame.h"
 
 
@@ -59,7 +60,11 @@ Window::Window( SDL_Rect *param_rect, SDL_Color *param_color )
 	Red = ((float)( param_color->r )) / 255.0f;
 	Green = ((float)( param_color->r )) / 255.0f;
 	Blue = ((float)( param_color->r )) / 255.0f;
-	Alpha = ((float)( param_color->unused )) / 255.0f;
+	#if SDL_VERSION_ATLEAST(2,0,0)
+		Alpha = ((float)( param_color->a )) / 255.0f;
+	#else
+		Alpha = ((float)( param_color->unused )) / 255.0f;
+	#endif
 }
 
 

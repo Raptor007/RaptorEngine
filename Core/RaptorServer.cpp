@@ -7,6 +7,7 @@
 #include "RaptorServer.h"
 
 #include <cstddef>
+#include <cmath>
 #include <string>
 #include <map>
 #include <signal.h>
@@ -52,9 +53,13 @@ RaptorServer::~RaptorServer()
 	
 	if( Thread )
 	{
-		// FIXME: This is causing crashing sometimes!
-		//        Probably when SDLNet_Quit() has already been called.
-		SDL_KillThread( Thread );
+		#if SDL_VERSION_ATLEAST(2,0,0)
+			SDL_DetachThread( Thread );
+		#else
+			// FIXME: This is causing crashing sometimes!
+			//        Probably when SDLNet_Quit() has already been called.
+			SDL_KillThread( Thread );
+		#endif
 		Thread = NULL;
 	}
 }
@@ -73,7 +78,13 @@ bool RaptorServer::Start( std::string name )
 	
 	Net.NetRate = NetRate;
 	
-	if( !( Thread = SDL_CreateThread( RaptorServerThread, this ) ) )
+	#if SDL_VERSION_ATLEAST(2,0,0)
+		Thread = SDL_CreateThread( RaptorServerThread, "RaptorServer", this );
+	#else
+		Thread = SDL_CreateThread( RaptorServerThread, this );
+	#endif
+	
+	if( ! Thread )
 	{
 		fprintf( stderr, "SDL_CreateThread: %s\n", SDLNet_GetError() );
 		return false;

@@ -8,8 +8,15 @@ class RaptorServer;
 #include "PlatformSpecific.h"
 
 #include <string>
-#include <SDL/SDL.h>
-#include <SDL/SDL_thread.h>
+
+#ifdef SDL2
+	#include <SDL2/SDL.h>
+	#include <SDL2/SDL_thread.h>
+#else
+	#include <SDL/SDL.h>
+	#include <SDL/SDL_thread.h>
+#endif
+
 #include "NetServer.h"
 #include "Packet.h"
 #include "GameData.h"

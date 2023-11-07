@@ -5,6 +5,7 @@
 #include "Button.h"
 
 #include <cstddef>
+#include <cmath>
 #include "RaptorGame.h"
 
 

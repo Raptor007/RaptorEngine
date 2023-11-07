@@ -3,6 +3,7 @@
  */
 
 #include "Player.h"
+
 #include "Str.h"
 #include <cstdlib>
 #include <cstring>

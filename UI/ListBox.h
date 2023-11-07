@@ -12,7 +12,13 @@ class ListBoxButton;
 #include "Layer.h"
 #include <string>
 #include <vector>
-#include <SDL/SDL.h>
+
+#ifdef SDL2
+	#include <SDL2/SDL.h>
+#else
+	#include <SDL/SDL.h>
+#endif
+
 #include "Font.h"
 #include "Animation.h"
 #include "Button.h"
@@ -55,6 +61,7 @@ public:
 	virtual void DrawItem( const ListBoxItem *item, const SDL_Rect *rect );
 	
 	void TrackEvent( SDL_Event *event );
+	virtual bool HandleEvent( SDL_Event *event );
 	void MouseEnter( void );
 	void MouseLeave( void );
 	bool MouseDown( Uint8 button = SDL_BUTTON_LEFT );

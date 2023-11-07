@@ -11,7 +11,13 @@ class ScrollAreaButton;
 #include "Layer.h"
 #include <string>
 #include <vector>
-#include <SDL/SDL.h>
+
+#ifdef SDL2
+	#include <SDL2/SDL.h>
+#else
+	#include <SDL/SDL.h>
+#endif
+
 #include "Font.h"
 #include "Animation.h"
 #include "Button.h"

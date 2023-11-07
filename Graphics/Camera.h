@@ -27,4 +27,5 @@ public:
 	void SetupGraphics( Graphics *gfx ) const;
 	
 	void Copy( const Pos3D *pos );
+	Camera &operator = ( const Camera &other );
 };

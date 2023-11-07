@@ -3,6 +3,7 @@
  */
 
 #include "ListBox.h"
+
 #include <cstddef>
 #include "RaptorGame.h"
 
@@ -303,6 +304,23 @@ void ListBox::TrackEvent( SDL_Event *event )
 		Scroll = 0;
 		ScrollDown( line );
 	}
+}
+
+
+bool ListBox::HandleEvent( SDL_Event *event )
+{
+#if SDL_VERSION_ATLEAST(2,0,0)
+	if( (event->type == SDL_MOUSEWHEEL) && event->wheel.y && WithinCalcRect( event->wheel.mouseX, event->wheel.mouseY ) )
+	{
+		if( event->wheel.y > 0 )
+			ScrollUp();
+		else
+			ScrollDown();
+		return true;
+	}
+#endif
+	
+	return Layer::HandleEvent( event );
 }
 
 

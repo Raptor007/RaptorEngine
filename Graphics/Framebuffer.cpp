@@ -77,8 +77,8 @@ void Framebuffer::Initialize( void )
 	if( FramebufferHandle || Texture || Depthbuffer )
 		return;
 	
-	// If framebuffers are disabled, create a blank 2x2 texture instead.
-	if( ! Raptor::Game->Gfx.Framebuffers )
+	// If framebuffers are disabled or unavailable, create a blank 2x2 texture instead.
+	if( ! (Raptor::Game->Gfx.Framebuffers && glGenFramebuffers) )
 	{
 		glGenTextures( 1, &Texture );
 		glBindTexture( GL_TEXTURE_2D, Texture );

@@ -30,8 +30,8 @@ public:
 	void Clear( void );
 	void Load( std::string filename, std::map<std::string,std::string> defs );
 	
-	bool Ready( void );
-	bool Active( void );
+	bool Ready( void ) const;
+	bool Active( void ) const;
 	
 	bool Set1f( const char *name, double value );
 	bool Set3f( const char *name, double x, double y, double z );

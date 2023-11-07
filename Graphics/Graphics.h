@@ -7,16 +7,20 @@ class Graphics;
 
 #include "PlatformSpecific.h"
 
-#include <SDL/SDL.h>
-#include "RaptorGL.h"
-
-#ifdef __APPLE__
-	#include <SDL_ttf/SDL_ttf.h>
+#ifdef SDL2
+	#include <SDL2/SDL.h>
+	#include <SDL2/SDL_ttf.h>
 #else
-	#include <SDL/SDL_ttf.h>
+	#include <SDL/SDL.h>
+	#ifdef __APPLE__
+		#include <SDL_ttf/SDL_ttf.h>
+	#else
+		#include <SDL/SDL_ttf.h>
+	#endif
 #endif
 
 #include <string>
+#include "RaptorGL.h"
 #include "Camera.h"
 #include "Framebuffer.h"
 
@@ -24,7 +28,11 @@ class Graphics;
 class Graphics
 {
 public:
+#if SDL_VERSION_ATLEAST(2,0,0)
+	SDL_Window *Screen;
+#else
 	SDL_Surface *Screen;
+#endif
 	bool Initialized;
 	int W, H, RealW, RealH, DesktopW, DesktopH, BPP;
 	float AspectRatio;
