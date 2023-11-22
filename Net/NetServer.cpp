@@ -17,7 +17,7 @@ NetServer::NetServer( void )
 	Socket = NULL;
 	NetRate = 30.;
 	DisconnectTime = 30.;
-	ResyncTime = 0.;  // Send RESYNC packet after this long without response.  Disabled because it sometimes crashed the server, and probably isn't even helpful.
+	ResyncTime = 0.;  // Send RESYNC packet after this long without response.  Disabled because the updated netcode should no longer lose sync.
 	Precision = 0;
 }
 
@@ -338,7 +338,7 @@ void NetServer::SendUpdates( void )
 			if( elapsed >= (1. / temp_netrate) )
 			{
 				client->NetClock.Advance( elapsed );
-				Raptor::Server->SendUpdate( client, client->Precision );
+				Raptor::Server->SendUpdate( client );
 				
 				double ping_elapsed = client->PingClock.ElapsedSeconds();
 				if( (ping_elapsed >= (1. / client->PingRate)) && client->SendPing() )

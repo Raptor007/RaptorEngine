@@ -23,5 +23,6 @@ public:
 private:
 	std::queue< Packet*, std::list<Packet*> > Complete;
 	Packet *Unfinished;
-	PacketSize UnfinishedSizeRemaining;
+	PacketSize UnfinishedSizeRemaining, PartialHeaderSize;
+	uint8_t PartialHeaderData[ PACKET_HEADER_SIZE ];
 };

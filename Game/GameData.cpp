@@ -360,40 +360,56 @@ bool GameData::HasProperty( std::string name ) const
 }
 
 
-std::string GameData::PropertyAsString( std::string name, const char *ifndef ) const
+std::string GameData::PropertyAsString( std::string name, const char *ifndef, const char *ifempty ) const
 {
 	std::map<std::string, std::string>::const_iterator found = Properties.find( name );
 	if( found != Properties.end() )
+	{
+		if( found->second.empty() && ifempty )
+			return std::string(ifempty);
 		return found->second;
+	}
 	if( ifndef )
 		return std::string(ifndef);
 	return "";
 }
 
 
-double GameData::PropertyAsDouble( std::string name, double ifndef ) const
+double GameData::PropertyAsDouble( std::string name, double ifndef, double ifempty ) const
 {
 	std::map<std::string, std::string>::const_iterator found = Properties.find( name );
 	if( found != Properties.end() )
+	{
+		if( found->second.empty() )
+			return ifempty;
 		return Str::AsDouble( found->second );
+	}
 	return ifndef;
 }
 
 
-int GameData::PropertyAsInt( std::string name, int ifndef ) const
+int GameData::PropertyAsInt( std::string name, int ifndef, int ifempty ) const
 {
 	std::map<std::string, std::string>::const_iterator found = Properties.find( name );
 	if( found != Properties.end() )
+	{
+		if( found->second.empty() )
+			return ifempty;
 		return Str::AsInt( found->second );
+	}
 	return ifndef;
 }
 
 
-bool GameData::PropertyAsBool( std::string name, bool ifndef ) const
+bool GameData::PropertyAsBool( std::string name, bool ifndef, bool ifempty ) const
 {
 	std::map<std::string, std::string>::const_iterator found = Properties.find( name );
 	if( found != Properties.end() )
+	{
+		if( found->second.empty() )
+			return ifempty;
 		return Str::AsBool( found->second );
+	}
 	return ifndef;
 }
 

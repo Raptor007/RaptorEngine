@@ -41,10 +41,10 @@ public:
 	void Save( std::string filename ) const;
 	
 	bool HasSetting( std::string name ) const;
-	std::string SettingAsString( std::string name, const char *ifndef = NULL ) const;
-	double SettingAsDouble( std::string name, double ifndef = 0. ) const;
-	int SettingAsInt( std::string name, int ifndef = 0 ) const;
-	bool SettingAsBool( std::string name, bool ifndef = false ) const;
+	std::string SettingAsString( std::string name, const char *ifndef = NULL, const char *ifempty = NULL ) const;
+	double SettingAsDouble( std::string name, double ifndef = 0., double ifempty = 0. ) const;
+	int SettingAsInt( std::string name, int ifndef = 0, int ifempty = 0 ) const;
+	bool SettingAsBool( std::string name, bool ifndef = false, bool ifempty = false ) const;
 	std::vector<double> SettingAsDoubles( std::string name ) const;
 	std::vector<int> SettingAsInts( std::string name ) const;
 	

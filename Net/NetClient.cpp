@@ -276,14 +276,18 @@ void NetClient::Cleanup( void )
 	{
 		Raptor::Game->ChangeState( Raptor::State::DISCONNECTED );
 		
-		if( Socket && ! Thread ) // FIXME: This is probably leaving orphaned sockets.
+		// Make sure the old thread is done before we do anything else (like reconnect).
+		if( Thread )
+			SDL_WaitThread( Thread, NULL );
+		
+		if( Socket && ! Thread )
 		{
 			// If the connection is open, close it.
 			SDLNet_TCP_Close( Socket );
 			Socket = NULL;
 		}
 		
-		// Empty the incoming packet buffer.  This locks the mutex, so it's okay to do while the thread finishes.
+		// Empty the incoming packet buffer.
 		ClearPackets();
 		
 		PingTimes.clear();
@@ -362,6 +366,8 @@ bool NetClient::ProcessPacket( Packet *packet )
 		uint16_t player_id = packet->NextUShort();
 		
 		int state = Raptor::Game->State;
+		if( state < Raptor::State::CONNECTED )
+			state = Raptor::State::CONNECTED;
 		
 		bool reconnected = Raptor::Server->IsRunning();
 		if( (! reconnected) && (ReconnectClock.ElapsedSeconds() > 2.) )

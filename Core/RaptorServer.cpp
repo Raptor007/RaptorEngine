@@ -400,7 +400,7 @@ void RaptorServer::DroppedClient( ConnectedClient *client )
 }
 
 
-void RaptorServer::SendUpdate( ConnectedClient *client, int8_t precision )
+void RaptorServer::SendUpdate( ConnectedClient *client )
 {
 	// Don't attempt to update clients that haven't received the list of objects yet.
 	if( ! client->Synchronized )
@@ -420,15 +420,17 @@ void RaptorServer::SendUpdate( ConnectedClient *client, int8_t precision )
 			objects_to_update.push_back( obj_iter->second );
 	}
 	
+	int8_t precision = client->Precision;
+	
 	// If precision is auto (-128), the number of objects to update dictates how much detail to send about each.
 	if( precision == -128 )
 	{
 		if( objects_to_update.size() < 32 )
-			precision = 127;
-		else if( objects_to_update.size() < 1024 )
+			precision = 1;
+		else if( objects_to_update.size() < 64 )
 			precision = 0;
 		else
-			precision = -127;
+			precision = -1;
 	}
 	
 	Packet update_packet = Packet( Raptor::Packet::UPDATE );
@@ -445,7 +447,7 @@ void RaptorServer::SendUpdate( ConnectedClient *client, int8_t precision )
 		update_packet.AddUInt( (*obj_iter)->ID );
 		(*obj_iter)->AddToUpdatePacketFromServer( &update_packet, precision );
 	}
-
+	
 	// Send the packet.
 	client->Send( &update_packet );
 }

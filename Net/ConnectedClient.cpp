@@ -262,6 +262,9 @@ bool ConnectedClient::ProcessPacket( Packet *packet )
 			DropPlayerID = PlayerID;
 			PlayerID = player_id;
 			
+			if( ! Raptor::Server->Net.Lock.Lock() )
+				fprintf( stderr, "ConnectedClient::ProcessPacket: Raptor::Server->Net.Lock.Lock: %s\n", SDL_GetError() );
+			
 			// Get rid of player's old client(s) that lost connection.
 			for( std::list<ConnectedClient*>::iterator client_iter = Raptor::Server->Net.Clients.begin(); client_iter != Raptor::Server->Net.Clients.end(); client_iter ++ )
 			{
@@ -277,6 +280,9 @@ bool ConnectedClient::ProcessPacket( Packet *packet )
 				if( (*client_iter)->DropPlayerID == player_id )
 					(*client_iter)->DropPlayerID = 0;
 			}
+			
+			if( ! Raptor::Server->Net.Lock.Unlock() )
+				fprintf( stderr, "ConnectedClient::ProcessPacket: Raptor::Server->Net.Lock.Unlock: %s\n", SDL_GetError() );
 			
 			// Give old PlayerID to new client.
 			Packet login( Raptor::Packet::LOGIN );
@@ -463,7 +469,7 @@ bool ConnectedClient::SendPing( void )
 
 bool ConnectedClient::SendResync( void )
 {
-	// Sometimes clients with flaky connections can receive data but not send replies; ask them to reconnect and resync.
+	// In the (now unlikely) event a client can receive data but hasn't been sending replies, ask them to reconnect and resync.
 	
 	char cstr[ 1024 ] = "";
 	snprintf( cstr, 1024, "Sending resync to: %i.%i.%i.%i:%i", (IP & 0xFF000000) >> 24, (IP & 0x00FF0000) >> 16, (IP & 0x0000FF00) >> 8, IP & 0x000000FF, Port );

@@ -375,7 +375,6 @@ int8_t Packet::NextChar( void )
 	else
 	{
 		Offset = Size();
-		
 		if( ThrowExceptions )
 			throw PacketSmall();
 	}

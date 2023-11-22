@@ -44,8 +44,8 @@ void ClientConfig::SetDefaults( void )
 	
 	Settings[ "g_res_fullscreen_x" ] = Num::ToString( Raptor::Game->Gfx.DesktopW );
 	Settings[ "g_res_fullscreen_y" ] = Num::ToString( Raptor::Game->Gfx.DesktopH );
-	Settings[ "g_res_windowed_x" ] = "1280";
-	Settings[ "g_res_windowed_y" ] = "720";
+	Settings[ "g_res_windowed_x" ] = (Raptor::Game->Gfx.DesktopH > 1080) ? "1920" : "1280";
+	Settings[ "g_res_windowed_y" ] = (Raptor::Game->Gfx.DesktopH > 1080) ? "1080" : "720";
 	Settings[ "g_fullscreen" ] = "true";
 	Settings[ "g_vsync" ] = "false";
 	Settings[ "g_fsaa" ] = "4";
@@ -73,7 +73,7 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "s_depth" ] = "16";
 	Settings[ "s_buffer" ] = "4096";
 	Settings[ "s_mix_channels" ] = "64";
-	Settings[ "s_volume" ] = "0.4";
+	Settings[ "s_volume" ] = "0.3";
 	Settings[ "s_effect_volume" ] = "0.5";
 	Settings[ "s_music_volume" ] = "0.9";
 	
@@ -930,40 +930,56 @@ bool ClientConfig::HasSetting( std::string name ) const
 }
 
 
-std::string ClientConfig::SettingAsString( std::string name, const char *ifndef ) const
+std::string ClientConfig::SettingAsString( std::string name, const char *ifndef, const char *ifempty ) const
 {
 	std::map<std::string, std::string>::const_iterator found = Settings.find( name );
 	if( found != Settings.end() )
+	{
+		if( found->second.empty() && ifempty )
+			return std::string(ifempty);
 		return found->second;
+	}
 	if( ifndef )
 		return std::string(ifndef);
 	return "";
 }
 
 
-double ClientConfig::SettingAsDouble( std::string name, double ifndef ) const
+double ClientConfig::SettingAsDouble( std::string name, double ifndef, double ifempty ) const
 {
 	std::map<std::string, std::string>::const_iterator found = Settings.find( name );
 	if( found != Settings.end() )
+	{
+		if( found->second.empty() )
+			return ifempty;
 		return Str::AsDouble( found->second );
+	}
 	return ifndef;
 }
 
 
-int ClientConfig::SettingAsInt( std::string name, int ifndef ) const
+int ClientConfig::SettingAsInt( std::string name, int ifndef, int ifempty ) const
 {
 	std::map<std::string, std::string>::const_iterator found = Settings.find( name );
 	if( found != Settings.end() )
+	{
+		if( found->second.empty() )
+			return ifempty;
 		return Str::AsInt( found->second );
+	}
 	return ifndef;
 }
 
 
-bool ClientConfig::SettingAsBool( std::string name, bool ifndef ) const
+bool ClientConfig::SettingAsBool( std::string name, bool ifndef, bool ifempty ) const
 {
 	std::map<std::string, std::string>::const_iterator found = Settings.find( name );
 	if( found != Settings.end() )
+	{
+		if( found->second.empty() )
+			return ifempty;
 		return Str::AsBool( found->second );
+	}
 	return ifndef;
 }
 
