@@ -51,13 +51,18 @@ uint16_t GameData::AddPlayer( Player *player )
 	if( ! player )
 		return 0;
 	
+	Lock.Lock();
+	
 	// ID 0 means no ID has been assigned yet.
 	if( ! player->ID )
 		player->ID = PlayerIDs.NextAvailable();
 	
-	Players[ player->ID ] = player;
-
-	return player->ID;
+	uint16_t player_id = player->ID;
+	Players[ player_id ] = player;
+	
+	Lock.Unlock();
+	
+	return player_id;
 }
 
 
@@ -79,6 +84,8 @@ void GameData::RemoveObject( uint32_t id )
 
 void GameData::RemovePlayer( uint16_t id )
 {
+	Lock.Lock();
+	
 	std::map<uint16_t,Player*>::iterator player_iter = Players.find( id );
 	if( player_iter != Players.end() )
 	{
@@ -88,6 +95,8 @@ void GameData::RemovePlayer( uint16_t id )
 	}
 	
 	PlayerIDs.Remove( id );
+	
+	Lock.Unlock();
 }
 
 
@@ -108,12 +117,17 @@ void GameData::Clear( void )
 {
 	ClearObjects();
 	
+	Lock.Lock();
+	
 	for( std::map<uint16_t,Player*>::iterator player_iter = Players.begin(); player_iter != Players.end(); player_iter ++ )
 		delete player_iter->second;
 	
 	Players.clear();
 	PlayerIDs.Clear();
 	Properties.clear();
+	
+	Lock.Unlock();
+	
 	TimeScale = 1.;
 }
 
@@ -342,81 +356,137 @@ GameObject *GameData::GetObject( uint32_t id )
 
 Player *GameData::GetPlayer( uint16_t id )
 {
+	Player *player = NULL;
+	
+	Lock.Lock();
+	
 	std::map<uint16_t,Player*>::iterator player_iter = Players.find( id );
 	if( player_iter != Players.end() )
-		return player_iter->second;
+		player = player_iter->second;
 	
-	return NULL;
+	Lock.Unlock();
+	
+	return player;
 }
 
 
 // -----------------------------------------------------------------------------
 
 
-bool GameData::HasProperty( std::string name ) const
+void GameData::SetProperty( std::string name, std::string value )
 {
-	std::map<std::string, std::string>::const_iterator found = Properties.find( name );
-	return ( found != Properties.end() );
+	Lock.Lock();
+	Properties[ name ] = value;
+	Lock.Unlock();
 }
 
 
-std::string GameData::PropertyAsString( std::string name, const char *ifndef, const char *ifempty ) const
+bool GameData::HasProperty( std::string name )
 {
+	bool has_property = false;
+	
+	Lock.Lock();
+	
+	std::map<std::string, std::string>::const_iterator found = Properties.find( name );
+	has_property = (found != Properties.end());
+	
+	Lock.Unlock();
+	
+	return has_property;
+}
+
+
+std::string GameData::PropertyAsString( std::string name, const char *ifndef, const char *ifempty )
+{
+	std::string value;
+	
+	Lock.Lock();
+	
 	std::map<std::string, std::string>::const_iterator found = Properties.find( name );
 	if( found != Properties.end() )
 	{
 		if( found->second.empty() && ifempty )
-			return std::string(ifempty);
-		return found->second;
+			value = std::string(ifempty);
+		else
+			value = found->second;
 	}
-	if( ifndef )
-		return std::string(ifndef);
-	return "";
+	else if( ifndef )
+		value = std::string(ifndef);
+	
+	Lock.Unlock();
+	
+	return value;
 }
 
 
-double GameData::PropertyAsDouble( std::string name, double ifndef, double ifempty ) const
+double GameData::PropertyAsDouble( std::string name, double ifndef, double ifempty )
 {
+	double value = ifndef;
+	
+	Lock.Lock();
+	
 	std::map<std::string, std::string>::const_iterator found = Properties.find( name );
 	if( found != Properties.end() )
 	{
 		if( found->second.empty() )
-			return ifempty;
-		return Str::AsDouble( found->second );
+			value = ifempty;
+		else
+			value = Str::AsDouble( found->second );
 	}
-	return ifndef;
+	
+	Lock.Unlock();
+	
+	return value;
 }
 
 
-int GameData::PropertyAsInt( std::string name, int ifndef, int ifempty ) const
+int GameData::PropertyAsInt( std::string name, int ifndef, int ifempty )
 {
+	int value = ifndef;
+	
+	Lock.Lock();
+	
 	std::map<std::string, std::string>::const_iterator found = Properties.find( name );
 	if( found != Properties.end() )
 	{
 		if( found->second.empty() )
-			return ifempty;
-		return Str::AsInt( found->second );
+			value = ifempty;
+		else
+			value = Str::AsInt( found->second );
 	}
-	return ifndef;
+	
+	Lock.Unlock();
+	
+	return value;
 }
 
 
-bool GameData::PropertyAsBool( std::string name, bool ifndef, bool ifempty ) const
+bool GameData::PropertyAsBool( std::string name, bool ifndef, bool ifempty )
 {
+	bool value = ifndef;
+	
+	Lock.Lock();
+	
 	std::map<std::string, std::string>::const_iterator found = Properties.find( name );
 	if( found != Properties.end() )
 	{
 		if( found->second.empty() )
-			return ifempty;
-		return Str::AsBool( found->second );
+			value = ifempty;
+		else
+			value = Str::AsBool( found->second );
 	}
-	return ifndef;
+	
+	Lock.Unlock();
+	
+	return value;
 }
 
 
-std::vector<double> GameData::PropertyAsDoubles( std::string name ) const
+std::vector<double> GameData::PropertyAsDoubles( std::string name )
 {
 	std::vector<double> results;
+	
+	Lock.Lock();
 	
 	std::map<std::string, std::string>::const_iterator found = Properties.find( name );
 	if( found != Properties.end() )
@@ -435,13 +505,17 @@ std::vector<double> GameData::PropertyAsDoubles( std::string name ) const
 		}
 	}
 	
+	Lock.Unlock();
+	
 	return results;
 }
 
 
-std::vector<int> GameData::PropertyAsInts( std::string name ) const
+std::vector<int> GameData::PropertyAsInts( std::string name )
 {
 	std::vector<int> results;
+	
+	Lock.Lock();
 	
 	std::map<std::string, std::string>::const_iterator found = Properties.find( name );
 	if( found != Properties.end() )
@@ -459,6 +533,8 @@ std::vector<int> GameData::PropertyAsInts( std::string name ) const
 				seeking = true;
 		}
 	}
+	
+	Lock.Unlock();
 	
 	return results;
 }

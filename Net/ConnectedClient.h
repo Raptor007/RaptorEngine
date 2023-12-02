@@ -36,7 +36,7 @@ class ConnectedClient
 {
 public:
 	volatile bool Connected;
-	SDL_Thread *InThread, *OutThread;
+	SDL_Thread *InThread, *OutThread, *CleanupThread;
 	Mutex InLock, OutLock;
 	TCPsocket Socket;
 	unsigned int IP;
@@ -57,9 +57,10 @@ public:
 	ConnectedClient( TCPsocket socket, double net_rate = 30., int8_t precision = 0 );
 	virtual ~ConnectedClient();
 	
+	void Cleanup( double wait_for_threads = 0.5 );
+	
 	void DisconnectNice( const char *message = NULL );
 	void Disconnect( void );
-	void Cleanup( void );
 	
 	void ProcessIn( void );
 	void ProcessTop( void );
@@ -82,6 +83,7 @@ public:
 	
 	static int ConnectedClientInThread( void *client );
 	static int ConnectedClientOutThread( void *client );
+	static int ConnectedClientCleanupThread( void *client );
 	
 private:
 	void SendToOutBuffer( Packet *packet );

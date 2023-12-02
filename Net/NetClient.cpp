@@ -71,11 +71,14 @@ bool NetClient::Initialize( double net_rate, int8_t precision )
 	NetRate = net_rate;
 	Precision = precision;
 	
-	// Initialize SDL_net.
-	if( SDLNet_Init() < 0 )
+	if( ! Initialized )
 	{
-		fprintf( stderr, "SDLNet_Init: %s\n", SDLNet_GetError() );
-		return false;
+		// Initialize SDL_net.
+		if( SDLNet_Init() < 0 )
+		{
+			fprintf( stderr, "SDLNet_Init: %s\n", SDLNet_GetError() );
+			return false;
+		}
 	}
 	
 	Initialized = true;
@@ -562,13 +565,33 @@ std::string NetClient::Status( void )
 
 int NetClientThread( void *client )
 {
-	NetClient *net_client = (NetClient *) client;
+	NetClient *net_client = (NetClient*) client;
 	char data[ PACKET_BUFFER_SIZE ] = "";
 	PacketBuffer Buffer;
 	int retries = 3;
 	
+	SDLNet_SocketSet socket_set = SDLNet_AllocSocketSet( 1 );
+	SDLNet_TCP_AddSocket( socket_set, net_client->Socket );
+	
 	while( net_client->Connected )
 	{
+		// Avoid indefinite SDLNet_TCP_Recv blocking: https://libsdl.org/projects/old/SDL_net/docs/SDL_net_47.html
+		if( SDLNet_CheckSockets( socket_set, 100 ) < 0 )
+		{
+			if( retries )
+				retries --;
+			else
+			{
+				net_client->DisconnectMessage = std::string("SDLNet_CheckSockets: ") + std::string(SDLNet_GetError());
+				net_client->Disconnect();
+			}
+		}
+		if( ! SDLNet_SocketReady(net_client->Socket) )
+		{
+			SDL_Delay( 1 );
+			continue;
+		}
+		
 		// Check for packets.
 		int size = SDLNet_TCP_Recv( net_client->Socket, data, PACKET_BUFFER_SIZE );
 		if( size > 0 )
@@ -605,6 +628,8 @@ int NetClientThread( void *client )
 	
 	// Set the thread pointer to NULL when we disconnect.
 	net_client->Thread = NULL;
+	
+	SDLNet_FreeSocketSet( socket_set );
 	
 	return 0;
 }

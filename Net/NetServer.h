@@ -56,8 +56,8 @@ public:
 	void ProcessTop( void );
 	
 	void SendToPlayer( Packet *packet, uint32_t player_id );
-	void SendAll( Packet *packet );
-	void SendAllExcept( Packet *packet, ConnectedClient *except );
+	void SendAll( Packet *packet, bool send_to_unsynced = false );
+	void SendAllExcept( Packet *packet, ConnectedClient *except, bool send_to_unsynced = false );
 	void SendAllReconnect( uint8_t seconds_to_wait = 3 );
 	void SendUpdates( void );
 	

@@ -7,6 +7,7 @@
 #include <cstddef>
 #include "RaptorDefs.h"
 #include "RaptorServer.h"
+#include "RaptorGame.h"
 
 
 NetServer::NetServer( void )
@@ -52,16 +53,19 @@ bool NetServer::Initialize( int port )
 	if( ! port )
 		port = Raptor::Server->Port;
 	
-	// Initialize SDL_net.
-	if( SDLNet_Init() < 0 )
+	if( ! ( Initialized || Raptor::Game->Net.Initialized ) )
 	{
-		fprintf( stderr, "SDLNet_Init: %s\n", SDLNet_GetError() );
-		return false;
+		// Dedicated server initializes SDL_net here.
+		if( SDLNet_Init() < 0 )
+		{
+			fprintf( stderr, "SDLNet_Init: %s\n", SDLNet_GetError() );
+			return false;
+		}
+		
+		Initialized = true;
 	}
 	
-	Initialized = true;
-	
-	// Resolving the host using NULL make network interface to listen.
+	// Resolving the host using NULL makes the network interface listen.
 	IPaddress nonsense_ip;
 	if( SDLNet_ResolveHost( &nonsense_ip, NULL, port ) < 0 )
 	{
@@ -192,8 +196,18 @@ void NetServer::RemoveDisconnectedClients( void )
 		
 		if( client && (( (! client->InThread) && (! client->OutThread) && (client->ResyncClock.Progress() >= 1.) ) || (client->ResyncClock.ElapsedSeconds() >= 10.)) )
 		{
-			delete client; // This also calls RaptorServer::DroppedClient.
-			*iter = NULL;
+			// Start the cleanup thread.
+			#if SDL_VERSION_ATLEAST(2,0,0)
+				client->CleanupThread = SDL_CreateThread( ConnectedClient::ConnectedClientCleanupThread, "ConnectedClientCleanup", client );
+			#else
+				client->CleanupThread = SDL_CreateThread( ConnectedClient::ConnectedClientCleanupThread, client );
+			#endif
+			if( ! client->CleanupThread )
+			{
+				fprintf( stderr, "NetServer::RemoveDisconnectedClients: SDL_CreateThread(ConnectedClientCleanupThread): %s\n", SDLNet_GetError() );
+				delete client;
+			}
+			
 			DisconnectedClients.erase( iter );
 		}
 		
@@ -266,7 +280,7 @@ void NetServer::SendToPlayer( Packet *packet, uint32_t player_id )
 }
 
 
-void NetServer::SendAll( Packet *packet )
+void NetServer::SendAll( Packet *packet, bool send_to_unsynced )
 {
 	if( ! Lock.Lock() )
 		fprintf( stderr, "NetServer::SendAll: Lock.Lock: %s\n", SDL_GetError() );
@@ -276,7 +290,8 @@ void NetServer::SendAll( Packet *packet )
 		std::list<ConnectedClient*>::iterator next = iter;
 		next ++;
 		
-		(*iter)->Send( packet );
+		if( (*iter)->Synchronized || send_to_unsynced )
+			(*iter)->Send( packet );
 		
 		iter = next;
 	}
@@ -286,7 +301,7 @@ void NetServer::SendAll( Packet *packet )
 }
 
 
-void NetServer::SendAllExcept( Packet *packet, ConnectedClient *except )
+void NetServer::SendAllExcept( Packet *packet, ConnectedClient *except, bool send_to_unsynced )
 {
 	if( ! Lock.Lock() )
 		fprintf( stderr, "NetServer::SendAllExcept: Lock.Lock: %s\n", SDL_GetError() );
@@ -296,7 +311,7 @@ void NetServer::SendAllExcept( Packet *packet, ConnectedClient *except )
 		std::list<ConnectedClient*>::iterator next = iter;
 		next ++;
 		
-		if( *iter != except )
+		if( (*iter != except) && ((*iter)->Synchronized || send_to_unsynced) )
 			(*iter)->Send( packet );
 		
 		iter = next;
@@ -311,7 +326,7 @@ void NetServer::SendAllReconnect( uint8_t seconds_to_wait )
 {
 	Packet reconnect_packet( Raptor::Packet::RECONNECT );
 	reconnect_packet.AddUChar( seconds_to_wait );
-	SendAll( &reconnect_packet );
+	SendAll( &reconnect_packet, true );
 }
 
 
@@ -386,15 +401,29 @@ void NetServer::SetNetRate( double netrate )
 
 int NetServer::NetServerThread( void *server )
 {
-	NetServer *net_server = (NetServer *) server;
+	NetServer *net_server = (NetServer*) server;
 	TCPsocket client_socket;
 	IPaddress *remote_ip;
 	
+	SDLNet_SocketSet socket_set = SDLNet_AllocSocketSet( 1 );
+	SDLNet_TCP_AddSocket( socket_set, net_server->Socket );
+	
 	while( net_server->Listening )
 	{
+		// Avoid indefinite TCP blocking: https://libsdl.org/projects/old/SDL_net/docs/SDL_net_47.html
+		SDLNet_CheckSockets( socket_set, 500 );
+		if( ! SDLNet_SocketReady(net_server->Socket) )
+		{
+			SDL_Delay( 1 );
+			continue;
+		}
+		
 		// Check for new connections.
 		if( (client_socket = SDLNet_TCP_Accept(net_server->Socket)) )
 		{
+			if( ! net_server->Lock.Lock() )
+				fprintf( stderr, "NetServerThread: net_server->Lock.Lock: %s\n", SDL_GetError() );
+			
 			ConnectedClient *connected_client = new ConnectedClient( client_socket, net_server->NetRate, net_server->Precision );
 			
 			if( (remote_ip = SDLNet_TCP_GetPeerAddress(client_socket)) )
@@ -412,9 +441,8 @@ int NetServer::NetServerThread( void *server )
 				Raptor::Server->ConsolePrint( "Client connected from unknown IP!\n" );
 			}
 			
-			if( ! net_server->Lock.Lock() )
-				fprintf( stderr, "NetServerThread: net_server->Lock.Lock: %s\n", SDL_GetError() );
 			net_server->Clients.push_back( connected_client );
+			
 			if( ! net_server->Lock.Unlock() )
 				fprintf( stderr, "NetServerThread: net_server->Lock.Unlock: %s\n", SDL_GetError() );
 		}
@@ -425,6 +453,8 @@ int NetServer::NetServerThread( void *server )
 	
 	// Set the thread pointer to NULL so we can delete the NetServer object.
 	net_server->Thread = NULL;
+	
+	SDLNet_FreeSocketSet( socket_set );
 	
 	return 0;
 }

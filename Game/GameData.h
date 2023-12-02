@@ -16,6 +16,7 @@ class CollisionDataSet;
 #include "Identifier.h"
 #include "GameObject.h"
 #include "Player.h"
+#include "Mutex.h"
 #include "Effect.h"
 #include "Clock.h"
 
@@ -39,6 +40,8 @@ public:
 	
 	std::map<std::string,std::string> Properties;
 	
+	Mutex Lock;
+	
 	
 	GameData( void );
 	virtual ~GameData();
@@ -52,13 +55,14 @@ public:
 	GameObject *GetObject( uint32_t id );
 	Player *GetPlayer( uint16_t id );
 	
-	bool HasProperty( std::string name ) const;
-	std::string PropertyAsString( std::string name, const char *ifndef = NULL, const char *ifempty = NULL ) const;
-	double PropertyAsDouble( std::string name, double ifndef = 0., double ifempty = 0. ) const;
-	int PropertyAsInt( std::string name, int ifndef = 0, int ifempty = 0 ) const;
-	bool PropertyAsBool( std::string name, bool ifndef = false, bool ifempty = false ) const;
-	std::vector<double> PropertyAsDoubles( std::string name ) const;
-	std::vector<int> PropertyAsInts( std::string name ) const;
+	void SetProperty( std::string name, std::string value );
+	bool HasProperty( std::string name );
+	std::string PropertyAsString( std::string name, const char *ifndef = NULL, const char *ifempty = NULL );
+	double PropertyAsDouble( std::string name, double ifndef = 0., double ifempty = 0. );
+	int PropertyAsInt( std::string name, int ifndef = 0, int ifempty = 0 );
+	bool PropertyAsBool( std::string name, bool ifndef = false, bool ifempty = false );
+	std::vector<double> PropertyAsDoubles( std::string name );
+	std::vector<int> PropertyAsInts( std::string name );
 	
 	void CheckCollisions( double dt );
 	void Update( double dt );

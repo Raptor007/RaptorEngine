@@ -78,6 +78,8 @@ bool RaptorServer::Start( std::string name )
 	
 	Net.NetRate = NetRate;
 	
+	State = Raptor::State::CONNECTING;
+	
 	#if SDL_VERSION_ATLEAST(2,0,0)
 		Thread = SDL_CreateThread( RaptorServerThread, "RaptorServer", this );
 	#else
@@ -86,12 +88,14 @@ bool RaptorServer::Start( std::string name )
 	
 	if( ! Thread )
 	{
+		State = Raptor::State::DISCONNECTED;
 		fprintf( stderr, "SDL_CreateThread: %s\n", SDLNet_GetError() );
 		return false;
 	}
 	
-	State = Raptor::State::CONNECTED;
-	Started();
+	Clock start_time;
+	while( (State == Raptor::State::CONNECTING) && (start_time.ElapsedSeconds() < 3.) )
+		SDL_Delay( 100 );
 	
 	return true;
 }
@@ -115,7 +119,7 @@ void RaptorServer::StopAndWait( double max_wait_seconds )
 
 bool RaptorServer::IsRunning( void )
 {
-	return (State >= Raptor::State::CONNECTED);
+	return (State >= Raptor::State::CONNECTING);
 }
 
 
@@ -290,6 +294,8 @@ void RaptorServer::AcceptedClient( ConnectedClient *client )
 	
 	Player *player = Data.GetPlayer( client->PlayerID );
 	
+	Raptor::Server->Data.Lock.Lock();
+	
 	// Send list of server properties to the new client.
 	Packet info( Raptor::Packet::INFO );
 	info.AddUShort( Data.Properties.size() );
@@ -366,6 +372,8 @@ void RaptorServer::AcceptedClient( ConnectedClient *client )
 		message.AddString( (player->Name + " has joined the game.").c_str() );
 		Net.SendAllExcept( &message, client );
 	}
+	
+	Raptor::Server->Data.Lock.Unlock();
 }
 
 
@@ -374,11 +382,16 @@ void RaptorServer::DroppedClient( ConnectedClient *client )
 	client->Synchronized = false;
 	
 	// Before removing player, make sure they haven't resynced.
+	Net.Lock.Lock();
 	for( std::list<ConnectedClient*>::const_iterator client_iter = Net.Clients.begin(); client_iter != Net.Clients.end(); client_iter ++ )
 	{
 		if( (*client_iter)->Connected && ((*client_iter)->PlayerID == client->DropPlayerID) )
+		{
+			Net.Lock.Unlock();
 			return;
+		}
 	}
+	Net.Lock.Unlock();
 	
 	Player *player = Data.GetPlayer( client->DropPlayerID );
 	
@@ -502,6 +515,10 @@ int RaptorServer::RaptorServerThread( void *game_server )
 	
 	if( server->Net.Listening )
 	{
+		server->Started();
+		if( server->State == Raptor::State::CONNECTING )
+			server->State = Raptor::State::CONNECTED;
+		
 		snprintf( cstr, 1024, "%s server started on port %i.", server->Game.c_str(), server->Port );
 		server->ConsolePrint( cstr );
 		
@@ -514,8 +531,8 @@ int RaptorServer::RaptorServerThread( void *game_server )
 		
 		while( server->Net.Listening )
 		{
-			// Process network input buffers (one packet per client).
-			server->Net.ProcessTop();
+			// Process network input buffers.
+			server->Net.ProcessIn();
 			
 			// Calculate the time elapsed for the "frame".
 			double elapsed = GameClock.ElapsedSeconds();
@@ -544,6 +561,8 @@ int RaptorServer::RaptorServerThread( void *game_server )
 					
 					Packet info( Raptor::Packet::INFO );
 					
+					server->Data.Lock.Lock();
+					
 					// Properties.
 					info.AddUShort( 3 + server->Data.Properties.size() );
 					info.AddString( "game" );
@@ -565,11 +584,15 @@ int RaptorServer::RaptorServerThread( void *game_server )
 					for( std::map<uint16_t,Player*>::iterator player_iter = server->Data.Players.begin(); player_iter != server->Data.Players.end(); player_iter ++ )
 						info.AddString( player_iter->second->Name.c_str() );
 					
+					server->Data.Lock.Unlock();
+					
 					ServerAnnouncer.Broadcast( &info, server->AnnouncePort );
 				}
 				
 				// Don't work very hard if nobody is connected.
-				sleep_longer = ( server->Net.Clients.size() < 1 );
+				server->Net.Lock.Lock();
+				sleep_longer = (server->Net.Clients.size() < 1);
+				server->Net.Lock.Unlock();
 			}
 			
 			// Let the thread rest a bit.

@@ -608,7 +608,7 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 									Raptor::Game->Console.Print( setting_iter->first + ": " + setting_iter->second );
 							}
 						}
-						else if( Raptor::Game->Data.Properties.find( sv_cmd ) != Raptor::Game->Data.Properties.end() )
+						else if( Raptor::Game->Data.HasProperty(sv_cmd) )
 						{
 							if( elements.size() >= 2 )
 							{
@@ -619,7 +619,7 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 								Raptor::Game->Net.Send( &info );
 							}
 							else
-								Raptor::Game->Console.Print( sv_cmd + ": " + Raptor::Game->Data.Properties[ sv_cmd ] );
+								Raptor::Game->Console.Print( sv_cmd + ": " + Raptor::Game->Data.PropertyAsString(sv_cmd) );
 						}
 						else
 							Raptor::Game->Console.Print( "Unknown rcon command: " + sv_cmd, TextConsole::MSG_ERROR );
@@ -646,7 +646,7 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 						{
 							if( elements.size() >= 3 )
 							{
-								Raptor::Server->Data.Properties[ elements.at(1) ] = elements.at(2);
+								Raptor::Server->Data.SetProperty( elements.at(1), elements.at(2) );
 								
 								Packet info = Packet( Raptor::Packet::INFO );
 								info.AddUShort( 1 );
@@ -668,11 +668,15 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 								info.AddString( "" );
 								Raptor::Server->Net.SendAll( &info );
 								
+								Raptor::Server->Data.Lock.Lock();
+								
 								std::map<std::string, std::string>::iterator setting_iter = Raptor::Server->Data.Properties.find( elements.at(1) );
 								if( setting_iter != Raptor::Server->Data.Properties.end() )
 									Raptor::Server->Data.Properties.erase( setting_iter );
 								else
 									Raptor::Game->Console.Print( elements.at(1) + " is not defined." );
+								
+								Raptor::Server->Data.Lock.Unlock();
 							}
 							else
 								Raptor::Game->Console.Print( "Usage: sv unset <variable>", TextConsole::MSG_ERROR );
@@ -684,6 +688,9 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 								int count = 0;
 								const char *cstr = elements.at(1).c_str();
 								int len = strlen(cstr);
+								
+								Raptor::Server->Data.Lock.Lock();
+								
 								for( std::map<std::string, std::string>::iterator property_iter = Raptor::Server->Data.Properties.begin(); property_iter != Raptor::Server->Data.Properties.end(); property_iter ++ )
 								{
 									if( strncmp( property_iter->first.c_str(), cstr, len ) == 0 )
@@ -692,13 +699,20 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 										count ++;
 									}
 								}
+								
+								Raptor::Server->Data.Lock.Unlock();
+								
 								if( ! count )
 									Raptor::Game->Console.Print( elements.at(1) + " is not defined." );
 							}
 							else
 							{
+								Raptor::Server->Data.Lock.Lock();
+								
 								for( std::map<std::string, std::string>::iterator setting_iter = Raptor::Server->Data.Properties.begin(); setting_iter != Raptor::Server->Data.Properties.end(); setting_iter ++ )
 									Raptor::Game->Console.Print( setting_iter->first + ": " + setting_iter->second );
+								
+								Raptor::Server->Data.Lock.Unlock();
 							}
 						}
 						else if( sv_cmd == "port" )
@@ -812,11 +826,11 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 								Raptor::Game->Console.Print( cstr );
 							}
 						}
-						else if( Raptor::Server->Data.Properties.find( sv_cmd ) != Raptor::Server->Data.Properties.end() )
+						else if( Raptor::Server->Data.HasProperty(sv_cmd) )
 						{
 							if( elements.size() >= 2 )
 							{
-								Raptor::Server->Data.Properties[ sv_cmd ] = elements.at(1);
+								Raptor::Server->Data.SetProperty( sv_cmd, elements.at(1) );
 								
 								Packet info = Packet( Raptor::Packet::INFO );
 								info.AddUShort( 1 );
@@ -825,7 +839,7 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 								Raptor::Server->Net.SendAll( &info );
 							}
 							else
-								Raptor::Game->Console.Print( sv_cmd + ": " + Raptor::Server->Data.Properties[ sv_cmd ] );
+								Raptor::Game->Console.Print( sv_cmd + ": " + Raptor::Server->Data.PropertyAsString(sv_cmd) );
 						}
 						else
 							Raptor::Game->Console.Print( "Unknown sv command: " + sv_cmd, TextConsole::MSG_ERROR );

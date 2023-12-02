@@ -28,6 +28,7 @@ ConnectedClient::ConnectedClient( TCPsocket socket, double net_rate, int8_t prec
 	BytesReceived = 0;
 	InThread = NULL;
 	OutThread = NULL;
+	CleanupThread = NULL;
 	
 	PlayerID = 0;
 	
@@ -58,34 +59,36 @@ ConnectedClient::ConnectedClient( TCPsocket socket, double net_rate, int8_t prec
 
 ConnectedClient::~ConnectedClient()
 {
+	while( ! InBuffer.empty() )
+	{
+		Packet *packet = InBuffer.front();
+		InBuffer.pop();
+		delete packet;
+	}
+	
+	while( ! OutBuffer.empty() )
+	{
+		Packet *packet = OutBuffer.front();
+		OutBuffer.pop();
+		delete packet;
+	}
+}
+
+
+void ConnectedClient::Cleanup( double wait_for_threads )
+{
 	Disconnect();
 	
-	// Sleep until the other threads have finished (max 2 sec).
+	// Give in/out threads a moment to finish before closing the socket.
 	Clock wait_for_thread;
-	while( (InThread || OutThread) && (wait_for_thread.ElapsedSeconds() < 2.) )
-		SDL_Delay( 1 );
+	while( (InThread || OutThread) && (wait_for_thread.ElapsedSeconds() < wait_for_threads) )
+		SDL_Delay( 50 );
 	
-	// If either thread didn't finish, kill it.
-	if( InThread )
+	if( Socket )
 	{
-		#if SDL_VERSION_ATLEAST(2,0,0)
-			SDL_DetachThread( InThread );
-		#else
-			SDL_KillThread( InThread );
-		#endif
-		InThread = NULL;
+		SDLNet_TCP_Close( Socket );
+		Socket = NULL;
 	}
-	if( OutThread )
-	{
-		#if SDL_VERSION_ATLEAST(2,0,0)
-			SDL_DetachThread( OutThread );
-		#else
-			SDL_KillThread( OutThread );
-		#endif
-		OutThread = NULL;
-	}
-	
-	Cleanup();
 }
 
 
@@ -122,12 +125,6 @@ void ConnectedClient::Disconnect( void )
 	
 	PlayerID = 0;
 	
-	// Handle cleanup later, after the threads are finished.
-}
-
-
-void ConnectedClient::Cleanup( void )
-{
 	if( DropPlayerID )
 	{
 		char cstr[ 1024 ] = "";
@@ -135,27 +132,11 @@ void ConnectedClient::Cleanup( void )
 		Raptor::Server->ConsolePrint( cstr );
 		
 		Raptor::Server->DroppedClient( this );
+		
+		DropPlayerID = 0;
 	}
 	
-	if( Socket )
-	{
-		SDLNet_TCP_Close( Socket );
-		Socket = NULL;
-	}
-	
-	while( ! InBuffer.empty() )
-	{
-		Packet *packet = InBuffer.front();
-		InBuffer.pop();
-		delete packet;
-	}
-	
-	while( ! OutBuffer.empty() )
-	{
-		Packet *packet = OutBuffer.front();
-		OutBuffer.pop();
-		delete( packet );
-	}
+	// Handle cleanup later, after the threads are finished.
 }
 
 
@@ -171,9 +152,9 @@ void ConnectedClient::ProcessIn( void )
 	while( ! InBuffer.empty() )
 	{
 		Packet *packet = InBuffer.front();
+		InBuffer.pop();
 		ProcessPacket( packet );
 		delete packet;
-		InBuffer.pop();
 	}
 	
 	if( ! InLock.Unlock() )
@@ -244,6 +225,8 @@ bool ConnectedClient::ProcessPacket( Packet *packet )
 			Player *my_temp_player = Raptor::Server->Data.GetPlayer( PlayerID );
 			if( my_temp_player )
 			{
+				Raptor::Server->Data.Lock.Lock();
+				
 				// The client doesn't know their old PlayerID.  Search by Name.
 				for( std::map<uint16_t,Player*>::const_iterator player_iter = Raptor::Server->Data.Players.begin(); player_iter != Raptor::Server->Data.Players.end(); player_iter ++ )
 				{
@@ -253,6 +236,8 @@ bool ConnectedClient::ProcessPacket( Packet *packet )
 						break;
 					}
 				}
+				
+				Raptor::Server->Data.Lock.Unlock();
 			}
 			// FIXME: If not found, could also search for clients with high PingClock.Elapsed and/or matching IP address.
 		}
@@ -359,7 +344,9 @@ void ConnectedClient::Login( std::string name, std::string password )
 	
 	if( PlayerID )
 	{
+		Raptor::Server->Data.Lock.Lock();
 		Raptor::Server->Data.Players[ PlayerID ]->Name = name;
+		Raptor::Server->Data.Lock.Unlock();
 		
 		Packet accept( Raptor::Packet::LOGIN );
 		accept.AddUShort( PlayerID );
@@ -504,14 +491,34 @@ double ConnectedClient::MedianPing( void )
 
 int ConnectedClient::ConnectedClientInThread( void *client )
 {
-	ConnectedClient *connected_client = (ConnectedClient *) client;
+	ConnectedClient *connected_client = (ConnectedClient*) client;
 	char data[ PACKET_BUFFER_SIZE ] = "";
 	PacketBuffer Buffer;
 	Buffer.MaxPacketSize = 0x0007FFFF;
 	int retries = 3;
 	
+	SDLNet_SocketSet socket_set = SDLNet_AllocSocketSet( 1 );
+	SDLNet_TCP_AddSocket( socket_set, connected_client->Socket );
+	
 	while( connected_client->Connected )
 	{
+		// Avoid indefinite SDLNet_TCP_Recv blocking: https://libsdl.org/projects/old/SDL_net/docs/SDL_net_47.html
+		if( SDLNet_CheckSockets( socket_set, 100 ) < 0 )
+		{
+			if( retries )
+				retries --;
+			else
+			{
+				fprintf( stderr, "ConnectedClientInThread: SDLNet_CheckSockets: %s\n", SDL_GetError() );
+				connected_client->Disconnect();
+			}
+		}
+		if( ! SDLNet_SocketReady(connected_client->Socket) )
+		{
+			SDL_Delay( 1 );
+			continue;
+		}
+		
 		// Check for packets.
 		int size = SDLNet_TCP_Recv( connected_client->Socket, data, PACKET_BUFFER_SIZE );
 		if( size > 0 )
@@ -539,7 +546,7 @@ int ConnectedClient::ConnectedClientInThread( void *client )
 		}
 		else if( (size < 0) && retries )
 			retries --;
-		else
+		else if( connected_client->Connected )
 		{
 			// If 0 (disconnect) or multiple -1 (errors), stop listening.
 			connected_client->Disconnect();
@@ -553,13 +560,15 @@ int ConnectedClient::ConnectedClientInThread( void *client )
 	// Set the thread pointer to NULL so we can delete this client.
 	connected_client->InThread = NULL;
 	
+	SDLNet_FreeSocketSet( socket_set );
+	
 	return 0;
 }
 
 
 int ConnectedClient::ConnectedClientOutThread( void *client )
 {
-	ConnectedClient *connected_client = (ConnectedClient *) client;
+	ConnectedClient *connected_client = (ConnectedClient*) client;
 	
 	while( connected_client->Connected )
 	{
@@ -580,7 +589,7 @@ int ConnectedClient::ConnectedClientOutThread( void *client )
 				Packet *packet = prev_out_buffer.front();
 				prev_out_buffer.pop();
 				connected_client->SendNow( packet );
-				delete( packet );
+				delete packet;
 			}
 		}
 		
@@ -590,6 +599,34 @@ int ConnectedClient::ConnectedClientOutThread( void *client )
 	
 	// Set the thread pointer to NULL so we can delete this client.
 	connected_client->OutThread = NULL;
+	
+	return 0;
+}
+
+
+int ConnectedClient::ConnectedClientCleanupThread( void *client )
+{
+	ConnectedClient *connected_client = (ConnectedClient*) client;
+	
+	SDL_Thread *in      = connected_client->InThread;
+	SDL_Thread *out     = connected_client->OutThread;
+	SDL_Thread *cleanup = connected_client->CleanupThread;
+	
+	connected_client->Cleanup();
+	
+	// Wait for other threads to finish and then clean up their resources.
+	SDL_WaitThread( out, NULL );
+	SDL_WaitThread( in,  NULL );
+	
+	// After threads finish, it should now be safe to delete the client.
+	delete connected_client;
+	
+	// Clean up this thread's resources.
+	#if SDL_VERSION_ATLEAST(2,0,0)
+		SDL_DetachThread( cleanup );
+	#else
+		SDL_free( cleanup );
+	#endif
 	
 	return 0;
 }

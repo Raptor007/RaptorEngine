@@ -28,6 +28,9 @@ PacketBuffer::~PacketBuffer()
 	if( Unfinished )
 		delete Unfinished;
 	Unfinished = NULL;
+	
+	UnfinishedSizeRemaining = 0;
+	PartialHeaderSize = 0;
 }
 
 
@@ -47,6 +50,20 @@ void PacketBuffer::AddData( void *data, PacketSize size )
 		if( PartialHeaderSize == PACKET_HEADER_SIZE )
 		{
 			size_t packet_size = Packet::FirstPacketSize( PartialHeaderData );
+			
+			// Sanity check the incoming packet size.
+			if( (packet_size < PACKET_HEADER_SIZE) || (MaxPacketSize && (packet_size > MaxPacketSize)) )
+			{
+				PartialHeaderSize = 0;
+				memset( PartialHeaderData, 0, sizeof(PartialHeaderData) );
+				
+				Packet *packet = new Packet( Raptor::Packet::DISCONNECT );
+				packet->AddString( "Packet size error." );
+				Push( packet );
+				
+				return;
+			}
+			
 			Unfinished = new Packet( PartialHeaderData, PACKET_HEADER_SIZE );
 			UnfinishedSizeRemaining = packet_size - PACKET_HEADER_SIZE;
 			PartialHeaderSize = 0;
@@ -59,7 +76,7 @@ void PacketBuffer::AddData( void *data, PacketSize size )
 		if( size_unprocessed >= UnfinishedSizeRemaining )
 		{
 			Unfinished->AddData( data_unprocessed, UnfinishedSizeRemaining );
-			Complete.push( Unfinished );
+			Push( Unfinished );
 			Unfinished = NULL;
 			data_unprocessed += UnfinishedSizeRemaining;
 			size_unprocessed -= UnfinishedSizeRemaining;
@@ -97,14 +114,15 @@ void PacketBuffer::AddData( void *data, PacketSize size )
 			
 			Packet *packet = new Packet( Raptor::Packet::DISCONNECT );
 			packet->AddString( "Packet size error." );
-			Complete.push( packet );
+			Push( packet );
+			
 			return;
 		}
 		
 		if( size_unprocessed >= packet_size )
 		{
 			Packet *packet = new Packet( data_unprocessed, packet_size );
-			Complete.push( packet );
+			Push( packet );
 			data_unprocessed += packet_size;
 			size_unprocessed -= packet_size;
 		}
@@ -119,12 +137,29 @@ void PacketBuffer::AddData( void *data, PacketSize size )
 }
 
 
+void PacketBuffer::Push( Packet *packet )
+{
+	Lock.Lock();
+	
+	Complete.push( packet );
+	
+	Lock.Unlock();
+}
+
+
 Packet *PacketBuffer::Pop( void )
 {
-	if( ! Complete.size() )
-		return NULL;
+	Packet *packet = NULL;
 	
-	Packet *packet = Complete.front();
-	Complete.pop();
+	Lock.Lock();
+	
+	if( Complete.size() )
+	{
+		packet = Complete.front();
+		Complete.pop();
+	}
+	
+	Lock.Unlock();
+	
 	return packet;
 }

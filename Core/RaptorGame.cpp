@@ -745,7 +745,7 @@ bool RaptorGame::ProcessPacket( Packet *packet )
 			std::string name = packet->NextString();
 			std::string value = packet->NextString();
 			
-			Data.Properties[ name ] = value;
+			Data.SetProperty( name, value );
 		}
 		
 		return true;
@@ -958,13 +958,6 @@ void RaptorGame::Host( void )
 		Server->MaxFPS = Cfg.SettingAsDouble( "sv_maxfps", 60. );
 		Server->NetRate = Cfg.SettingAsDouble( "sv_netrate", 30. );
 		Server->Start( Cfg.SettingAsString( "name" , Raptor::Server->Game.c_str() ) );
-		
-		Clock wait_for_start;
-		while( ! Server->IsRunning() )
-		{
-			if( wait_for_start.ElapsedSeconds() > 3.0 )
-				break;
-		}
 		
 		Net.Connect( "localhost", Server->Port, Cfg.SettingAsString("name").c_str(), Cfg.SettingAsString("password").c_str() );
 	}
