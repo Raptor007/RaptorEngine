@@ -24,6 +24,7 @@ namespace Saitek
 
 SaitekManager::SaitekManager( void )
 {
+	Initialized = false;
 }
 
 
@@ -50,7 +51,7 @@ void SaitekManager::Initialize( void )
 			// Find out what devices are attached.
 			DO.Enumerate( &(SaitekManager::EnumerateCallback), NULL );
 		}
-
+		
 		// Configure the callback function for Saitek device add/remove.
 		DO.RegisterDeviceCallback( &(SaitekManager::SaitekDeviceChange), NULL );
 	}

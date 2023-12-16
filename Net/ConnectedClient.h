@@ -36,6 +36,7 @@ class ConnectedClient
 {
 public:
 	volatile bool Connected;
+	std::string Version;
 	SDL_Thread *InThread, *OutThread, *CleanupThread;
 	Mutex InLock, OutLock;
 	TCPsocket Socket;

@@ -230,7 +230,7 @@ void GameObject::ReadFromUpdatePacket( Packet *packet, int8_t precision )
 		if( dist_behind > 0. )
 		{
 			if( speed * 1.001 < PrevMotionVector.Length() )
-				dist_behind *= std::min<double>( 0.5, speed / 100. );  // Reduce rubber-banding when stopping.
+				dist_behind *= std::min<double>( 0.75, speed / 100. );  // Reduce rubber-banding when stopping.
 			MoveAlong( &unit_motion, dist_behind * Data->AntiJitter );
 		}
 	}

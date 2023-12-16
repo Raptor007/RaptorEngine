@@ -61,6 +61,7 @@ public:
 	virtual void Stopped( void );
 	virtual bool HandleCommand( std::string cmd, std::vector<std::string> *params = NULL );
 	virtual bool ProcessPacket( Packet *packet, ConnectedClient *from_client );
+	virtual bool CompatibleVersion( std::string version ) const;
 	virtual bool ValidateLogin( std::string name, std::string password );
 	virtual void AcceptedClient( ConnectedClient *client );
 	virtual void DroppedClient( ConnectedClient *client );

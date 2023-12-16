@@ -299,7 +299,8 @@ bool ConnectedClient::ProcessPacket( Packet *packet )
 		
 		if( game == Raptor::Server->Game )
 		{
-			if( version == Raptor::Server->Version )
+			Version = version;
+			if( Raptor::Server->CompatibleVersion( Version ) )
 				Login( name, password );
 			else
 				DisconnectNice( "Version mismatch.  Make sure all players have the latest build." );

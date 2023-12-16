@@ -133,7 +133,7 @@ void DropDown::TrackEvent( SDL_Event *event )
 bool DropDown::HandleEvent( SDL_Event *event )
 {
 #if SDL_VERSION_ATLEAST(2,0,0)
-	if( (event->type == SDL_MOUSEWHEEL) && event->wheel.y && WithinCalcRect( event->wheel.mouseX, event->wheel.mouseY ) )
+	if( Enabled && (event->type == SDL_MOUSEWHEEL) && event->wheel.y && WithinCalcRect( event->wheel.mouseX, event->wheel.mouseY ) )
 	{
 		Clicked( (event->wheel.y > 0) ? SDL_BUTTON_WHEELUP : SDL_BUTTON_WHEELDOWN );
 		return true;

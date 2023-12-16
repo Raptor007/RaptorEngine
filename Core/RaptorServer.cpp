@@ -281,6 +281,12 @@ bool RaptorServer::ProcessPacket( Packet *packet, ConnectedClient *from_client )
 }
 
 
+bool RaptorServer::CompatibleVersion( std::string version ) const
+{
+	return (version == Version);
+}
+
+
 bool RaptorServer::ValidateLogin( std::string name, std::string password )
 {
 	return true;
