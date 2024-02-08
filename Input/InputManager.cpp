@@ -211,7 +211,7 @@ SDLKey InputManager::KeyID( std::string name ) const
 	for( std::map<SDLKey, std::string>::const_iterator iter = KeyNames.begin(); iter != KeyNames.end(); iter ++ )
 	{
 		// First see if this key has an assigned name.
-		if( iter->second == name )
+		if( Str::EqualsInsensitive( iter->second, name ) )
 			return iter->first;
 	}
 	
@@ -244,7 +244,7 @@ Uint8 InputManager::MouseID( std::string name ) const
 	for( std::map<Uint8, std::string>::const_iterator iter = MouseNames.begin(); iter != MouseNames.end(); iter ++ )
 	{
 		// First see if this mouse button has an assigned name.
-		if( iter->second == name )
+		if( Str::EqualsInsensitive( iter->second, name ) )
 			return iter->first;
 	}
 	
@@ -427,14 +427,14 @@ uint8_t InputManager::ControlID( std::string name ) const
 	for( std::map<uint8_t,std::string>::const_iterator iter = ControlNames.begin(); iter != ControlNames.end(); iter ++ )
 	{
 		// First see if this control ID has an assigned name.
-		if( iter->second == name )
+		if( Str::EqualsInsensitive( iter->second, name ) )
 			return iter->first;
 	}
 	
 	for( std::map<uint8_t,std::string>::const_iterator iter = ControlNames.begin(); iter != ControlNames.end(); iter ++ )
 	{
 		// If it matched no assigned name, see if it matches an auto-generated name like "Control66".
-		if( GenericControlName(iter->first) == name )
+		if( Str::EqualsInsensitive( GenericControlName(iter->first), name ) )
 			return iter->first;
 	}
 	

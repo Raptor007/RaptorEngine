@@ -347,6 +347,7 @@ void ConnectedClient::Login( std::string name, std::string password )
 	{
 		Raptor::Server->Data.Lock.Lock();
 		Raptor::Server->Data.Players[ PlayerID ]->Name = name;
+		Raptor::Server->Data.Players[ PlayerID ]->Properties[ "version" ] = Version;
 		Raptor::Server->Data.Lock.Unlock();
 		
 		Packet accept( Raptor::Packet::LOGIN );

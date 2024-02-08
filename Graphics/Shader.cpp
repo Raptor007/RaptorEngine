@@ -56,13 +56,19 @@ void Shader::Load( std::string filename, std::map<std::string,std::string> defs 
 	
 	if( ProgramHandle )
 	{
-		Components.push_back( new ShaderComponent( GL_VERTEX_SHADER, filename + std::string(".vert"), defs ) );
+		Components.push_back( new ShaderComponent( GL_VERTEX_SHADER,   filename + std::string(".vert"), defs ) );
 		Components.push_back( new ShaderComponent( GL_FRAGMENT_SHADER, filename + std::string(".frag"), defs ) );
 		
 		for( std::vector<ShaderComponent*>::iterator component_iter = Components.begin(); component_iter != Components.end(); component_iter ++ )
 		{
 			if( *component_iter && (*component_iter)->Ready() )
 				glAttachShader( ProgramHandle, (*component_iter)->ShaderHandle );
+			else
+			{
+				// If any shader component fails to compile, abandon the shader.  Both vertex and fragment shaders are required to function.
+				Clear();
+				return;
+			}
 		}
 		
 		glLinkProgram( ProgramHandle );
@@ -113,8 +119,13 @@ bool Shader::Set1f( const char *name, double value )
 	
 	if( ProgramHandle )
 	{
-		// See if we already know the variable's loc.  If not, look it up in the shader.
 		ShaderVar *var = &(Vars[ std::string(name) ]);
+		
+		// Avoid repeated failed lookups.
+		if( var->Type == ShaderVar::TYPE_ERROR )
+			return false;
+		
+		// See if we already know the variable's loc.  If not, look it up in the shader.
 		if( var->Loc < 0 )
 			var->Loc = glGetUniformLocation( ProgramHandle, name );
 		
@@ -130,6 +141,8 @@ bool Shader::Set1f( const char *name, double value )
 			}
 			valid = true;
 		}
+		else
+			var->Type = ShaderVar::TYPE_ERROR;
 	}
 	
 	return valid;
@@ -142,8 +155,13 @@ bool Shader::Set3f( const char *name, double x, double y, double z )
 	
 	if( ProgramHandle )
 	{
-		// See if we already know the variable's loc.  If not, look it up in the shader.
 		ShaderVar *var = &(Vars[ std::string(name) ]);
+		
+		// Avoid repeated failed lookups.
+		if( var->Type == ShaderVar::TYPE_ERROR )
+			return false;
+		
+		// See if we already know the variable's loc.  If not, look it up in the shader.
 		if( var->Loc < 0 )
 			var->Loc = glGetUniformLocation( ProgramHandle, name );
 		
@@ -161,6 +179,8 @@ bool Shader::Set3f( const char *name, double x, double y, double z )
 			}
 			valid = true;
 		}
+		else
+			var->Type = ShaderVar::TYPE_ERROR;
 	}
 	
 	return valid;
@@ -173,8 +193,13 @@ bool Shader::Set4f( const char *name, double x, double y, double z, double w )
 	
 	if( ProgramHandle )
 	{
-		// See if we already know the variable's loc.  If not, look it up in the shader.
 		ShaderVar *var = &(Vars[ std::string(name) ]);
+		
+		// Avoid repeated failed lookups.
+		if( var->Type == ShaderVar::TYPE_ERROR )
+			return false;
+		
+		// See if we already know the variable's loc.  If not, look it up in the shader.
 		if( var->Loc < 0 )
 			var->Loc = glGetUniformLocation( ProgramHandle, name );
 		
@@ -193,6 +218,8 @@ bool Shader::Set4f( const char *name, double x, double y, double z, double w )
 			}
 			valid = true;
 		}
+		else
+			var->Type = ShaderVar::TYPE_ERROR;
 	}
 	
 	return valid;
@@ -205,8 +232,13 @@ bool Shader::Set1i( const char *name, int value )
 	
 	if( ProgramHandle )
 	{
-		// See if we already know the variable's loc.  If not, look it up in the shader.
 		ShaderVar *var = &(Vars[ std::string(name) ]);
+		
+		// Avoid repeated failed lookups.
+		if( var->Type == ShaderVar::TYPE_ERROR )
+			return false;
+		
+		// See if we already know the variable's loc.  If not, look it up in the shader.
 		if( var->Loc < 0 )
 			var->Loc = glGetUniformLocation( ProgramHandle, name );
 		
@@ -222,6 +254,8 @@ bool Shader::Set1i( const char *name, int value )
 			}
 			valid = true;
 		}
+		else
+			var->Type = ShaderVar::TYPE_ERROR;
 	}
 	
 	return valid;

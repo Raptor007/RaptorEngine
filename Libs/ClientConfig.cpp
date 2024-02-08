@@ -541,7 +541,13 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 					if( Raptor::Game->Net.Connected )
 					{
 						for( std::map<uint16_t,Player*>::const_iterator player_iter = Raptor::Game->Data.Players.begin(); player_iter != Raptor::Game->Data.Players.end(); player_iter ++ )
-							Raptor::Game->Console.Print( player_iter->second->Name );
+						{
+							std::string name = player_iter->second->Name;
+							std::string version = player_iter->second->PropertyAsString( "version", Raptor::Game->Version.c_str(), Raptor::Game->Version.c_str() );
+							if( version != Raptor::Game->Version )
+								name += std::string(" [v") + version + std::string("]");
+							Raptor::Game->Console.Print( name );
+						}
 					}
 					else
 						Raptor::Game->Console.Print( "Not connected.", TextConsole::MSG_ERROR );
@@ -774,7 +780,13 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 						else if( sv_cmd == "who" )
 						{
 							for( std::map<uint16_t,Player*>::const_iterator player_iter = Raptor::Server->Data.Players.begin(); player_iter != Raptor::Server->Data.Players.end(); player_iter ++ )
-								Raptor::Game->Console.Print( player_iter->second->Name );
+							{
+								std::string name = player_iter->second->Name;
+								std::string version = player_iter->second->PropertyAsString( "version", Raptor::Server->Version.c_str(), Raptor::Server->Version.c_str() );
+								if( version != Raptor::Server->Version )
+									name += std::string(" [v") + version + std::string("]");
+								Raptor::Game->Console.Print( name );
+							}
 						}
 						else if( sv_cmd == "say" )
 						{

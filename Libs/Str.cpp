@@ -69,6 +69,12 @@ bool CStr::AsBool( const char *str )
 }
 
 
+bool CStr::EqualsInsensitive( const char *a, const char *b )
+{
+	return (strcasecmp( a, b ) == 0);
+}
+
+
 int CStr::FindInsensitive( const char *str, const char *search_for )
 {
 	size_t search_len = strlen(search_for);
@@ -407,6 +413,12 @@ int Str::AsInt( std::string str )
 bool Str::AsBool( std::string str )
 {
 	return CStr::AsBool( str.c_str() );
+}
+
+
+bool Str::EqualsInsensitive( std::string a, std::string b )
+{
+	return CStr::EqualsInsensitive( a.c_str(), b.c_str() );
 }
 
 

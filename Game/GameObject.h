@@ -13,6 +13,7 @@ class GameObject;
 #include "Packet.h"
 #include "GameData.h"
 #include "Player.h"
+#include "Shader.h"
 
 
 class GameObject : public Pos3D
@@ -44,6 +45,7 @@ public:
 	
 	virtual uint32_t Type( void ) const;
 	virtual Player *Owner( void ) const;
+	virtual bool ServerShouldSend( void ) const;
 	virtual bool PlayerShouldUpdateServer( void ) const;
 	virtual bool ServerShouldUpdatePlayer( void ) const;
 	virtual bool ServerShouldUpdateOthers( void ) const;
@@ -67,6 +69,7 @@ public:
 	virtual void SendUpdate( int8_t precision );
 	
 	virtual void Draw( void );
+	virtual Shader *WantShader( void ) const;
 	
 private:
 	uint32_t TypeCode;

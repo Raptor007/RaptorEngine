@@ -32,6 +32,7 @@ public:
 	void Sync( const Clock *c );
 	void Advance( double secs );
 	void SetTimeScale( double time_scale );
+	void SetProgress( double progress );
 	
 	double ElapsedSeconds( void ) const;
 	double ElapsedMilliseconds( void ) const;

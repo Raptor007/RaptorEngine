@@ -76,6 +76,7 @@ public:
 	enum
 	{
 		TYPE_UNKNOWN = 0,
+		TYPE_ERROR,
 		TYPE_1F,
 		TYPE_3F,
 		TYPE_4F,

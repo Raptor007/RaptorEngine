@@ -4,6 +4,7 @@
 
 #pragma once
 class SoundOut;
+class SoundOutDelayed;
 
 #include "PlatformSpecific.h"
 #include <cstddef>
@@ -41,6 +42,7 @@ public:
 	std::map<int, PanningSound> ActivePans;
 	std::map<uint32_t, int> ObjectPans;
 	std::map<uint32_t, Clock> RecentPans;
+	std::list<SoundOutDelayed> Delayed;
 	float SoundAttenuate, MusicAttenuate;
 	int AttenuateFor;
 	
@@ -70,6 +72,7 @@ public:
 	
 	int PlayPanned( Mix_Chunk *sound, double x, double y, double z, double loudness = 1. );
 	int PlayFromObject( Mix_Chunk *sound, uint32_t object_id, double loudness = 1. );
+	void PlayDelayedFromObject( Mix_Chunk *sound, double delay, uint32_t object_id, double loudness = 1. );
 	int SetPos( int channel, double x, double y, double z );
 	
 	void Update( const Pos3D *cam = NULL );
@@ -88,4 +91,18 @@ public:
 	
 private:
 	void PlayMusicWithRetries( Mix_Music *music );
+};
+
+
+class SoundOutDelayed
+{
+public:
+	Mix_Chunk *Sound;
+	Clock Delay;
+	uint32_t ObjectID;
+	double Loudness;
+	
+	SoundOutDelayed( Mix_Chunk *sound, double delay, uint32_t object_id = 0, double loudness = 1. );
+	SoundOutDelayed( const SoundOutDelayed &other );
+	virtual ~SoundOutDelayed();
 };

@@ -133,6 +133,7 @@ int SoundOut::PlayAt( Mix_Chunk *sound, double x, double y, double z, double lou
 void SoundOut::StopSounds( void )
 {
 	Mix_HaltChannel( -1 );
+	Delayed.clear();
 }
 
 
@@ -218,6 +219,12 @@ int SoundOut::PlayFromObject( Mix_Chunk *sound, uint32_t object_id, double loudn
 }
 
 
+void SoundOut::PlayDelayedFromObject( Mix_Chunk *sound, double delay, uint32_t object_id, double loudness )
+{
+	Delayed.push_back( SoundOutDelayed( sound, delay, object_id, loudness ) );
+}
+
+
 int SoundOut::SetPos( int channel, double x, double y, double z )
 {
 	if( ! Initialized )
@@ -299,6 +306,24 @@ void SoundOut::Update( const Pos3D *cam )
 			RecentPans.erase( this_pan );
 		
 		this_pan = next_pan;
+	}
+	
+	
+	// Play any delayed sounds that are ready.
+	
+	for( std::list<SoundOutDelayed>::iterator this_delayed = Delayed.begin(); this_delayed != Delayed.end(); )
+	{
+		std::list<SoundOutDelayed>::iterator next_delayed = this_delayed;
+		next_delayed ++;
+		
+		if( this_delayed->Delay.Progress() >= 1. )
+		{
+			if( this_delayed->ObjectID )
+				PlayFromObject( this_delayed->Sound, this_delayed->ObjectID, this_delayed->Loudness );
+			Delayed.erase( this_delayed );
+		}
+		
+		this_delayed = next_delayed;
 	}
 	
 	
@@ -563,4 +588,30 @@ void SoundOut::PlayMusicWithRetries( Mix_Music *music )
 			break;
 		}
 	}
+}
+
+
+// -----------------------------------------------------------------------------
+
+
+SoundOutDelayed::SoundOutDelayed( Mix_Chunk *sound, double delay, uint32_t object_id, double loudness )
+{
+	Sound = sound;
+	Delay.CountUpToSecs = std::max<double>( 0., delay );
+	ObjectID = object_id;
+	Loudness = loudness;
+}
+
+
+SoundOutDelayed::SoundOutDelayed( const SoundOutDelayed &other )
+{
+	Sound = other.Sound;
+	Delay.Sync( &(other.Delay) );
+	ObjectID = other.ObjectID;
+	Loudness = other.Loudness;
+}
+
+
+SoundOutDelayed::~SoundOutDelayed()
+{
 }

@@ -17,6 +17,7 @@
 #include "NetUDP.h"
 #include "Clock.h"
 #include "Rand.h"
+#include "Str.h"
 
 
 namespace Raptor
@@ -283,7 +284,10 @@ bool RaptorServer::ProcessPacket( Packet *packet, ConnectedClient *from_client )
 
 bool RaptorServer::CompatibleVersion( std::string version ) const
 {
-	return (version == Version);
+	// FIXME: There are more efficient ways to get the first word (but it's probably not worth the effort).
+	std::vector<std::string> client_version_words = Str::SplitToVector( version, " " );
+	std::vector<std::string> server_version_words = Str::SplitToVector( Version, " " );
+	return (client_version_words[ 0 ] == server_version_words[ 0 ]);
 }
 
 
@@ -357,13 +361,19 @@ void RaptorServer::AcceptedClient( ConnectedClient *client )
 	}
 	
 	// Send list of existing objects to the new client.
-	Packet obj_list = Packet( Raptor::Packet::OBJECTS_ADD );
-	obj_list.AddUInt( Data.GameObjects.size() );
+	std::vector<GameObject*> objects_to_send;
 	for( std::map<uint32_t,GameObject*>::iterator obj_iter = Data.GameObjects.begin(); obj_iter != Data.GameObjects.end(); obj_iter ++ )
 	{
-		obj_list.AddUInt( obj_iter->second->ID );
-		obj_list.AddUInt( obj_iter->second->Type() );
-		obj_iter->second->AddToInitPacket( &obj_list );
+		if( obj_iter->second->ServerShouldSend() )
+			objects_to_send.push_back( obj_iter->second );
+	}
+	Packet obj_list = Packet( Raptor::Packet::OBJECTS_ADD );
+	obj_list.AddUInt( objects_to_send.size() );
+	for( std::vector<GameObject*>::iterator obj_iter = objects_to_send.begin(); obj_iter != objects_to_send.end(); obj_iter ++ )
+	{
+		obj_list.AddUInt( (*obj_iter)->ID );
+		obj_list.AddUInt( (*obj_iter)->Type() );
+		(*obj_iter)->AddToInitPacket( &obj_list );
 	}
 	client->Send( &obj_list );
 	

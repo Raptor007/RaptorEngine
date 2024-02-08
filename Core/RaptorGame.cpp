@@ -350,6 +350,7 @@ void RaptorGame::Run( void )
 			
 			// Handle all user input.
 			SDL_Event event;
+			memset( &event, 0, sizeof(event) );
 			while( SDL_PollEvent( &event ) )
 			{
 				// Keep track of input and mouse position events.
@@ -384,21 +385,11 @@ void RaptorGame::Run( void )
 				}
 			}
 			
-			// Update!
-			Update( FrameTime );
-			
 			// Update active panning sounds and continue music playlist if applicable.
 			Snd.MasterVolume = Cfg.SettingAsDouble( "s_volume", 0.5 );
 			Snd.SoundVolume = Cfg.SettingAsDouble( "s_effect_volume", 0.5 );
 			Snd.MusicVolume = Cfg.SettingAsDouble( "s_music_volume", 1. );
 			Snd.Update( &Cam );
-			
-			// If we're disconnected, make sure we clean up variables after the thread finishes.
-			Net.Cleanup();
-			
-			// Send periodic updates to server.
-			Net.NetRate = Raptor::Game->Cfg.SettingAsDouble( "netrate", 30. );
-			Net.SendUpdates();
 			
 			// Honor the maxfps variable.
 			MaxFPS = Cfg.SettingAsDouble("maxfps");
@@ -465,6 +456,16 @@ void RaptorGame::Run( void )
 				// Swap front and back framebuffers to update the screen.
 				Gfx.SwapBuffers();
 			}
+			
+			// Update!  (Extrapolate object motion, etc.)
+			Update( FrameTime );
+			
+			// If we're disconnected, make sure we clean up variables after the thread finishes.
+			Net.Cleanup();
+			
+			// Send periodic updates to server.
+			Net.NetRate = Raptor::Game->Cfg.SettingAsDouble( "netrate", 30. );
+			Net.SendUpdates();
 		}
 		
 		// Let the thread rest a bit.

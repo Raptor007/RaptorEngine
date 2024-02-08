@@ -87,13 +87,20 @@ void Clock::SetTimeScale( double time_scale )
 {
 	if( (TimeScale != time_scale) && time_scale && TimeScale )
 	{
-		double elapsed_seconds = ElapsedSeconds();  // NOTE: This is scaled by current TimeScale.
-		double desired_elapsed = elapsed_seconds / time_scale;
+		double desired_elapsed = ElapsedSeconds() / time_scale;  // NOTE: ElapsedSeconds() is scaled by current TimeScale.
 		Reset();
 		Advance( -desired_elapsed );
 	}
 	
 	TimeScale = time_scale;
+}
+
+
+void Clock::SetProgress( double progress )
+{
+	double desired_elapsed = TimeScale ? (progress * CountUpToSecs / TimeScale) : 0.;
+	Reset();
+	Advance( -desired_elapsed );
 }
 
 

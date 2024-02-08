@@ -72,6 +72,11 @@ Player *GameObject::Owner( void ) const
 }
 
 
+bool GameObject::ServerShouldSend( void ) const
+{
+	return true;
+}
+
 bool GameObject::PlayerShouldUpdateServer( void ) const
 {
 	return true;
@@ -84,7 +89,7 @@ bool GameObject::ServerShouldUpdatePlayer( void ) const
 
 bool GameObject::ServerShouldUpdateOthers( void ) const
 {
-	return true;
+	return ServerShouldSend();
 }
 
 bool GameObject::CanCollideWithOwnType( void ) const
@@ -365,4 +370,10 @@ void GameObject::SendUpdate( int8_t precision )
 
 void GameObject::Draw( void )
 {
+}
+
+
+Shader *GameObject::WantShader( void ) const
+{
+	return NULL;
 }
