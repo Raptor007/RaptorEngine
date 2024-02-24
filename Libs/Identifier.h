@@ -18,12 +18,14 @@ class Identifier
 public:
 	std::set<T> Available;
 	T Initial, Next;
+	bool ThrowExceptions;
 	
 	
 	Identifier( T initial = 1 )
 	{
 		Initial = initial;
 		Next = Initial;
+		ThrowExceptions = false;
 	}
 	
 	~Identifier()
@@ -44,7 +46,7 @@ public:
 			value = Next;
 			Next ++;
 		}
-		else
+		else if( ThrowExceptions )
 			throw IdentifierError();
 		
 		return value;

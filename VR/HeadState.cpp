@@ -193,6 +193,7 @@ void HeadState::Draw( void )
 	vr::Texture_t leftEyeTexture = { (void*)(uintptr_t)(EyeL->Texture), vr::TextureType_OpenGL, vr::ColorSpace_Gamma };
 	vr::VRCompositor()->Submit( vr::Eye_Left, &leftEyeTexture );
 	
+	double frame_time = Raptor::Game->FrameTime;
 	Raptor::Game->FrameTime = 0.;  // Prevent multi-render side effects.
 	
 	// Right Eye
@@ -205,6 +206,7 @@ void HeadState::Draw( void )
 	vr::VRCompositor()->Submit( vr::Eye_Right, &rightEyeTexture );
 	
 	// Restore default draw conditions.
+	Raptor::Game->FrameTime = frame_time;
 	Raptor::Game->Gfx.DrawTo = NULL;
 	Raptor::Game->Gfx.SelectDefaultFramebuffer();
 #endif

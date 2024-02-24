@@ -32,17 +32,22 @@ uint32_t GameData::AddObject( GameObject *obj )
 	if( ! obj )
 		return 0;
 	
+	obj->Data = this;
+	
 	// ID 0 means no ID has been assigned yet.
 	if( ! obj->ID )
 		obj->ID = GameObjectIDs.NextAvailable();
 	
-	GameObjects[ obj->ID ] = obj;
+	uint32_t obj_id = obj->ID;
+	if( obj_id )
+	{
+		GameObjects[ obj_id ] = obj;
+		
+		if( this == &(Raptor::Game->Data) )
+			obj->ClientInit();
+	}
 	
-	obj->Data = this;
-	if( this == &(Raptor::Game->Data) )
-		obj->ClientInit();
-	
-	return obj->ID;
+	return obj_id;
 }
 
 
@@ -58,7 +63,8 @@ uint16_t GameData::AddPlayer( Player *player )
 		player->ID = PlayerIDs.NextAvailable();
 	
 	uint16_t player_id = player->ID;
-	Players[ player_id ] = player;
+	if( player_id )
+		Players[ player_id ] = player;
 	
 	Lock.Unlock();
 	
