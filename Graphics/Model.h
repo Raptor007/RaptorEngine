@@ -27,6 +27,7 @@ class ModelMaterial;
 #include "Animation.h"
 #include "Color.h"
 #include "Rand.h"
+#include "Randomizer.h"
 
 
 class Model
@@ -200,9 +201,11 @@ public:
 	double GetHeight( void );
 	double GetWidth( void );
 	double GetMaxRadius( void );
-	Vec3D GetExplosionMotion( int seed = 0 ) const;
-	Vec3D GetExplosionRotationAxis( int seed = 0 ) const;
-	double GetExplosionRotationRate( int seed = 0 ) const;
+	Vec3D GetExplosionMotion( int seed = 0, Randomizer *randomizer = &GlobalRandomizer ) const;
+	Vec3D GetExplosionRotationAxis( int seed = 0, Randomizer *randomizer = &GlobalRandomizer ) const;
+	double GetExplosionRotationRate( int seed = 0, Randomizer *randomizer = &GlobalRandomizer ) const;
+	
+	static Randomizer GlobalRandomizer;
 	
 private:
 	bool NeedsRecalc;

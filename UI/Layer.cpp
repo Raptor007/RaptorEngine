@@ -254,6 +254,7 @@ bool Layer::HandleEvent( SDL_Event *event )
 		MouseDown( mouse_button );
 		MouseUp( mouse_button );
 	}
+	// FIXME: SDL_TEXTINPUT
 #endif
 	else if( event->type == SDL_KEYDOWN )
 	{

@@ -314,8 +314,8 @@ std::list<std::string> CStr::ParseCommand( const char *cmd, const char *original
 			{
 				// Check for semicolons (not within quotes) to delimit multiple commands.
 				if( *buffer_ptr == ';' )
-					return_list.push_back( ";" );
-
+					return_list.push_back( ";;" );  // Turn ; into ;; so ";" can be used to bind semicolon.
+				
 				buffer_ptr ++;
 			}
 			

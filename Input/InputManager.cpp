@@ -187,6 +187,11 @@ void InputManager::ResetDeviceTypes( void )
 	#else
 		// SDL2 does not detect F16 MFD button panels as joysticks, but SDL1 does.
 		DeviceTypes.insert( "MFD" );
+		
+		#ifndef WIN32
+			// Linux SDL1 detects Xbox controllers as "Pad".
+			DeviceTypes.insert( "Pad" );
+		#endif
 	#endif
 }
 
@@ -572,9 +577,15 @@ void InputManager::Update( void )
 					}
 					
 					double deadzone = 0., deadedge = 0., exponent = 1.;
-					if( joy_device_type == "Xbox" )
+					if( (joy_device_type == "Xbox") || (joy_device_type == "Pad") )
 					{
-#if SDL_VERSION_ATLEAST(2,0,0)
+#ifndef WIN32
+						if( (bind->first == 2) || (bind->first == 5) ) // Triggers
+						{
+							deadedge = Raptor::Game->Cfg.SettingAsDouble( "joy_deadzone_triggers", 0.02 );
+							exponent = 1. + Raptor::Game->Cfg.SettingAsDouble( "joy_smooth_triggers", 0.75 );
+						}
+#elif SDL_VERSION_ATLEAST(2,0,0)
 						if( bind->first >= 4 ) // Triggers
 						{
 							deadedge = Raptor::Game->Cfg.SettingAsDouble( "joy_deadzone_triggers", 0.02 );
@@ -595,21 +606,21 @@ void InputManager::Update( void )
 					}
 					else if( joy_device_type == "Pedal" )
 					{
-						deadzone = Raptor::Game->Cfg.SettingAsDouble( "joy_deadzone", 0.03 );
+						deadzone = Raptor::Game->Cfg.SettingAsDouble( "joy_deadzone", 0.04 );
 						exponent = 1. + Raptor::Game->Cfg.SettingAsDouble( "joy_smooth_pedals" );
 					}
 					else if( joy_device_type == "Throttle" )
-						deadedge = Raptor::Game->Cfg.SettingAsDouble( "joy_deadzone", 0.03 );
+						deadedge = Raptor::Game->Cfg.SettingAsDouble( "joy_deadzone", 0.04 );
 					else if( joy_device_type == "Wheel" )
 					{
 						if( bind->first == 0 ) // Steering Wheel
 						{
-							deadzone = Raptor::Game->Cfg.SettingAsDouble( "joy_deadzone", 0.03 );
+							deadzone = Raptor::Game->Cfg.SettingAsDouble( "joy_deadzone", 0.04 );
 							exponent = 1. + Raptor::Game->Cfg.SettingAsDouble( "joy_smooth" );
 						}
 						else // Pedals
 						{
-							deadedge = Raptor::Game->Cfg.SettingAsDouble( "joy_deadzone", 0.03 );
+							deadedge = Raptor::Game->Cfg.SettingAsDouble( "joy_deadzone", 0.04 );
 							exponent = 1. + Raptor::Game->Cfg.SettingAsDouble( "joy_smooth_pedals" );
 						}
 					}
@@ -621,9 +632,9 @@ void InputManager::Update( void )
 							Uint8 throttle_axis = 2;
 						#endif
 						if( bind->first == throttle_axis ) // Throttle
-							deadedge = Raptor::Game->Cfg.SettingAsDouble( "joy_deadzone", 0.03 );
+							deadedge = Raptor::Game->Cfg.SettingAsDouble( "joy_deadzone", 0.04 );
 						else
-							deadzone = Raptor::Game->Cfg.SettingAsDouble( "joy_deadzone", 0.03 );
+							deadzone = Raptor::Game->Cfg.SettingAsDouble( "joy_deadzone", 0.04 );
 						
 						if( bind->first == 0 )
 							exponent = 1. + Raptor::Game->Cfg.SettingAsDouble( "joy_smooth_x" );

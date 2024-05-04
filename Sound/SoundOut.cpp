@@ -198,6 +198,26 @@ int SoundOut::PlayPanned( Mix_Chunk *sound, double x, double y, double z, double
 }
 
 
+int SoundOut::PlayFromObject( Mix_Chunk *sound, const GameObject *obj, double loudness )
+{
+	int channel = -1;
+	
+	if( obj )
+	{
+		channel = PlayAt( sound, obj->X, obj->Y, obj->Z, loudness );
+		
+		if( channel >= 0 )
+		{
+			ActivePans[ channel ] = PanningSound( channel, obj->ID, loudness );
+			ObjectPans[ obj->ID ] = channel;
+			RecentPans[ obj->ID ].Reset();
+		}
+	}
+	
+	return channel;
+}
+
+
 int SoundOut::PlayFromObject( Mix_Chunk *sound, uint32_t object_id, double loudness )
 {
 	int channel = -1;

@@ -263,10 +263,11 @@ bool RaptorServer::ProcessPacket( Packet *packet, ConnectedClient *from_client )
 			std::string value = packet->NextString();
 			
 			// FIXME: Make sure the client is authorized to update this data?
-			Data.Properties[ name ] = value;
+			SetProperty( name, value );
 		}
 		
 		// Lazy solution: Just resend this packet back to everyone.
+		// FIXME: Should SetProperty do this instead?
 		Net.SendAll( packet );
 		
 		return true;
@@ -514,6 +515,12 @@ bool RaptorServer::SetPlayerProperty( Player *player, std::string name, std::str
 void RaptorServer::ChangeState( int state )
 {
 	State = state;
+}
+
+
+void RaptorServer::SetProperty( std::string name, std::string value )
+{
+	Data.SetProperty( name, value );
 }
 
 

@@ -69,6 +69,7 @@ public:
 	virtual bool SetPlayerProperty( Player *player, std::string name, std::string value );
 	
 	virtual void ChangeState( int state );
+	virtual void SetProperty( std::string name, std::string value );
 	
 	static int RaptorServerThread( void *game_server );
 };

@@ -221,6 +221,9 @@ double Pos3D::AboveZ( void ) const
 
 double Pos3D::Dist( const Pos3D *other ) const
 {
+	if( ! other )
+		return sqrt( (X*X) + (Y*Y) + (Z*Z) );
+	
 	return sqrt( ((X - other->X) * (X - other->X)) + ((Y - other->Y) * (Y - other->Y)) + ((Z - other->Z) * (Z - other->Z)) );
 }
 

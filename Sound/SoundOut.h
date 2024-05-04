@@ -27,7 +27,7 @@ class SoundOutDelayed;
 #endif
 
 #include "PanningSound.h"
-#include "Pos.h"
+#include "GameObject.h"
 
 
 class SoundOut
@@ -71,6 +71,7 @@ public:
 	int Pan3D( int channel, double x, double y, double z, double loudness = 1. );
 	
 	int PlayPanned( Mix_Chunk *sound, double x, double y, double z, double loudness = 1. );
+	int PlayFromObject( Mix_Chunk *sound, const GameObject *obj, double loudness = 1. );
 	int PlayFromObject( Mix_Chunk *sound, uint32_t object_id, double loudness = 1. );
 	void PlayDelayedFromObject( Mix_Chunk *sound, double delay, uint32_t object_id, double loudness = 1. );
 	int SetPos( int channel, double x, double y, double z );

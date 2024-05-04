@@ -75,7 +75,7 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "s_mix_channels" ] = "64";
 	Settings[ "s_volume" ] = "0.3";
 	Settings[ "s_effect_volume" ] = "0.5";
-	Settings[ "s_music_volume" ] = "0.9";
+	Settings[ "s_music_volume" ] = "0.8";
 	
 	Settings[ "vr_enable" ] = "false";
 	Settings[ "vr_mirror" ] = "true";
@@ -83,7 +83,7 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "vr_separation" ] = "0.0625";
 	Settings[ "vr_offset" ] = "87";
 	
-	Settings[ "joy_deadzone" ] = "0.03";
+	Settings[ "joy_deadzone" ] = "0.04";
 	Settings[ "joy_deadzone_thumbsticks" ] = "0.1";
 	Settings[ "joy_deadzone_triggers" ] = "0.02";
 	Settings[ "joy_smooth_x" ] = "0";
@@ -155,13 +155,13 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 			
 			std::vector<std::string> elements;
 			
-			while( all_elements.size() && (all_elements.front() != ";") )
+			while( all_elements.size() && (all_elements.front() != ";;") )  // ParseCommand doubles semicolons so ";" can be used to bind the key.
 			{
 				elements.push_back( all_elements.front() );
 				all_elements.pop_front();
 			}
 
-			if( all_elements.size() && (all_elements.front() == ";") )
+			if( all_elements.size() && (all_elements.front() == ";;") )  // ParseCommand doubles semicolons so ";" can be used to bind the key.
 				all_elements.pop_front();
 			
 			
@@ -173,7 +173,7 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 				elements.erase( elements.begin() );
 				std::transform( cmd.begin(), cmd.end(), cmd.begin(), tolower );
 				
-				if( Raptor::Game->HandleCommand( cmd, &elements ) )
+				if( Raptor::Game->HandleCommand( cmd, elements.size() ? &elements : NULL ) )
 					;
 				
 				else if( cmd == "echo" )
@@ -333,6 +333,11 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 					Raptor::Game->Gfx.Restart();
 				}
 				
+				else if( cmd == "g_reload" )
+				{
+					Raptor::Game->Res.ReloadGraphics();
+				}
+				
 				else if( cmd == "s_reload" )
 				{
 					Raptor::Game->Snd.StopSounds();
@@ -350,6 +355,26 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 						Raptor::Game->Input.DeviceTypes.insert( elements.at(0) );
 					else
 						Raptor::Game->Console.Print( "Usage: joy_class <name>", TextConsole::MSG_ERROR );
+				}
+				
+				else if( cmd == "joy_clone" )
+				{
+					if( elements.size() >= 2 )
+					{
+						Raptor::Game->Input.DeviceTypes.insert( elements.at(1) );
+						
+						std::map<std::string,std::map<Uint8,uint8_t> >::iterator axes = JoyAxisBinds.find( elements.at(0) );
+						if( axes != JoyAxisBinds.end() )
+							JoyAxisBinds[ elements.at(1) ] = axes->second;
+						std::map<std::string,std::map<Uint8,uint8_t> >::iterator buttons = JoyButtonBinds.find( elements.at(0) );
+						if( buttons != JoyButtonBinds.end() )
+							JoyButtonBinds[ elements.at(1) ] = buttons->second;
+						std::map<std::string,std::map<Uint8,std::map<Uint8,uint8_t> > >::iterator hats = JoyHatBinds.find( elements.at(0) );
+						if( hats != JoyHatBinds.end() )
+							JoyHatBinds[ elements.at(1) ] = hats->second;
+					}
+					else
+						Raptor::Game->Console.Print( "Usage: joy_clone <from> <to>", TextConsole::MSG_ERROR );
 				}
 				
 				else if( cmd == "joy_delete" )
@@ -394,7 +419,7 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 				{
 					if( elements.size() >= 1 )
 					{
-						Mix_Music *music = Raptor::Game->Res.GetMusic(elements.at(1));
+						Mix_Music *music = Raptor::Game->Res.GetMusic(elements.at(0));
 						if( music )
 							Raptor::Game->Snd.PlayMusicOnce( music );
 						else
@@ -406,7 +431,7 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 				{
 					if( elements.size() >= 1 )
 					{
-						Mix_Chunk *sound = Raptor::Game->Res.GetSound(elements.at(1));
+						Mix_Chunk *sound = Raptor::Game->Res.GetSound(elements.at(0));
 						if( sound )
 							Raptor::Game->Snd.Play( sound );
 						else
@@ -640,24 +665,28 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 						Raptor::Game->Console.Print( "Server is not currently running.", TextConsole::MSG_ERROR );
 					else if( elements.size() >= 1 )
 					{
-						std::string sv_cmd = elements.at(0);
-						std::vector<std::string> sv_params = elements;
-						while( sv_params.at(0) == "sv" )
-							sv_params.erase( sv_params.begin() );
+						std::string sv_cmd;
+						do
+						{
+							sv_cmd = elements.at(0);
+							elements.erase( elements.begin() );
+							std::transform( sv_cmd.begin(), sv_cmd.end(), sv_cmd.begin(), tolower );
+						}
+						while( elements.size() && (sv_cmd == "sv") );
 						
-						if( Raptor::Server->HandleCommand( sv_cmd, &sv_params ) )
+						if( Raptor::Server->HandleCommand( sv_cmd, elements.size() ? &elements : NULL ) )
 							;
 						
 						else if( sv_cmd == "set" )
 						{
-							if( elements.size() >= 3 )
+							if( elements.size() >= 2 )
 							{
-								Raptor::Server->Data.SetProperty( elements.at(1), elements.at(2) );
+								Raptor::Server->SetProperty( elements.at(0), elements.at(1) );
 								
 								Packet info = Packet( Raptor::Packet::INFO );
 								info.AddUShort( 1 );
+								info.AddString( elements.at(0) );
 								info.AddString( elements.at(1) );
-								info.AddString( elements.at(2) );
 								Raptor::Server->Net.SendAll( &info );
 							}
 							else
@@ -665,22 +694,22 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 						}
 						else if( sv_cmd == "unset" )
 						{
-							if( elements.size() >= 2 )
+							if( elements.size() >= 1 )
 							{
 								// FIXME: Remove the variable on clients instead of just setting to an empty string.
 								Packet info = Packet( Raptor::Packet::INFO );
 								info.AddUShort( 1 );
-								info.AddString( elements.at(1) );
+								info.AddString( elements.at(0) );
 								info.AddString( "" );
 								Raptor::Server->Net.SendAll( &info );
 								
 								Raptor::Server->Data.Lock.Lock();
 								
-								std::map<std::string, std::string>::iterator setting_iter = Raptor::Server->Data.Properties.find( elements.at(1) );
+								std::map<std::string, std::string>::iterator setting_iter = Raptor::Server->Data.Properties.find( elements.at(0) );
 								if( setting_iter != Raptor::Server->Data.Properties.end() )
 									Raptor::Server->Data.Properties.erase( setting_iter );
 								else
-									Raptor::Game->Console.Print( elements.at(1) + " is not defined." );
+									Raptor::Game->Console.Print( elements.at(0) + " is not defined." );
 								
 								Raptor::Server->Data.Lock.Unlock();
 							}
@@ -689,10 +718,10 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 						}
 						else if( sv_cmd == "show" )
 						{
-							if( elements.size() >= 2 )
+							if( elements.size() >= 1 )
 							{
 								int count = 0;
-								const char *cstr = elements.at(1).c_str();
+								const char *cstr = elements.at(0).c_str();
 								int len = strlen(cstr);
 								
 								Raptor::Server->Data.Lock.Lock();
@@ -709,7 +738,7 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 								Raptor::Server->Data.Lock.Unlock();
 								
 								if( ! count )
-									Raptor::Game->Console.Print( elements.at(1) + " is not defined." );
+									Raptor::Game->Console.Print( elements.at(0) + " is not defined." );
 							}
 							else
 							{
@@ -723,8 +752,8 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 						}
 						else if( sv_cmd == "port" )
 						{
-							if( elements.size() >= 2 )
-								Settings["sv_port"] = elements.at(1);
+							if( elements.size() >= 1 )
+								Settings["sv_port"] = elements.at(0);
 							else
 							{
 								Raptor::Game->Console.Print( std::string("Server port: ") + Num::ToString( Raptor::Game->Server->Port ) );
@@ -735,9 +764,9 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 						}
 						else if( sv_cmd == "netrate" )
 						{
-							if( elements.size() >= 2 )
+							if( elements.size() >= 1 )
 							{
-								Settings["sv_netrate"] = elements.at(1);
+								Settings["sv_netrate"] = elements.at(0);
 								Raptor::Server->NetRate = SettingAsDouble( "sv_netrate", 30. );
 								Raptor::Server->Net.SetNetRate( Raptor::Server->NetRate );
 							}
@@ -746,9 +775,9 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 						}
 						else if( sv_cmd == "maxfps" )
 						{
-							if( elements.size() >= 2 )
+							if( elements.size() >= 1 )
 							{
-								Settings["sv_maxfps"] = elements.at(1);
+								Settings["sv_maxfps"] = elements.at(0);
 								Raptor::Server->MaxFPS = SettingAsDouble( "sv_maxfps", 60. );
 							}
 							else
@@ -790,14 +819,10 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 						}
 						else if( sv_cmd == "say" )
 						{
-							if( elements.size() >= 2 )
+							if( elements.size() >= 1 )
 							{
-								std::vector<std::string> msg_vec = elements;
-								msg_vec[0] = "";
-								std::string msg = Str::Join( msg_vec, " " );
-								
 								Packet message = Packet( Raptor::Packet::MESSAGE );
-								message.AddString( (std::string("Server:") + msg).c_str() );
+								message.AddString( (std::string("Server: ") + Str::Join( elements, " " )).c_str() );
 								message.AddUInt( TextConsole::MSG_CHAT );
 								Raptor::Server->Net.SendAll( &message );
 							}
@@ -806,19 +831,19 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 						}
 						else if( sv_cmd == "state" )
 						{
-							if( elements.size() >= 2 )
+							if( elements.size() >= 1 )
 							{
 								int new_state = Raptor::Server->State;
-								if( ((elements.at(1) == "+=") || (elements.at(1) == "+")) && (elements.size() >= 3) )
-									new_state += atoi( elements.at(2).c_str() );
-								else if( ((elements.at(1) == "-=") || (elements.at(1) == "-")) && (elements.size() >= 3) )
-									new_state -= atoi( elements.at(2).c_str() );
-								else if( (elements.at(1) == "++") || (elements.at(1) == "+") )
+								if( ((elements.at(0) == "+=") || (elements.at(0) == "+")) && (elements.size() >= 2) )
+									new_state += atoi( elements.at(1).c_str() );
+								else if( ((elements.at(0) == "-=") || (elements.at(0) == "-")) && (elements.size() >= 2) )
+									new_state -= atoi( elements.at(1).c_str() );
+								else if( (elements.at(0) == "++") || (elements.at(0) == "+") )
 									new_state ++;
-								else if( (elements.at(1) == "--") || (elements.at(1) == "-") )
+								else if( (elements.at(0) == "--") || (elements.at(0) == "-") )
 									new_state --;
 								else
-									new_state = atoi( elements.at(1).c_str() );
+									new_state = atoi( elements.at(0).c_str() );
 								
 								if( new_state >= Raptor::State::CONNECTED )
 								{
@@ -840,14 +865,14 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 						}
 						else if( Raptor::Server->Data.HasProperty(sv_cmd) )
 						{
-							if( elements.size() >= 2 )
+							if( elements.size() >= 1 )
 							{
-								Raptor::Server->Data.SetProperty( sv_cmd, elements.at(1) );
+								Raptor::Server->SetProperty( sv_cmd, elements.at(0) );
 								
 								Packet info = Packet( Raptor::Packet::INFO );
 								info.AddUShort( 1 );
 								info.AddString( sv_cmd );
-								info.AddString( elements.at(1) );
+								info.AddString( elements.at(0) );
 								Raptor::Server->Net.SendAll( &info );
 							}
 							else

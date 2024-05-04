@@ -638,6 +638,7 @@ void Model::Draw( const Pos3D *pos, const std::set<std::string> *object_names, c
 		
 		Pos3D draw_pos;
 		Vec3D x_vec, y_vec, z_vec;
+		Randomizer randomizer;
 		
 		for( std::map<std::string,ModelObject>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
 		{
@@ -649,7 +650,7 @@ void Model::Draw( const Pos3D *pos, const std::set<std::string> *object_names, c
 			if( exploded > 0. )
 			{
 				// Convert explosion vectors to worldspace.
-				Vec3D explosion_motion = obj_iter->second.GetExplosionMotion( explosion_seed ) * exploded;
+				Vec3D explosion_motion = obj_iter->second.GetExplosionMotion( explosion_seed, &randomizer ) * exploded;
 				Vec3D modelspace_rotation_axis = obj_iter->second.GetExplosionRotationAxis( explosion_seed );
 				Vec3D worldspace_rotation_axis = (pos->Fwd * modelspace_rotation_axis.X) + (pos->Up * modelspace_rotation_axis.Y) + (pos->Right * modelspace_rotation_axis.Z);
 				
@@ -930,6 +931,8 @@ void Model::MarkBlockMap( std::map< uint64_t, std::set<const GLdouble*> > *block
 	if( ! block_size )
 		block_size = GetMaxTriangleEdge();
 	
+	Randomizer randomizer;
+	
 	for( std::map<std::string,ModelObject>::const_iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
 	{
 		if( object_names && (object_names->find( obj_iter->first ) == object_names->end()) )
@@ -940,7 +943,7 @@ void Model::MarkBlockMap( std::map< uint64_t, std::set<const GLdouble*> > *block
 		if( exploded > 0. )
 		{
 			// Convert explosion vectors to worldspace.
-			Vec3D explosion_motion = obj_iter->second.GetExplosionMotion( explosion_seed ) * exploded;
+			Vec3D explosion_motion = obj_iter->second.GetExplosionMotion( explosion_seed, &randomizer ) * exploded;
 			Vec3D modelspace_rotation_axis = obj_iter->second.GetExplosionRotationAxis( explosion_seed );
 			Vec3D worldspace_rotation_axis = (pos->Fwd * modelspace_rotation_axis.X) + (pos->Up * modelspace_rotation_axis.Y) + (pos->Right * modelspace_rotation_axis.Z);
 			
@@ -2277,6 +2280,9 @@ std::vector< std::vector<ModelVertex> > ModelShape::OptimizedTriangles( double v
 // ---------------------------------------------------------------------------
 
 
+Randomizer ModelObject::GlobalRandomizer;
+
+
 ModelObject::ModelObject( void )
 {
 	CenterPoint.SetPos( 0., 0., 0. );
@@ -2493,7 +2499,7 @@ double ModelObject::GetMaxRadius( void )
 }
 
 
-Vec3D ModelObject::GetExplosionMotion( int seed ) const
+Vec3D ModelObject::GetExplosionMotion( int seed, Randomizer *randomizer ) const
 {
 	/*
 	if( NeedsRecalc )
@@ -2504,36 +2510,39 @@ Vec3D ModelObject::GetExplosionMotion( int seed ) const
 	seed *= Name.length();
 	for( size_t i = 0; i < Name.length(); i ++ )
 		seed += (i + 1) * (int)( Name[ i ] );
+	seed = abs(seed);
 	
 	// Generate a predictable motion axis, mostly away from object center, based on seed.
-	double center_motion_scale = 10. + ((seed*(seed+2)) % 300) / 10.;
-	double rx = 10. * ((seed*(seed+2)) % 344) / 343. - 5.;
-	double ry = 10. * ((seed*(seed+2)) % 344) / 343. - 5.;
-	double rz = 10. * ((seed*(seed+2)) % 344) / 343. - 5.;
-	return Vec3D( CenterPoint.X * (center_motion_scale + rx) + rx,
-	              CenterPoint.Y * (center_motion_scale + ry) + ry,
-	              CenterPoint.Z * (center_motion_scale + rz) + rz );
+	// FIXME: Scale rx/ry/rz by Model.MaxRadius() / CenterPoint.Dist()?
+	randomizer->Seed( seed );
+	double center_motion_scale = randomizer->Double( 7., 11. );
+	double rx = randomizer->Double( -30., 30. );
+	double ry = randomizer->Double( -30., 30. );
+	double rz = randomizer->Double( -30., 30. );
+	return Vec3D( CenterPoint.X * center_motion_scale + rx,
+	              CenterPoint.Y * center_motion_scale + ry,
+	              CenterPoint.Z * center_motion_scale + rz );
 }
 
 
-Vec3D ModelObject::GetExplosionRotationAxis( int seed ) const
+Vec3D ModelObject::GetExplosionRotationAxis( int seed, Randomizer *randomizer ) const
 {
 	// Generate predictable rotation axis for this chunk of debris, based on a seed value.
-	Vec3D explosion_rotation_axis = GetExplosionMotion( seed );
-	explosion_rotation_axis.ScaleTo( 1. );
-	return explosion_rotation_axis;
+	return GetExplosionMotion( seed + 1, randomizer ).Unit();
 }
 
 
-double ModelObject::GetExplosionRotationRate( int seed ) const
+double ModelObject::GetExplosionRotationRate( int seed, Randomizer *randomizer ) const
 {
 	// Generate a per-object seed based on the object name.
 	seed *= Name.length();
 	for( size_t i = 0; i < Name.length(); i ++ )
 		seed += (i + 1) * (int)( Name[ i ] );
+	seed = abs(seed);
 	
 	// Generate a predictable rotation rate based on the seed value.
-	return 360. + (seed*(seed+2)) % 361;
+	randomizer->Seed( seed );
+	return randomizer->Double( 360., 720. ) * (randomizer->Bool() ? -1. : 1.);
 }
 
 
