@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <cmath>
+#include <cfloat>
 #include "Num.h"
 #include "RaptorGame.h"
 
@@ -279,20 +280,21 @@ void GameObject::ReadFromUpdatePacketFromClient( Packet *packet, int8_t precisio
 }
 
 
-bool GameObject::WillCollide( const GameObject *other, double dt, std::string *this_object, std::string *other_object ) const
+bool GameObject::WillCollide( const GameObject *other, double dt, std::string *this_object, std::string *other_object, Pos3D *loc, double *when ) const
 {
 	return false;
 }
 
 
-GameObject *GameObject::Trace( double dt, double precision ) const
+GameObject *GameObject::FindCollision( double dt, Pos3D *loc, double *when ) const
 {
 	if( ! Data )
 		return NULL;
 	
-	std::set<GameObject*> will_hit;
+	GameObject *best = NULL;
+	double at_time = FLT_MAX, best_time = FLT_MAX, best_dist = FLT_MAX;
+	Pos3D at_loc, best_loc;
 	
-	// First find every object that this will collide with.
 	for( std::map<uint32_t,GameObject*>::iterator obj_iter = Data->GameObjects.begin(); obj_iter != Data->GameObjects.end(); obj_iter ++ )
 	{
 		if( obj_iter->second == this )
@@ -306,30 +308,39 @@ GameObject *GameObject::Trace( double dt, double precision ) const
 			continue;
 		else if( ! obj_iter->second->CanCollideWithOtherTypes() )
 			continue;
-		if( WillCollide( obj_iter->second, dt ) )
-			will_hit.insert( obj_iter->second );
+		
+		if( WillCollide( obj_iter->second, dt, NULL, NULL, &at_loc, &at_time ) )
+		{
+			if( best && (at_time > best_time) )
+				continue;
+			
+			// If the game's WillCollide implementation doesn't set at_loc, use object origin.
+			if( !( at_loc.X || at_loc.Y || at_loc.Z ) )
+				at_loc.Copy( obj_iter->second );
+			
+			double dist = Dist(&at_loc);
+			if( dist >= best_dist )
+				continue;
+			
+			best = obj_iter->second;
+			best_loc.Copy( &at_loc );
+			best_time = at_time;
+			best_dist = dist;
+			
+			at_time = FLT_MAX;
+			at_loc.SetPos(0,0,0);
+		}
 	}
 	
-	// Binary search slices of time until we find the first collision by itself or hit the precision limit.
-	double ddt = dt / -2.;
-	while( (will_hit.size() > 1) && (fabs(ddt) >= precision) )
+	if( best )
 	{
-		dt += ddt;
-		ddt = fabs(ddt) / 2.;
-		std::set<GameObject*> these_hits;
-		for( std::set<GameObject*>::iterator hit_iter = will_hit.begin(); hit_iter != will_hit.end(); hit_iter ++ )
-		{
-			if( WillCollide( *hit_iter, dt ) )
-				these_hits.insert( *hit_iter );
-		}
-		if( these_hits.size() )
-		{
-			will_hit = these_hits;
-			ddt *= -1.;
-		}
+		if( loc )
+			loc->Copy( &best_loc );
+		if( when )
+			*when = best_time;
 	}
 	
-	return will_hit.size() ? *(will_hit.begin()) : NULL;
+	return best;
 }
 
 

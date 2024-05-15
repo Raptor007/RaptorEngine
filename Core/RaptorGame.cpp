@@ -229,6 +229,8 @@ void RaptorGame::Initialize( int argc, char **argv )
 		else if( (i + 1 < argc) && (strcmp( argv[ i ], "-sv_port" ) == 0) )
 		{
 			Cfg.Settings[ "sv_port" ] = argv[ i + 1 ];
+			if( Server )
+				Server->Port = atoi( argv[ i + 1 ] );
 			i ++;
 		}
 		else if( (i + 1 < argc) && (strcmp( argv[ i ], "-connect" ) == 0) )
@@ -267,6 +269,21 @@ void RaptorGame::Initialize( int argc, char **argv )
 			Cfg.Settings[ "vr_enable" ] = "false";
 		}
 	}
+	
+	
+	if( Server )
+	{
+		int sv_port = Cfg.SettingAsInt( "sv_port", DefaultPort, DefaultPort );
+		if( sv_port > 0 )
+			Server->Port = sv_port;
+		Server->NetRate = Cfg.SettingAsInt( "sv_netrate", 30 );
+		Server->MaxFPS  = Cfg.SettingAsInt( "sv_maxfps",  60 );
+		Server->Data.ThreadCount = Cfg.SettingAsInt("sv_threads");
+	}
+	
+	// Dedicated servers bail out here.
+	if( (argc >= 2) && (strcmp( argv[ 1 ], "-dedicated" ) == 0) )
+		return;
 	
 	
 	// Initialize SDL and subsystems.

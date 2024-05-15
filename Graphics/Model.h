@@ -36,8 +36,7 @@ public:
 	std::map<std::string,ModelObject> Objects;
 	std::map<std::string,ModelMaterial> Materials;
 	std::vector<std::string> MaterialFiles;
-	double Length, Height, Width;
-	double MaxRadius;
+	double Length, Height, Width, MinFwd, MaxFwd, MinUp, MaxUp, MinRight, MaxRight, MaxRadius;
 	
 	Model( void );
 	virtual ~Model();
@@ -58,10 +57,10 @@ public:
 	void DrawObjectsAt( const std::list<std::string> *object_names, const Pos3D *pos, double scale = 1., double fwd_scale = 1., double up_scale = 1., double right_scale = 1. );
 	void DrawWireframeAt( const Pos3D *pos, Color color, double scale = 1., double fwd_scale = 1., double up_scale = 1., double right_scale = 1. );
 	
-	double DistanceFromLine( const Pos3D *pos, const std::set<std::string> *object_names, std::string *hit, double exploded, int explosion_seed, const Pos3D *pos2a, const Pos3D *pos2b, double block_size = 0. ) const;
-	double DistanceFromSphere( const Pos3D *pos, const std::set<std::string> *object_names, std::string *hit, double exploded, int explosion_seed, const Pos3D *pos2, const Vec3D *moved2, double radius, double block_size = 0. ) const;
-	bool CollidesWithSphere( const Pos3D *pos, const std::set<std::string> *object_names, std::string *hit, double exploded, int explosion_seed, const Pos3D *pos2, const Vec3D *moved2, double radius, double block_size = 0. ) const;
-	bool CollidesWithModel( const Pos3D *pos1, const std::set<std::string> *object_names1, std::string *hit1, double exploded1, int explosion_seed1, const Model *model2, const Pos3D *pos2, const std::set<std::string> *object_names2, std::string *hit2, double exploded2, int explosion_seed2, double block_size = 0., bool check_faces = true ) const;
+	double DistanceFromLine( const Pos3D *pos, Pos3D *nearest, const std::set<std::string> *object_names, std::string *hit, double exploded, int explosion_seed, const Pos3D *pos2a, const Pos3D *pos2b, double block_size = 0. ) const;
+	double DistanceFromSphere( const Pos3D *pos, Pos3D *nearest, const std::set<std::string> *object_names, std::string *hit, double exploded, int explosion_seed, const Pos3D *pos2, const Vec3D *moved2, double radius, double block_size = 0. ) const;
+	bool CollidesWithSphere( const Pos3D *pos, Pos3D *at, const std::set<std::string> *object_names, std::string *hit, double exploded, int explosion_seed, const Pos3D *pos2, const Vec3D *moved2, double radius, double block_size = 0. ) const;
+	bool CollidesWithModel( const Pos3D *pos1, Pos3D *at, const std::set<std::string> *object_names1, std::string *hit1, double exploded1, int explosion_seed1, const Model *model2, const Pos3D *pos2, const std::set<std::string> *object_names2, std::string *hit2, double exploded2, int explosion_seed2, double block_size = 0., bool check_faces = true ) const;
 	void MarkBlockMap( std::map< uint64_t, std::set<const GLdouble*> > *blockmap, std::vector< std::pair<ModelArrays,std::string> > *keep_arrays, const Pos3D *pos, const std::set<std::string> *object_names, double exploded, int explosion_seed, double block_size = 0. ) const;
 	
 	void Move( double fwd, double up, double right );

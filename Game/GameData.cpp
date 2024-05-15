@@ -5,11 +5,12 @@
 #include "GameData.h"
 
 #include <cstddef>
+#include <cfloat>
 #include "Camera.h"
 #include "RaptorGame.h"
 
 
-#define COMPLEX_THREADS 0
+#define COMPLEX_THREADS 2
 
 
 GameData::GameData( void )
@@ -19,6 +20,7 @@ GameData::GameData( void )
 	AntiJitter = 0.999;
 	MaxFrameTime = 0.125;  // Assume dropping below 8 FPS is a momentary hiccup.
 	TimeScale = 1.;
+	ThreadCount = 0;
 }
 
 
@@ -152,12 +154,9 @@ void GameData::CheckCollisions( double dt )
 	// Pre-sort by object type and collidability.
 	for( std::map<uint32_t,GameObject*>::iterator obj_iter = GameObjects.begin(); obj_iter != GameObjects.end(); obj_iter ++ )
 	{
-		#if COMPLEX_THREADS
-		if( obj_iter->second->ComplexCollisionDetection() )
+		if( (ThreadCount > 0) && obj_iter->second->ComplexCollisionDetection() )
 			complex.push_back( obj_iter->second );
-		else
-		#endif
-		if( obj_iter->second->IsMoving() )
+		else if( obj_iter->second->IsMoving() )
 		{
 			if( obj_iter->second->CanCollideWithOwnType() )
 				moving_can_hit_own_type[ obj_iter->second->Type() ].push_back( obj_iter->second );
@@ -173,74 +172,81 @@ void GameData::CheckCollisions( double dt )
 		}
 	}
 	
-	#if COMPLEX_THREADS
-	// Get threads going for complex collision detection.
-	for( std::list<GameObject*>::iterator obj_iter = complex.begin(); obj_iter != complex.end(); obj_iter ++ )
+	if( ThreadCount > 0 )
 	{
-		std::vector<CollisionDataSet*> data_sets;
-		
-		for( int i = 0; i < COMPLEX_THREADS; i ++ )
+		// Get threads going for complex collision detection.
+		for( std::list<GameObject*>::iterator obj_iter = complex.begin(); obj_iter != complex.end(); obj_iter ++ )
 		{
-			threads.push_back( CollisionDataSet(dt) );
-			data_sets.push_back( &(threads.back()) );
-			data_sets[ i ]->Objects1.push_back( *obj_iter );
-		}
-		
-		uint32_t type = (*obj_iter)->Type();
-		
-		int index = 0;
-		
-		for( std::list<GameObject*>::iterator obj2_iter = moving_can_hit_own_type[ type ].begin(); obj2_iter != moving_can_hit_own_type[ type ].end(); obj2_iter ++ )
-		{
-			data_sets[ index % COMPLEX_THREADS ]->Objects2.push_back( *obj2_iter );
-			index ++;
-		}
-		for( std::map< uint32_t, std::list<GameObject*> >::iterator list_iter = moving_can_hit_other_types.begin(); list_iter != moving_can_hit_other_types.end(); list_iter ++ )
-		{
-			if( list_iter->first == type )
-				continue;
+			std::vector<CollisionDataSet*> data_sets;
 			
-			for( std::list<GameObject*>::iterator obj2_iter = list_iter->second.begin(); obj2_iter != list_iter->second.end(); obj2_iter ++ )
+			for( int i = 0; i < ThreadCount; i ++ )
 			{
-				data_sets[ index % COMPLEX_THREADS ]->Objects2.push_back( *obj2_iter );
+				threads.push_back( CollisionDataSet(dt) );
+				data_sets.push_back( &(threads.back()) );
+				data_sets[ i ]->Objects1.push_back( *obj_iter );
+			}
+			
+			uint32_t type = (*obj_iter)->Type();
+			
+			int index = 0;
+			
+			for( std::list<GameObject*>::iterator obj2_iter = moving_can_hit_own_type[ type ].begin(); obj2_iter != moving_can_hit_own_type[ type ].end(); obj2_iter ++ )
+			{
+				data_sets[ index % ThreadCount ]->Objects2.push_back( *obj2_iter );
 				index ++;
 			}
-		}
-		
-		if( (*obj_iter)->IsMoving() )
-		{
-			for( std::list<GameObject*>::iterator obj2_iter = stationary_can_hit_own_type[ type ].begin(); obj2_iter != stationary_can_hit_own_type[ type ].end(); obj2_iter ++ )
-			{
-				data_sets[ index % COMPLEX_THREADS ]->Objects2.push_back( *obj2_iter );
-				index ++;
-			}
-			for( std::map< uint32_t, std::list<GameObject*> >::iterator list_iter = stationary_can_hit_other_types.begin(); list_iter != stationary_can_hit_other_types.end(); list_iter ++ )
+			for( std::map< uint32_t, std::list<GameObject*> >::iterator list_iter = moving_can_hit_other_types.begin(); list_iter != moving_can_hit_other_types.end(); list_iter ++ )
 			{
 				if( list_iter->first == type )
 					continue;
 				
 				for( std::list<GameObject*>::iterator obj2_iter = list_iter->second.begin(); obj2_iter != list_iter->second.end(); obj2_iter ++ )
 				{
-					data_sets[ index % COMPLEX_THREADS ]->Objects2.push_back( *obj2_iter );
+					data_sets[ index % ThreadCount ]->Objects2.push_back( *obj2_iter );
 					index ++;
 				}
 			}
+			
+			if( (*obj_iter)->IsMoving() )
+			{
+				for( std::list<GameObject*>::iterator obj2_iter = stationary_can_hit_own_type[ type ].begin(); obj2_iter != stationary_can_hit_own_type[ type ].end(); obj2_iter ++ )
+				{
+					data_sets[ index % ThreadCount ]->Objects2.push_back( *obj2_iter );
+					index ++;
+				}
+				for( std::map< uint32_t, std::list<GameObject*> >::iterator list_iter = stationary_can_hit_other_types.begin(); list_iter != stationary_can_hit_other_types.end(); list_iter ++ )
+				{
+					if( list_iter->first == type )
+						continue;
+					
+					for( std::list<GameObject*>::iterator obj2_iter = list_iter->second.begin(); obj2_iter != list_iter->second.end(); obj2_iter ++ )
+					{
+						data_sets[ index % ThreadCount ]->Objects2.push_back( *obj2_iter );
+						index ++;
+					}
+				}
+			}
+			
+			std::list<GameObject*>::iterator obj2_iter = obj_iter;
+			obj2_iter ++;
+			for( ; obj2_iter != complex.end(); obj2_iter ++ )
+			{
+				data_sets[ index % ThreadCount ]->Objects2.push_back( *obj2_iter );
+				index ++;
+			}
+			
+			for( int i = 0; i < ThreadCount; i ++ )
+				#if SDL_VERSION_ATLEAST(2,0,0)
+					data_sets[ i ]->Thread = SDL_CreateThread( &FindCollisionsThread, "GameDataFindCollisions", data_sets[ i ] );
+				#else
+					data_sets[ i ]->Thread = SDL_CreateThread( &FindCollisionsThread, data_sets[ i ] );
+				#endif
 		}
-		
-		std::list<GameObject*>::iterator obj2_iter = obj_iter;
-		obj2_iter ++;
-		for( ; obj2_iter != complex.end(); obj2_iter ++ )
-		{
-			data_sets[ index % COMPLEX_THREADS ]->Objects2.push_back( *obj2_iter );
-			index ++;
-		}
-		
-		for( int i = 0; i < COMPLEX_THREADS; i ++ )
-			data_sets[ i ]->Thread = SDL_CreateThread( &FindCollisionsThread, data_sets[ i ] );
 	}
-	#endif
 	
 	std::string a_object, b_object;
+	double when = 0.;
+	Pos3D loc;
 	
 	// Check moving objects that can hit their own type.
 	for( std::map< uint32_t, std::list<GameObject*> >::iterator list_iter = moving_can_hit_own_type.begin(); list_iter != moving_can_hit_own_type.end(); list_iter ++ )
@@ -252,22 +258,26 @@ void GameData::CheckCollisions( double dt )
 			obj2_iter ++;
 			for( ; obj2_iter != list_iter->second.end(); obj2_iter ++ )
 			{
-				if( (*obj1_iter)->WillCollide( *obj2_iter, dt, &a_object, &b_object ) )
+				if( (*obj1_iter)->WillCollide( *obj2_iter, dt, &a_object, &b_object, &loc, &when ) )
 				{
-					Collisions.push_back( Collision( *obj1_iter, *obj2_iter, &a_object, &b_object ) );
+					Collisions.push_back( Collision( *obj1_iter, *obj2_iter, &a_object, &b_object, &loc, &when ) );
 					a_object.clear();
 					b_object.clear();
+					when = 0.;
+					loc.SetPos(0,0,0);
 				}
 			}
 			
 			// Check for collisions with stationary objects of the same type.
 			for( obj2_iter = stationary_can_hit_own_type[ list_iter->first ].begin(); obj2_iter != stationary_can_hit_own_type[ list_iter->first ].end(); obj2_iter ++ )
 			{
-				if( (*obj1_iter)->WillCollide( *obj2_iter, dt, &a_object, &b_object ) )
+				if( (*obj1_iter)->WillCollide( *obj2_iter, dt, &a_object, &b_object, &loc, &when ) )
 				{
-					Collisions.push_back( Collision( *obj1_iter, *obj2_iter, &a_object, &b_object ) );
+					Collisions.push_back( Collision( *obj1_iter, *obj2_iter, &a_object, &b_object, &loc, &when ) );
 					a_object.clear();
 					b_object.clear();
+					when = 0.;
+					loc.SetPos(0,0,0);
 				}
 			}
 		}
@@ -285,11 +295,13 @@ void GameData::CheckCollisions( double dt )
 			{
 				for( std::list<GameObject*>::iterator obj2_iter = list2_iter->second.begin(); obj2_iter != list2_iter->second.end(); obj2_iter ++ )
 				{
-					if( (*obj1_iter)->WillCollide( *obj2_iter, dt, &a_object, &b_object ) )
+					if( (*obj1_iter)->WillCollide( *obj2_iter, dt, &a_object, &b_object, &loc, &when ) )
 					{
-						Collisions.push_back( Collision( *obj1_iter, *obj2_iter, &a_object, &b_object ) );
+						Collisions.push_back( Collision( *obj1_iter, *obj2_iter, &a_object, &b_object, &loc, &when ) );
 						a_object.clear();
 						b_object.clear();
+						when = 0.;
+						loc.SetPos(0,0,0);
 					}
 				}
 			}
@@ -305,11 +317,13 @@ void GameData::CheckCollisions( double dt )
 			{
 				for( std::list<GameObject*>::iterator obj2_iter = list2_iter->second.begin(); obj2_iter != list2_iter->second.end(); obj2_iter ++ )
 				{
-					if( (*obj1_iter)->WillCollide( *obj2_iter, dt, &a_object, &b_object ) )
+					if( (*obj1_iter)->WillCollide( *obj2_iter, dt, &a_object, &b_object, &loc, &when ) )
 					{
-						Collisions.push_back( Collision( *obj1_iter, *obj2_iter, &a_object, &b_object ) );
+						Collisions.push_back( Collision( *obj1_iter, *obj2_iter, &a_object, &b_object, &loc, &when ) );
 						a_object.clear();
 						b_object.clear();
+						when = 0.;
+						loc.SetPos(0,0,0);
 					}
 				}
 			}
@@ -347,6 +361,8 @@ void GameData::Update( double dt )
 	
 	TimeScale = PropertyAsDouble("time_scale",1.);
 	MaxFrameTime = 0.125 * TimeScale;
+	
+	ThreadCount = Raptor::Game->Cfg.SettingAsInt("sv_threads");
 }
 
 
@@ -549,8 +565,9 @@ std::vector<int> GameData::PropertyAsInts( std::string name )
 // -----------------------------------------------------------------------------
 
 
-Collision::Collision( GameObject *a, GameObject *b, std::string *a_object, std::string *b_object )
+Collision::Collision( GameObject *a, GameObject *b, std::string *a_object, std::string *b_object, Pos3D *loc, double *when )
 {
+	// These names mimic std::pair<GameObject*,GameObject*> that was used before.
 	first = a;
 	second = b;
 	
@@ -558,6 +575,10 @@ Collision::Collision( GameObject *a, GameObject *b, std::string *a_object, std::
 		FirstObject = *a_object;
 	if( b_object )
 		SecondObject = *b_object;
+	if( loc )
+		Location.Copy( loc );
+	if( when )
+		Time = *when;
 }
 
 
@@ -585,16 +606,20 @@ CollisionDataSet::~CollisionDataSet()
 void CollisionDataSet::DetectCollisions( void )
 {
 	std::string a_object, b_object;
+	double when = FLT_MAX;
+	Pos3D loc;
 	
 	for( std::list<GameObject*>::const_iterator obj1_iter = Objects1.begin(); obj1_iter != Objects1.end(); obj1_iter ++ )
 	{
 		for( std::list<GameObject*>::const_iterator obj2_iter = Objects2.begin(); obj2_iter != Objects2.end(); obj2_iter ++ )
 		{
-			if( (*obj1_iter)->WillCollide( *obj2_iter, dT, &a_object, &b_object ) )
+			if( (*obj1_iter)->WillCollide( *obj2_iter, dT, &a_object, &b_object, &loc, &when ) )
 			{
-				Collisions.push_back( Collision( *obj1_iter, *obj2_iter, &a_object, &b_object ) );
+				Collisions.push_back( Collision( *obj1_iter, *obj2_iter, &a_object, &b_object, &loc, &when ) );
 				a_object.clear();
 				b_object.clear();
+				loc.SetPos(0,0,0);
+				when = FLT_MAX;
 			}
 		}
 	}

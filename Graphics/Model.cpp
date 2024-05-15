@@ -38,6 +38,7 @@ void Model::Clear( void )
 	Length = 0.;
 	Width = 0.;
 	Height = 0.;
+	MinFwd = MaxFwd = MinUp = MaxUp = MinRight = MaxRight = 0.;
 	MaxRadius = 0.;
 }
 
@@ -792,14 +793,14 @@ static void Model_SetHit( const std::vector< std::pair<ModelArrays,std::string> 
 }
 
 
-double Model::DistanceFromLine( const Pos3D *pos, const std::set<std::string> *object_names, std::string *hit, double exploded, int explosion_seed, const Pos3D *pos2a, const Pos3D *pos2b, double block_size ) const
+double Model::DistanceFromLine( const Pos3D *pos, Pos3D *nearest, const std::set<std::string> *object_names, std::string *hit, double exploded, int explosion_seed, const Pos3D *pos2a, const Pos3D *pos2b, double block_size ) const
 {
 	Vec3D motion( pos2b->X - pos2a->X, pos2b->Y - pos2a->Y, pos2b->Z - pos2a->Z );
-	return DistanceFromSphere( pos, object_names, hit, exploded, explosion_seed, pos2a, &motion, 0., block_size );
+	return DistanceFromSphere( pos, nearest, object_names, hit, exploded, explosion_seed, pos2a, &motion, 0., block_size );
 }
 
 
-double Model::DistanceFromSphere( const Pos3D *pos, const std::set<std::string> *object_names, std::string *hit, double exploded, int explosion_seed, const Pos3D *pos2, const Vec3D *moved2, double radius, double block_size ) const
+double Model::DistanceFromSphere( const Pos3D *pos, Pos3D *nearest, const std::set<std::string> *object_names, std::string *hit, double exploded, int explosion_seed, const Pos3D *pos2, const Vec3D *moved2, double radius, double block_size ) const
 {
 	std::map< uint64_t, std::set<const GLdouble*> > blockmap;
 	std::vector< std::pair<ModelArrays,std::string> > arrays;
@@ -843,32 +844,38 @@ double Model::DistanceFromSphere( const Pos3D *pos, const std::set<std::string> 
 	
 	double min_dist = FLT_MAX, min_dist_pos2 = FLT_MAX;
 	const GLdouble *hit_face = NULL;
+	Pos3D intersection, best_intersection;
 	
 	for( std::set<const GLdouble*>::const_iterator face = faces.begin(); face != faces.end(); face ++ )
 	{
-		double dist = Math3D::LineSegDistFromFace( pos2, &pos2b, *face, 3 );
+		double dist = Math3D::LineSegDistFromFace( pos2, &pos2b, *face, 3, &intersection );
 		double dist_pos2 = Math3D::FaceCenter( *face ).Dist( pos2 );
 		if( (dist < min_dist) || ((dist == min_dist) && (dist_pos2 < min_dist_pos2)) )
 		{
 			min_dist = dist;
 			min_dist_pos2 = dist_pos2;
 			hit_face = *face;
+			best_intersection.Copy( &intersection );
+			intersection.SetPos(0,0,0);
 		}
 	}
 	
 	Model_SetHit( &arrays, hit_face, hit );
 	
+	if( nearest )
+		nearest->Copy( &best_intersection );
+	
 	return min_dist;
 }
 
 
-bool Model::CollidesWithSphere( const Pos3D *pos, const std::set<std::string> *object_names, std::string *hit, double exploded, int explosion_seed, const Pos3D *pos2, const Vec3D *moved2, double radius, double block_size ) const
+bool Model::CollidesWithSphere( const Pos3D *pos, Pos3D *at, const std::set<std::string> *object_names, std::string *hit, double exploded, int explosion_seed, const Pos3D *pos2, const Vec3D *moved2, double radius, double block_size ) const
 {
-	return (DistanceFromSphere( pos, object_names, hit, exploded, explosion_seed, pos2, moved2, radius, block_size ) <= radius);
+	return (DistanceFromSphere( pos, at, object_names, hit, exploded, explosion_seed, pos2, moved2, radius, block_size ) <= radius);
 }
 
 
-bool Model::CollidesWithModel( const Pos3D *pos1, const std::set<std::string> *object_names1, std::string *hit1, double exploded1, int explosion_seed1, const Model *model2, const Pos3D *pos2, const std::set<std::string> *object_names2, std::string *hit2, double exploded2, int explosion_seed2, double block_size, bool check_faces ) const
+bool Model::CollidesWithModel( const Pos3D *pos1, Pos3D *at, const std::set<std::string> *object_names1, std::string *hit1, double exploded1, int explosion_seed1, const Model *model2, const Pos3D *pos2, const std::set<std::string> *object_names2, std::string *hit2, double exploded2, int explosion_seed2, double block_size, bool check_faces ) const
 {
 	std::map< uint64_t, std::set<const GLdouble*> > blockmap1, blockmap2;
 	std::vector< std::pair<ModelArrays,std::string> > arrays1, arrays2;
@@ -892,29 +899,33 @@ bool Model::CollidesWithModel( const Pos3D *pos1, const std::set<std::string> *o
 			{
 				for( std::set<const GLdouble*>::const_iterator face2 = block2->second.begin(); face2 != block2->second.end(); face2 ++ )
 				{
-					Pos3D vertices[ 3 ];
+					Pos3D vertices[ 3 ], intersection;
 					
 					vertices[ 0 ].SetPos( (*face1)[ 0 ], (*face1)[ 1 ], (*face1)[ 2 ] );
 					vertices[ 1 ].SetPos( (*face1)[ 3 ], (*face1)[ 4 ], (*face1)[ 5 ] );
 					vertices[ 2 ].SetPos( (*face1)[ 6 ], (*face1)[ 7 ], (*face1)[ 8 ] );
-					if( Math3D::LineIntersectsFace( &(vertices[ 0 ]), &(vertices[ 1 ]), *face2 )
-					||  Math3D::LineIntersectsFace( &(vertices[ 1 ]), &(vertices[ 2 ]), *face2 )
-					||  Math3D::LineIntersectsFace( &(vertices[ 2 ]), &(vertices[ 0 ]), *face2 ) )
+					if( Math3D::LineIntersectsFace( &(vertices[ 0 ]), &(vertices[ 1 ]), *face2, 3, &intersection )
+					||  Math3D::LineIntersectsFace( &(vertices[ 1 ]), &(vertices[ 2 ]), *face2, 3, &intersection )
+					||  Math3D::LineIntersectsFace( &(vertices[ 2 ]), &(vertices[ 0 ]), *face2, 3, &intersection ) )
 					{
 						Model_SetHit( &arrays1, *face1, hit1 );
 						Model_SetHit( &arrays2, *face2, hit2 );
+						if( at )
+							at->Copy( &intersection );
 						return true;
 					}
 					
 					vertices[ 0 ].SetPos( (*face2)[ 0 ], (*face2)[ 1 ], (*face2)[ 2 ] );
 					vertices[ 1 ].SetPos( (*face2)[ 3 ], (*face2)[ 4 ], (*face2)[ 5 ] );
 					vertices[ 2 ].SetPos( (*face2)[ 6 ], (*face2)[ 7 ], (*face2)[ 8 ] );
-					if( Math3D::LineIntersectsFace( &(vertices[ 0 ]), &(vertices[ 1 ]), *face1 )
-					||  Math3D::LineIntersectsFace( &(vertices[ 1 ]), &(vertices[ 2 ]), *face1 )
-					||  Math3D::LineIntersectsFace( &(vertices[ 2 ]), &(vertices[ 0 ]), *face1 ) )
+					if( Math3D::LineIntersectsFace( &(vertices[ 0 ]), &(vertices[ 1 ]), *face1, 3, &intersection )
+					||  Math3D::LineIntersectsFace( &(vertices[ 1 ]), &(vertices[ 2 ]), *face1, 3, &intersection )
+					||  Math3D::LineIntersectsFace( &(vertices[ 2 ]), &(vertices[ 0 ]), *face1, 3, &intersection ) )
 					{
 						Model_SetHit( &arrays1, *face1, hit1 );
 						Model_SetHit( &arrays2, *face2, hit2 );
+						if( at )
+							at->Copy( &intersection );
 						return true;
 					}
 				}
@@ -1110,6 +1121,9 @@ double Model::GetLength( void )
 		}
 		
 		Length = front - rear;
+		
+		MaxFwd = front;
+		MinFwd = rear;
 	}
 	
 	return Length;
@@ -1147,6 +1161,9 @@ double Model::GetHeight( void )
 		}
 		
 		Height = top - bottom;
+		
+		MaxUp = top;
+		MinUp = bottom;
 	}
 	
 	return Height;
@@ -1184,6 +1201,9 @@ double Model::GetWidth( void )
 		}
 		
 		Width = right - left;
+		
+		MaxRight = right;
+		MinRight = left;
 	}
 	
 	return Width;

@@ -47,29 +47,12 @@ double Math3D::PointToPointDist( const Pos3D *pt1, const Pos3D *pt2 )
 }
 
 
-double Math3D::PointToLineSegDist( const Pos3D *pt, const Pos3D *end1, const Pos3D *end2 )
+double Math3D::PointToLineSegDist( const Pos3D *pt, const Pos3D *end1, const Pos3D *end2, Pos3D *pt_on_line )
 {
-	// http://forums.codeguru.com/printthread.php?t=194400
-	
-	Vec3D end1_to_end2( end2->X - end1->X, end2->Y - end1->Y, end2->Z - end1->Z );
-	double len = end1_to_end2.Length();
-	
-	if( len <= 0. )
-		return PointToPointDist( pt, end1 );
-	
-	Vec3D end1_to_pt( pt->X - end1->X, pt->Y - end1->Y, pt->Z - end1->Z );
-	double r = end1_to_end2.Dot( &end1_to_pt ) / (len*len);
-	
-	if( r <= 0. )
-		return PointToPointDist( pt, end1 );
-	else if( r >= 1. )
-		return PointToPointDist( pt, end2 );
-	
-	Pos3D pt_on_line( end1 );
-	end1_to_end2.ScaleBy( r );
-	pt_on_line += end1_to_end2;
-	
-	return PointToPointDist( pt, &pt_on_line );
+	Pos3D nearest_pt_on_line = NearestPointOnLine( pt, end1, end2 );
+	if( pt_on_line )
+		pt_on_line->Copy( &nearest_pt_on_line );
+	return PointToPointDist( pt, &nearest_pt_on_line );
 }
 
 
@@ -180,6 +163,32 @@ double Math3D::MinimumDistance( const Pos3D *pt1, const Vec3D *motion1, const Po
 }
 
 
+Pos3D Math3D::NearestPointOnLine( const Pos3D *pt, const Pos3D *end1, const Pos3D *end2 )
+{
+	// http://forums.codeguru.com/printthread.php?t=194400
+	
+	Vec3D end1_to_end2( end2->X - end1->X, end2->Y - end1->Y, end2->Z - end1->Z );
+	double len = end1_to_end2.Length();
+	
+	if( len <= 0. )
+		return *end1;
+	
+	Vec3D end1_to_pt( pt->X - end1->X, pt->Y - end1->Y, pt->Z - end1->Z );
+	double r = end1_to_end2.Dot( &end1_to_pt ) / (len*len);
+	
+	if( r <= 0. )
+		return *end1;
+	else if( r >= 1. )
+		return *end2;
+	
+	Pos3D pt_on_line( end1 );
+	end1_to_end2.ScaleBy( r );
+	pt_on_line += end1_to_end2;
+	
+	return pt_on_line;
+}
+
+
 // ----------------------------------------------------------------------------
 
 
@@ -276,33 +285,46 @@ Plane3D Math3D::FaceToPlane( const double *vertex_array, int vertex_count )
 }
 
 
-bool Math3D::PointWithinFace( const Pos3D *pt, const double *vertex_array, int vertex_count )
+bool Math3D::PointWithinFace( const Pos3D *pt, const double *vertex_array, int vertex_count, Pos3D *pt_on_face )
 {
 	Plane3D plane = FaceToPlane( vertex_array, vertex_count );
 	
 	if( vertex_count >= 2 )
 	{
 		Pos3D corner( vertex_array[ vertex_count*3 - 3 ], vertex_array[ vertex_count*3 - 2 ], vertex_array[ vertex_count*3 - 1 ] );
+		Pos3D on_face( &corner );
 		Vec3D edge( vertex_array[ 0 ] - corner.X, vertex_array[ 1 ] - corner.Y, vertex_array[ 2 ] - corner.Z );
 		Vec3D out = edge.Cross( &(plane.Up) );
-		if( pt->DistAlong( &out, &corner ) > 0. )
+		double dist = pt->DistAlong( &out, &corner );
+		if( dist > 0. )
 			return false;
+		on_face.MoveAlong( &out, dist );
 		
 		for( int i = 0; i + 1 < vertex_count; i ++ )
 		{
 			corner.SetPos( vertex_array[ i*3 ], vertex_array[ i*3 + 1 ], vertex_array[ i*3 + 2 ] );
 			edge.Set( vertex_array[ i*3 + 3 ] - corner.X, vertex_array[ i*3 + 4 ] - corner.Y, vertex_array[ i*3 + 5 ] - corner.Z );
 			out = edge.Cross( &(plane.Up) );
-			if( pt->DistAlong( &out, &corner ) > 0. )
+			dist = pt->DistAlong( &out, &corner );
+			if( dist > 0. )
 				return false;
+			on_face.MoveAlong( &out, dist );
 		}
+		
+		if( pt_on_face )
+			pt_on_face->Copy( &on_face );
 		
 		return true;
 	}
 	else if( vertex_count )
 	{
 		Pos3D face_dot( vertex_array[ 0 ], vertex_array[ 1 ], vertex_array[ 2 ] );
-		return (PointToPointDist( pt, &face_dot ) < EPSILON);
+		if( PointToPointDist( pt, &face_dot ) < EPSILON )
+		{
+			if( pt_on_face )
+				pt_on_face->SetPos( vertex_array[ 0 ], vertex_array[ 1 ], vertex_array[ 2 ] );
+			return true;
+		}
 	}
 	
 	return false;
@@ -338,9 +360,9 @@ double Math3D::PointDistFromFace( const Pos3D *pt, const double *vertex_array, i
 }
 
 
-double Math3D::LineSegDistFromFace( const Pos3D *end1, const Pos3D *end2, const double *vertex_array, int vertex_count )
+double Math3D::LineSegDistFromFace( const Pos3D *end1, const Pos3D *end2, const double *vertex_array, int vertex_count, Pos3D *intersection )
 {
-	if( LineIntersectsFace( end1, end2, vertex_array, vertex_count ) )
+	if( LineIntersectsFace( end1, end2, vertex_array, vertex_count, intersection ) )
 		return 0.;
 	else if( vertex_count )
 	{
@@ -364,14 +386,18 @@ double Math3D::LineSegDistFromFace( const Pos3D *end1, const Pos3D *end2, const 
 		if( vertex_count >= 3 )
 		{
 			Plane3D plane = FaceToPlane( vertex_array, vertex_count );
-			
 			Pos3D pt = NearestPointToPlane( end1, end2, &plane );
-			if( PointWithinFace( &pt, vertex_array, vertex_count ) )
+			Pos3D pt_on_face;
+			
+			if( PointWithinFace( &pt, vertex_array, vertex_count, &pt_on_face ) )
 			{
 				double dist = fabs( pt.DistAlong( &(plane.Up), &plane ) );
 				if( dist < nearest )
 					nearest = dist;
 			}
+			
+			if( intersection )
+				intersection->Copy( &pt_on_face );
 		}
 		
 		return nearest;
@@ -388,7 +414,7 @@ bool Math3D::LineIntersectsFace( const Pos3D *end1, const Pos3D *end2, const dou
 	if( LineIntersectsPlane( end1, end2, &plane ) )
 	{
 		Pos3D pt_on_plane = CollisionPoint( end1, end2, &plane );
-
+		
 		if( PointWithinFace( &pt_on_plane, vertex_array, vertex_count ) )
 		{
 			if( at )

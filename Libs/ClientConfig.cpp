@@ -132,6 +132,7 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "sv_port" ] = "7000";
 	Settings[ "sv_netrate" ] = "30";
 	Settings[ "sv_maxfps" ] = "60";
+	Settings[ "sv_threads" ] = "0";
 	
 	Settings[ "password" ] = "";
 }
@@ -782,6 +783,16 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 							}
 							else
 								Raptor::Game->Console.Print( std::string("Server maxfps: ") + Num::ToString( (int)( Raptor::Game->Server->MaxFPS + 0.5 ) ) );
+						}
+						else if( sv_cmd == "threads" )
+						{
+							if( elements.size() >= 1 )
+							{
+								Settings["sv_threads"] = elements.at(0);
+								Raptor::Server->Data.ThreadCount = SettingAsInt("sv_threads");
+							}
+							else
+								Raptor::Game->Console.Print( std::string("Complex collision threads: ") + Num::ToString(Raptor::Server->Data.ThreadCount) );
 						}
 						else if( sv_cmd == "restart" )
 						{

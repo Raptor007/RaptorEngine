@@ -63,8 +63,9 @@ public:
 	virtual void AddToUpdatePacketFromClient( Packet *packet, int8_t precision = 0 );
 	virtual void ReadFromUpdatePacketFromClient( Packet *packet, int8_t precision = 0 );
 	
-	virtual bool WillCollide( const GameObject *other, double dt, std::string *this_object = NULL, std::string *other_object = NULL ) const;
-	GameObject *Trace( double dt, double precision = 0.01 ) const;
+	virtual bool WillCollide( const GameObject *other, double dt, std::string *this_object = NULL, std::string *other_object = NULL, Pos3D *loc = NULL, double *when = NULL ) const;
+	GameObject *FindCollision( double dt, Pos3D *loc = NULL, double *when = NULL ) const;
+	// Leave no trace!  Replaced Trace with FindCollision to prevent silent failure; any old code still trying to use Trace needs to update its WillCollide format!
 	virtual void Update( double dt );
 	virtual void SendUpdate( int8_t precision );
 	

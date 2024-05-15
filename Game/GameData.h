@@ -33,6 +33,7 @@ public:
 	
 	Clock GameTime;
 	
+	int ThreadCount;
 	std::list<Collision> Collisions;
 	std::set<uint32_t> ObjectIDsToRemove;
 	
@@ -75,8 +76,10 @@ public:
 	// These names mimic std::pair<GameObject*,GameObject*> that was used before.
 	GameObject *first, *second;
 	std::string FirstObject, SecondObject;
+	Pos3D Location;
+	double Time;
 	
-	Collision( GameObject *a, GameObject *b, std::string *a_object = NULL, std::string *b_object = NULL );
+	Collision( GameObject *a, GameObject *b, std::string *a_object = NULL, std::string *b_object = NULL, Pos3D *loc = NULL, double *when = NULL );
 	virtual ~Collision();
 };
 
