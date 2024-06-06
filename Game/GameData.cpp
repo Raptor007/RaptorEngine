@@ -10,9 +10,6 @@
 #include "RaptorGame.h"
 
 
-#define COMPLEX_THREADS 2
-
-
 GameData::GameData( void )
 :	GameObjectIDs( 1 )
 ,	PlayerIDs( 1 )

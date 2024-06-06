@@ -229,8 +229,6 @@ void RaptorGame::Initialize( int argc, char **argv )
 		else if( (i + 1 < argc) && (strcmp( argv[ i ], "-sv_port" ) == 0) )
 		{
 			Cfg.Settings[ "sv_port" ] = argv[ i + 1 ];
-			if( Server )
-				Server->Port = atoi( argv[ i + 1 ] );
 			i ++;
 		}
 		else if( (i + 1 < argc) && (strcmp( argv[ i ], "-connect" ) == 0) )
