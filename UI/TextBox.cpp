@@ -3,6 +3,7 @@
  */
 
 #include "TextBox.h"
+#include "RaptorGame.h"
 
 #include <cstddef>
 
@@ -208,6 +209,134 @@ void TextBox::TrackEvent( SDL_Event *event )
 }
 
 
+bool TextBox::HandleEvent( SDL_Event *event )
+{
+#if SDL_VERSION_ATLEAST(2,0,0)
+	if( (event->type == SDL_TEXTINPUT) && IsSelected() && Raptor::Game->Cfg.SettingAsBool("unicode") && ((this == Raptor::Game->Console.Input) || ! Raptor::Game->Console.IsActive()) )
+	{
+		char *text = event->text.text;
+		size_t text_len = strlen(text);
+		
+		for( size_t i = 0; i < text_len; i ++ )
+		{
+			char c = text[ i ];
+			
+			if( text[ i ] & 0x80 )  // Decode UTF-8.
+			{
+				c = '?';
+				if(      (text[ i ] & 0xE0) == 0xC0 )  // 110xxxxx 10xxxxxx
+				{
+					if(  (text[ i ] & 0xFC) == 0xC0 )  // 110000xx 10xxxxxx  (extended ASCII)
+						c = 0x80 | ((text[ i ] & 0x03) << 6) | (text[ i + i ] & 0x3F);
+					else switch( (text[ i + i ] & 0x3F) % 9 )
+					{
+						case 1:
+							c = '!';
+							break;
+						case 2:
+							c = '@';
+							break;
+						case 3:
+							c = '#';
+							break;
+						case 4:
+							c = '$';
+							break;
+						case 5:
+							c = '%';
+							break;
+						case 6:
+							c = '^';
+							break;
+						case 7:
+							c = '&';
+							break;
+						case 8:
+							c = '*';
+							break;
+					}
+					i ++;
+				}
+				else if( (text[ i ] & 0xF0) == 0xE0 )  // 1110xxxx 10xxxxxx 10xxxxxx
+				{
+					switch( (text[ i + 2 ] & 0x3F) % 9 )
+					{
+						case 1:
+							c = '!';
+							break;
+						case 2:
+							c = '@';
+							break;
+						case 3:
+							c = '#';
+							break;
+						case 4:
+							c = '$';
+							break;
+						case 5:
+							c = '%';
+							break;
+						case 6:
+							c = '^';
+							break;
+						case 7:
+							c = '&';
+							break;
+						case 8:
+							c = '*';
+							break;
+					}
+					i += 2;
+				}
+				else if( (text[ i ] & 0xF8) == 0xF0 )  // 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+				{
+					switch( (text[ i + 3 ] & 0x3F) % 9 )
+					{
+						case 1:
+							c = '!';
+							break;
+						case 2:
+							c = '@';
+							break;
+						case 3:
+							c = '#';
+							break;
+						case 4:
+							c = '$';
+							break;
+						case 5:
+							c = '%';
+							break;
+						case 6:
+							c = '^';
+							break;
+						case 7:
+							c = '&';
+							break;
+						case 8:
+							c = '*';
+							break;
+					}
+					i += 3;
+				}
+			}
+			
+			if( c == Raptor::Game->Console.ToggleKey )
+				continue;
+			if( strchr( "\n\r\t", c ) )
+				continue;
+			
+			InsertAtCursor( c );
+		}
+		
+		return true;
+	}
+#endif
+	
+	return Layer::HandleEvent( event );
+}
+
+
 void TextBox::MouseEnter( void )
 {
 }
@@ -234,6 +363,7 @@ bool TextBox::MouseUp( Uint8 button )
 	
 	Container->Selected = this;
 	Cursor = Text.length();
+	
 	return true;
 }
 
@@ -290,6 +420,10 @@ bool TextBox::KeyDown( SDLKey key )
 			Cursor = 0;
 		else if( (key == SDLK_DOWN) || (key == SDLK_END) )
 			Cursor = Text.length();
+#if SDL_VERSION_ATLEAST(2,0,0)
+		else if( Raptor::Game->Cfg.SettingAsBool("unicode") )
+			return (PassExtendedKeys && (key >= SDLK_F1)) ? false : true;
+#endif
 		else if( (key == SDLK_LSHIFT) || (key == SDLK_RSHIFT) || (key == SDLK_CAPSLOCK) )
 			ShiftIsDown = true;
 		else if( (key >= SDLK_KP1) && (key <= SDLK_KP9) )  // NOTE: For some reason SDL2 puts KP0 after KP9.
@@ -398,6 +532,10 @@ bool TextBox::KeyUp( SDLKey key )
 			if( PassTab )
 				return false;
 		}
+#if SDL_VERSION_ATLEAST(2,0,0)
+		else if( Raptor::Game->Cfg.SettingAsBool("unicode") )
+			return (PassExtendedKeys && (key >= SDLK_F1)) ? false : true;
+#endif
 		else if( (key == SDLK_LSHIFT) || (key == SDLK_RSHIFT) || (key == SDLK_CAPSLOCK) )
 			ShiftIsDown = false;
 		else if( PassExtendedKeys && (key >= SDLK_F1) )

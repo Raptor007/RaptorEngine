@@ -97,6 +97,10 @@ void ClientConfig::SetDefaults( void )
 		Settings[ "saitek_enable" ] = "true";
 	#endif
 	
+	#if SDL_VERSION_ATLEAST(2,0,0)
+		Settings[ "unicode" ] = "true";
+	#endif
+	
 	const char *name = getenv("USER");
 	if( !(name && name[0]) )
 		name = getenv("USERNAME");

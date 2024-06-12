@@ -40,6 +40,7 @@ public:
 	
 	void Draw( void );
 	void TrackEvent( SDL_Event *event );
+	virtual bool HandleEvent( SDL_Event *event );
 	void MouseEnter( void );
 	void MouseLeave( void );
 	bool MouseDown( Uint8 button = SDL_BUTTON_LEFT );
