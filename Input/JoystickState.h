@@ -9,6 +9,7 @@ class JoystickState;
 #include <cstddef>
 #include <string>
 #include <map>
+#include <vector>
 
 #ifdef SDL2
 	#include <SDL2/SDL.h>
@@ -36,8 +37,8 @@ public:
 	static double AxisScale( Sint16 value );
 	
 	bool HasAxis( Uint8 axis ) const;
-	double Axis( Uint8 axis, double deadzone = 0., double deadedge = 0. ) const;
-	double AxisScaled( Uint8 axis, double low, double high, double deadzone = 0., double deadedge = 0. ) const;
+	double Axis( Uint8 axis, double deadzone_min = 0., double deadzone_max = 0., double range_min = -1., double range_max = 1. ) const;
+	double AxisScaled( Uint8 axis, double low, double high, double deadzone_min = 0., double deadzone_max = 0., double range_min = -1., double range_max = 1. ) const;
 	bool ButtonDown( Uint8 button ) const;
 	Uint8 Hat( Uint8 hat ) const;
 	bool HatDir( Uint8 hat, Uint8 dir ) const;

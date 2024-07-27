@@ -147,26 +147,26 @@ bool JoystickManager::HasAxis( Sint32 joystick_id, Uint8 axis ) const
 }
 
 
-double JoystickManager::Axis( Sint32 joystick_id, Uint8 axis, double deadzone, double deadzone_at_ends ) const
+double JoystickManager::Axis( Sint32 joystick_id, Uint8 axis, double deadzone_min, double deadzone_max, double range_min, double range_max ) const
 {
 	// Return the value of a joystick's axis.
 	// Note that these values are scaled to the (-1,1) range when tracked.
 	
 	std::map<Sint32, JoystickState>::const_iterator joy_iter = Joysticks.find( joystick_id );
 	if( joy_iter != Joysticks.end() )
-		return joy_iter->second.Axis( axis, deadzone, deadzone_at_ends );
+		return joy_iter->second.Axis( axis, deadzone_min, deadzone_max, range_min, range_max );
 	
 	return 0.;
 }
 
 
-double JoystickManager::AxisScaled( Sint32 joystick_id, Uint8 axis, double low, double high, double deadzone, double deadzone_at_ends ) const
+double JoystickManager::AxisScaled( Sint32 joystick_id, Uint8 axis, double low, double high, double deadzone_min, double deadzone_max, double range_min, double range_max ) const
 {
 	// Return the value of a joystick's axis, scaled to (low,high).
 	
 	std::map<Sint32, JoystickState>::const_iterator joy_iter = Joysticks.find( joystick_id );
 	if( joy_iter != Joysticks.end() )
-		return joy_iter->second.AxisScaled( axis, low, high, deadzone, deadzone_at_ends );
+		return joy_iter->second.AxisScaled( axis, low, high, deadzone_min, deadzone_max, range_min, range_max );
 
 	return low + (high - low) / 2.;
 }

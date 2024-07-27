@@ -23,7 +23,7 @@ public:
 	bool ClickOutEventHandle;
 	std::set<const SDL_Event*> EventsHandled;
 	
-	DropDown( SDL_Rect *rect, Font *font, uint8_t align, int scroll_bar_size, Animation *normal, Animation *mouse_down = NULL, Animation *mouse_over = NULL );
+	DropDown( SDL_Rect *rect, Font *font, uint8_t align, int scroll_bar_size = 0, Animation *normal = NULL, Animation *mouse_down = NULL, Animation *mouse_over = NULL );
 	virtual ~DropDown();
 	
 	void AddItem( std::string value, std::string text );

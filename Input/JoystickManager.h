@@ -36,8 +36,8 @@ public:
 	
 	void TrackEvent( SDL_Event *event );
 	bool HasAxis( Sint32 joystick_id, Uint8 axis ) const;
-	double Axis( Sint32 joystick_id, Uint8 axis, double deadzone = 0., double deadzone_at_ends = 0. ) const;
-	double AxisScaled( Sint32 joystick_id, Uint8 axis, double low, double high, double deadzone = 0., double deadzone_at_ends = 0. ) const;
+	double Axis( Sint32 joystick_id, Uint8 axis, double deadzone_min = 0., double deadzone_max = 0., double range_min = -1., double range_max = 1. ) const;
+	double AxisScaled( Sint32 joystick_id, Uint8 axis, double low, double high, double deadzone_min = 0., double deadzone_max = 0., double range_min = -1., double range_max = 1. ) const;
 	bool ButtonDown( Sint32 joystick_id, Uint8 button ) const;
 	Uint8 Hat( Sint32 joystick_id, Uint8 hat ) const;
 	bool HatDir( Sint32 joystick_id, Uint8 hat, Uint8 dir ) const;

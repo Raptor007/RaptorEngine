@@ -112,6 +112,7 @@ void ClientConfig::SetDefaults( void )
 	
 	Settings[ "netrate" ] = "30";
 	Settings[ "maxfps" ] = "60";
+	Settings[ "showfps" ] = "false";
 	
 	#ifdef WIN32
 		// Ideal maxfps is the display's refresh rate, especially when using vsync.

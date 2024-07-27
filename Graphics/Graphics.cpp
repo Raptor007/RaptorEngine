@@ -70,15 +70,12 @@ void Graphics::Initialize( void )
 	
 	// Get the desktop resolution.
 	#if SDL_VERSION_ATLEAST(2,0,0)
-	/*
-		// Disabled because I don't think we need this in SDL2, and it's possible querying index 0 will return an available mode that's higher-res than the current desktop!
 		SDL_DisplayMode mode;
 		if( SDL_GetDisplayMode( 0, 0, &mode ) == 0 )
 		{
 			DesktopW = mode.w;
 			DesktopH = mode.h;
 		}
-	*/
 	#else
 		const SDL_VideoInfo *info = SDL_GetVideoInfo();
 		if( info )
@@ -134,6 +131,11 @@ void Graphics::SetMode( int x, int y, int bpp, bool fullscreen, int fsaa, int af
 				x = y * AspectRatio;
 			else
 				y = x / AspectRatio;
+		}
+		else
+		{
+			x = 480.f * AspectRatio + 0.5f;
+			y = 480;
 		}
 	}
 	
@@ -923,7 +925,7 @@ GLuint Graphics::MakeTexture( SDL_Surface *surface, GLint texture_filter, GLint 
 		texcoord[0] = 0.f;                                          // Min X
 		texcoord[1] = 0.f;                                          // Min Y
 		texcoord[2] = ((GLfloat)( surface->w )) / ((GLfloat)( w )); // Max X
-		texcoord[3] = ((GLfloat)( surface->h )) / ((GLfloat)( h ));	// Max Y
+		texcoord[3] = ((GLfloat)( surface->h )) / ((GLfloat)( h )); // Max Y
 	}
 	else if( ! Raptor::Game->Cfg.SettingAsBool( "g_texture_anyres", true ) )
 	{

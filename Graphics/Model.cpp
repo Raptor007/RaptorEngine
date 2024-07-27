@@ -639,7 +639,7 @@ void Model::Draw( const Pos3D *pos, const std::set<std::string> *object_names, c
 		
 		Pos3D draw_pos;
 		Vec3D x_vec, y_vec, z_vec;
-		Randomizer randomizer;
+		Randomizer randomizer(explosion_seed);
 		
 		for( std::map<std::string,ModelObject>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
 		{
@@ -812,7 +812,8 @@ double Model::DistanceFromSphere( const Pos3D *pos, Pos3D *nearest, const std::s
 	
 	MarkBlockMap( &blockmap, &arrays, pos, object_names, exploded, explosion_seed, block_size );
 	
-	std::set<uint64_t> blocks = Math3D::BlocksInRadius( pos2->X, pos2->Y, pos2->Z, block_size, radius );
+	std::set<uint64_t> blocks;
+	Math3D::BlocksInRadius( &blocks, pos2->X, pos2->Y, pos2->Z, block_size, radius );
 	
 	if( moved2 && moved2->Length() )
 	{
@@ -828,8 +829,7 @@ double Model::DistanceFromSphere( const Pos3D *pos, Pos3D *nearest, const std::s
 				diff.ScaleTo( block_size );
 			intermediate += diff;
 			
-			std::set<uint64_t> add_blocks = Math3D::BlocksInRadius( intermediate.X, intermediate.Y, intermediate.Z, block_size, radius );
-			blocks.insert( add_blocks.begin(), add_blocks.end() );
+			Math3D::BlocksInRadius( &blocks, intermediate.X, intermediate.Y, intermediate.Z, block_size, radius );
 			
 			index = Math3D::BlockMapIndex( intermediate.X, intermediate.Y, intermediate.Z, block_size );
 		}
@@ -877,6 +877,12 @@ bool Model::CollidesWithSphere( const Pos3D *pos, Pos3D *at, const std::set<std:
 
 bool Model::CollidesWithModel( const Pos3D *pos1, Pos3D *at, const std::set<std::string> *object_names1, std::string *hit1, double exploded1, int explosion_seed1, const Model *model2, const Pos3D *pos2, const std::set<std::string> *object_names2, std::string *hit2, double exploded2, int explosion_seed2, double block_size, bool check_faces ) const
 {
+	return CollidesWithModel( pos1, at, object_names1, hit1, exploded1, explosion_seed1, model2, pos2, NULL, object_names2, hit2, exploded2, explosion_seed2, block_size, check_faces );
+}
+
+
+bool Model::CollidesWithModel( const Pos3D *pos1, Pos3D *at, const std::set<std::string> *object_names1, std::string *hit1, double exploded1, int explosion_seed1, const Model *model2, const Pos3D *pos2, const Vec3D *moved2, const std::set<std::string> *object_names2, std::string *hit2, double exploded2, int explosion_seed2, double block_size, bool check_faces ) const
+{
 	std::map< uint64_t, std::set<const GLdouble*> > blockmap1, blockmap2;
 	std::vector< std::pair<ModelArrays,std::string> > arrays1, arrays2;
 	
@@ -884,7 +890,7 @@ bool Model::CollidesWithModel( const Pos3D *pos1, Pos3D *at, const std::set<std:
 		block_size = std::max<double>( GetMaxTriangleEdge(), model2->GetMaxTriangleEdge() );
 	
 	MarkBlockMap( &blockmap1, &arrays1, pos1, object_names1, exploded1, explosion_seed1, block_size );
-	MarkBlockMap( &blockmap2, &arrays2, pos2, object_names2, exploded2, explosion_seed2, block_size );
+	model2->MarkBlockMap( &blockmap2, &arrays2, pos2, moved2, object_names2, exploded2, explosion_seed2, block_size );
 	
 	for( std::map< uint64_t, std::set<const GLdouble*> >::const_iterator block1 = blockmap1.begin(); block1 != blockmap1.end(); block1 ++ )
 	{
@@ -895,12 +901,13 @@ bool Model::CollidesWithModel( const Pos3D *pos1, Pos3D *at, const std::set<std:
 			if( ! check_faces )
 				return true;
 			
+			Pos3D vertices[ 6 ], intersection;
+			double line_motion[ 12 ] = {0};
+			
 			for( std::set<const GLdouble*>::const_iterator face1 = block1->second.begin(); face1 != block1->second.end(); face1 ++ )
 			{
 				for( std::set<const GLdouble*>::const_iterator face2 = block2->second.begin(); face2 != block2->second.end(); face2 ++ )
 				{
-					Pos3D vertices[ 3 ], intersection;
-					
 					vertices[ 0 ].SetPos( (*face1)[ 0 ], (*face1)[ 1 ], (*face1)[ 2 ] );
 					vertices[ 1 ].SetPos( (*face1)[ 3 ], (*face1)[ 4 ], (*face1)[ 5 ] );
 					vertices[ 2 ].SetPos( (*face1)[ 6 ], (*face1)[ 7 ], (*face1)[ 8 ] );
@@ -915,18 +922,78 @@ bool Model::CollidesWithModel( const Pos3D *pos1, Pos3D *at, const std::set<std:
 						return true;
 					}
 					
-					vertices[ 0 ].SetPos( (*face2)[ 0 ], (*face2)[ 1 ], (*face2)[ 2 ] );
-					vertices[ 1 ].SetPos( (*face2)[ 3 ], (*face2)[ 4 ], (*face2)[ 5 ] );
-					vertices[ 2 ].SetPos( (*face2)[ 6 ], (*face2)[ 7 ], (*face2)[ 8 ] );
-					if( Math3D::LineIntersectsFace( &(vertices[ 0 ]), &(vertices[ 1 ]), *face1, 3, &intersection )
-					||  Math3D::LineIntersectsFace( &(vertices[ 1 ]), &(vertices[ 2 ]), *face1, 3, &intersection )
-					||  Math3D::LineIntersectsFace( &(vertices[ 2 ]), &(vertices[ 0 ]), *face1, 3, &intersection ) )
+					vertices[ 3 ].SetPos( (*face2)[ 0 ], (*face2)[ 1 ], (*face2)[ 2 ] );
+					vertices[ 4 ].SetPos( (*face2)[ 3 ], (*face2)[ 4 ], (*face2)[ 5 ] );
+					vertices[ 5 ].SetPos( (*face2)[ 6 ], (*face2)[ 7 ], (*face2)[ 8 ] );
+					if( Math3D::LineIntersectsFace( &(vertices[ 3 ]), &(vertices[ 4 ]), *face1, 3, &intersection )
+					||  Math3D::LineIntersectsFace( &(vertices[ 4 ]), &(vertices[ 5 ]), *face1, 3, &intersection )
+					||  Math3D::LineIntersectsFace( &(vertices[ 5 ]), &(vertices[ 3 ]), *face1, 3, &intersection ) )
 					{
 						Model_SetHit( &arrays1, *face1, hit1 );
 						Model_SetHit( &arrays2, *face2, hit2 );
 						if( at )
 							at->Copy( &intersection );
 						return true;
+					}
+					
+					if( moved2 )
+					{
+						line_motion[  0 ] = (*face2)[ 0 ];
+						line_motion[  1 ] = (*face2)[ 1 ];
+						line_motion[  2 ] = (*face2)[ 2 ];
+						line_motion[  3 ] = line_motion[ 0 ] + moved2->X;
+						line_motion[  4 ] = line_motion[ 1 ] + moved2->Y;
+						line_motion[  5 ] = line_motion[ 2 ] + moved2->Z;
+						line_motion[  9 ] = (*face2)[ 3 ];
+						line_motion[ 10 ] = (*face2)[ 4 ];
+						line_motion[ 11 ] = (*face2)[ 5 ];
+						line_motion[  6 ] = line_motion[  9 ] + moved2->X;
+						line_motion[  7 ] = line_motion[ 10 ] + moved2->Y;
+						line_motion[  8 ] = line_motion[ 11 ] + moved2->Z;
+						if( Math3D::LineIntersectsFace( &(vertices[ 0 ]), &(vertices[ 1 ]), line_motion, 4, &intersection )
+						||  Math3D::LineIntersectsFace( &(vertices[ 1 ]), &(vertices[ 2 ]), line_motion, 4, &intersection )
+						||  Math3D::LineIntersectsFace( &(vertices[ 2 ]), &(vertices[ 0 ]), line_motion, 4, &intersection ) )
+						{
+							Model_SetHit( &arrays1, *face1, hit1 );
+							Model_SetHit( &arrays2, *face2, hit2 );
+							if( at )
+								at->Copy( &intersection );
+							return true;
+						}
+						
+						line_motion[ 0 ] = (*face2)[ 6 ];
+						line_motion[ 1 ] = (*face2)[ 7 ];
+						line_motion[ 2 ] = (*face2)[ 8 ];
+						line_motion[ 3 ] = line_motion[ 0 ] + moved2->X;
+						line_motion[ 4 ] = line_motion[ 1 ] + moved2->Y;
+						line_motion[ 5 ] = line_motion[ 2 ] + moved2->Z;
+						if( Math3D::LineIntersectsFace( &(vertices[ 0 ]), &(vertices[ 1 ]), line_motion, 4, &intersection )
+						||  Math3D::LineIntersectsFace( &(vertices[ 1 ]), &(vertices[ 2 ]), line_motion, 4, &intersection )
+						||  Math3D::LineIntersectsFace( &(vertices[ 2 ]), &(vertices[ 0 ]), line_motion, 4, &intersection ) )
+						{
+							Model_SetHit( &arrays1, *face1, hit1 );
+							Model_SetHit( &arrays2, *face2, hit2 );
+							if( at )
+								at->Copy( &intersection );
+							return true;
+						}
+						
+						line_motion[  9 ] = (*face2)[ 0 ];
+						line_motion[ 10 ] = (*face2)[ 1 ];
+						line_motion[ 11 ] = (*face2)[ 2 ];
+						line_motion[  6 ] = line_motion[  9 ] + moved2->X;
+						line_motion[  7 ] = line_motion[ 10 ] + moved2->Y;
+						line_motion[  8 ] = line_motion[ 11 ] + moved2->Z;
+						if( Math3D::LineIntersectsFace( &(vertices[ 0 ]), &(vertices[ 1 ]), line_motion, 4, &intersection )
+						||  Math3D::LineIntersectsFace( &(vertices[ 1 ]), &(vertices[ 2 ]), line_motion, 4, &intersection )
+						||  Math3D::LineIntersectsFace( &(vertices[ 2 ]), &(vertices[ 0 ]), line_motion, 4, &intersection ) )
+						{
+							Model_SetHit( &arrays1, *face1, hit1 );
+							Model_SetHit( &arrays2, *face2, hit2 );
+							if( at )
+								at->Copy( &intersection );
+							return true;
+						}
 					}
 				}
 			}
@@ -939,10 +1006,16 @@ bool Model::CollidesWithModel( const Pos3D *pos1, Pos3D *at, const std::set<std:
 
 void Model::MarkBlockMap( std::map< uint64_t, std::set<const GLdouble*> > *blockmap, std::vector< std::pair<ModelArrays,std::string> > *keep_arrays, const Pos3D *pos, const std::set<std::string> *object_names, double exploded, int explosion_seed, double block_size ) const
 {
+	return MarkBlockMap( blockmap, keep_arrays, pos, NULL, object_names, exploded, explosion_seed, block_size );
+}
+
+
+void Model::MarkBlockMap( std::map< uint64_t, std::set<const GLdouble*> > *blockmap, std::vector< std::pair<ModelArrays,std::string> > *keep_arrays, const Pos3D *pos, const Vec3D *motion, const std::set<std::string> *object_names, double exploded, int explosion_seed, double block_size ) const
+{
 	if( ! block_size )
 		block_size = GetMaxTriangleEdge();
 	
-	Randomizer randomizer;
+	Randomizer randomizer(explosion_seed);
 	
 	for( std::map<std::string,ModelObject>::const_iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
 	{
@@ -972,20 +1045,44 @@ void Model::MarkBlockMap( std::map< uint64_t, std::set<const GLdouble*> > *block
 		{
 			if( array_iter->second.VertexCount )
 			{
+				/*
+				// NOTE: Part of an incomplete change; disabled because it required making WillCollide non-const, which slowed everything way down.
+				array_iter->second.MakeWorldSpace( &obj_pos );  // NOTE: Overwrites WorldSpaceVertexArray if position differs from previous.
+				arrays->push_back( std::pair<ModelArrays*,std::string>( &(array_iter->second), obj_iter->first ) );
+				*/
 				keep_arrays->push_back( std::pair<ModelArrays,std::string>( ModelArrays(), obj_iter->first ) );
 				keep_arrays->back().first.BecomeInstance( &(array_iter->second) );
-				keep_arrays->back().first.MakeWorldSpace( &obj_pos );
+				keep_arrays->back().first.MakeWorldSpace( &obj_pos );  // FIXME: This is slow, and we may call MarkBlockMap multiple times per server frame!  Reuse somehow!
 				
 				const GLdouble *worldspace_vertex_array = keep_arrays->back().first.WorldSpaceVertexArray;
 				size_t vertex_count = keep_arrays->back().first.VertexCount;
-				
-				for( size_t i = 0; i < vertex_count; i ++ )
+				if( motion )
 				{
-					double x = worldspace_vertex_array[ i * 3     ];
-					double y = worldspace_vertex_array[ i * 3 + 1 ];
-					double z = worldspace_vertex_array[ i * 3 + 2 ];
-					// Store a pointer to first vertex of the triangle face.
-					(*blockmap)[ Math3D::BlockMapIndex(x,y,z,block_size) ].insert( &( worldspace_vertex_array[ (i - (i%3)) * 3 ] ) );
+					for( size_t i = 0; (i + 2) < vertex_count; i += 3 )
+					{
+						const GLdouble *triangle = &( worldspace_vertex_array[ i * 3 ] );  // Pointer to first vertex of the triangle face.
+						std::set<uint64_t> blocks;
+						Math3D::BlocksInTriangle( &blocks, triangle[0],triangle[1],triangle[2], triangle[3],triangle[4],triangle[5], triangle[6],triangle[7],triangle[8], block_size );
+						Math3D::BlocksInTriangle( &blocks, triangle[0]+motion->X,triangle[1]+motion->Y,triangle[2]+motion->Z, triangle[3]+motion->X,triangle[4]+motion->Y,triangle[5]+motion->Z, triangle[6]+motion->X,triangle[7]+motion->Y,triangle[8]+motion->Z, block_size );
+						Pos3D center = Math3D::FaceCenter( triangle, 3 );
+						Math3D::BlocksInCube( &blocks, center.X,center.Y,center.Z, center.X+motion->X,center.Y+motion->Y,center.Z+motion->Z, block_size );
+						Math3D::BlocksInCube( &blocks, triangle[0],triangle[1],triangle[2], triangle[0]+motion->X,triangle[1]+motion->Y,triangle[2]+motion->Z, block_size );
+						Math3D::BlocksInCube( &blocks, triangle[3],triangle[4],triangle[5], triangle[3]+motion->X,triangle[4]+motion->Y,triangle[5]+motion->Z, block_size );
+						Math3D::BlocksInCube( &blocks, triangle[6],triangle[7],triangle[8], triangle[6]+motion->X,triangle[7]+motion->Y,triangle[8]+motion->Z, block_size );
+						for( std::set<uint64_t>::const_iterator block_iter = blocks.begin(); block_iter != blocks.end(); block_iter ++ )
+							(*blockmap)[ *block_iter ].insert( triangle );
+					}
+				}
+				else
+				{
+					for( size_t i = 0; (i + 2) < vertex_count; i += 3 )
+					{
+						const GLdouble *triangle = &( worldspace_vertex_array[ i * 3 ] );  // Pointer to first vertex of the triangle face.
+						std::set<uint64_t> blocks;
+						Math3D::BlocksNearTriangle( &blocks, triangle[0],triangle[1],triangle[2], triangle[3],triangle[4],triangle[5], triangle[6],triangle[7],triangle[8], block_size );
+						for( std::set<uint64_t>::const_iterator block_iter = blocks.begin(); block_iter != blocks.end(); block_iter ++ )
+							(*blockmap)[ *block_iter ].insert( triangle );
+					}
 				}
 			}
 		}
@@ -1336,6 +1433,12 @@ ModelArrays::ModelArrays( void )
 	NormalArray = NULL;
 	Allocated = false;
 	WorldSpaceVertexArray = NULL;
+	/*
+	WorldSpacePos.Fwd.Set(0,0,0);
+	WorldSpacePos.Up.Set(0,0,0);
+	WorldSpacePos.Right.Set(0,0,0);
+	WorldSpaceFwdScale = WorldSpaceUpScale = WorldSpaceRightScale = 0.;
+	*/
 }
 
 
@@ -1347,6 +1450,12 @@ ModelArrays::ModelArrays( const ModelArrays &other )
 	NormalArray = NULL;
 	Allocated = false;
 	WorldSpaceVertexArray = NULL;
+	/*
+	WorldSpacePos.Fwd.Set(0,0,0);
+	WorldSpacePos.Up.Set(0,0,0);
+	WorldSpacePos.Right.Set(0,0,0);
+	WorldSpaceFwdScale = WorldSpaceUpScale = WorldSpaceRightScale = 0.;
+	*/
 	
 	BecomeInstance( &other );
 }
@@ -1383,6 +1492,12 @@ void ModelArrays::Clear( void )
 		free( WorldSpaceVertexArray );
 		WorldSpaceVertexArray = NULL;
 	}
+	/*
+	WorldSpacePos.Fwd.Set(0,0,0);
+	WorldSpacePos.Up.Set(0,0,0);
+	WorldSpacePos.Right.Set(0,0,0);
+	WorldSpaceFwdScale = WorldSpaceUpScale = WorldSpaceRightScale = 0.;
+	*/
 }
 
 
@@ -1804,6 +1919,54 @@ void ModelArrays::MakeWorldSpace( const Pos3D *pos, double fwd_scale, double up_
 {
 	if( VertexCount )
 	{
+		/*
+		// NOTE: Part of an incomplete change; disabled because it required making WillCollide non-const, which slowed everything way down.
+		
+		WorldSpaceLock.Lock();
+		
+		// Make sure we have an array allocated for worldspace vertices.
+		bool do_it = true;
+		if( ! WorldSpaceVertexArray )
+		{
+			size_t vertex_array_mem = sizeof(GLdouble) * 3 * VertexCount;
+			WorldSpaceVertexArray = (GLdouble*) malloc( vertex_array_mem );
+		}
+		else if( VertexCount > 30 )
+		{
+			// Avoid redoing work on complex models.
+			do_it = (pos->X  != WorldSpacePos.X)       || (pos->Y       != WorldSpacePos.Y)       || (pos->Z       != WorldSpacePos.Z)
+			|| (pos->Fwd.X   != WorldSpacePos.Fwd.X)   || (pos->Fwd.Y   != WorldSpacePos.Fwd.Y)   || (pos->Fwd.Z   != WorldSpacePos.Fwd.Z)
+			|| (pos->Up.X    != WorldSpacePos.Up.X)    || (pos->Up.Y    != WorldSpacePos.Up.Y)    || (pos->Up.Z    != WorldSpacePos.Up.Z)
+			|| (pos->Right.X != WorldSpacePos.Right.X) || (pos->Right.Y != WorldSpacePos.Right.Y) || (pos->Right.Z != WorldSpacePos.Right.Z)
+			|| (WorldSpaceFwdScale != fwd_scale) || (WorldSpaceUpScale != up_scale) || (WorldSpaceRightScale != right_scale);
+		}
+		
+		if( do_it )
+		{
+			// In model space, X = fwd, Y = up, Z = right.
+			Vec3D x_vec( pos->Fwd.X * fwd_scale, pos->Up.X * up_scale, pos->Right.X * right_scale );
+			Vec3D y_vec( pos->Fwd.Y * fwd_scale, pos->Up.Y * up_scale, pos->Right.Y * right_scale );
+			Vec3D z_vec( pos->Fwd.Z * fwd_scale, pos->Up.Z * up_scale, pos->Right.Z * right_scale );
+			
+			// Translate from modelspace to worldspace.
+			for( size_t i = 0; i < VertexCount; i ++ )
+			{
+				Vec3D vertex( VertexArray[ i*3 ], VertexArray[ i*3 + 1 ], VertexArray[ i*3 + 2 ] );
+				WorldSpaceVertexArray[ i*3     ] = pos->X + x_vec.Dot(&vertex);
+				WorldSpaceVertexArray[ i*3 + 1 ] = pos->Y + y_vec.Dot(&vertex);
+				WorldSpaceVertexArray[ i*3 + 2 ] = pos->Z + z_vec.Dot(&vertex);
+			}
+			
+			// Remember where we did this so we can avoid redoing the same.
+			WorldSpacePos.Copy( pos );
+			WorldSpaceFwdScale   = fwd_scale;
+			WorldSpaceUpScale    = up_scale;
+			WorldSpaceRightScale = right_scale;
+		}
+		
+		WorldSpaceLock.Unlock();
+		*/
+		
 		// In model space, X = fwd, Y = up, Z = right.
 		Vec3D x_vec( pos->Fwd.X * fwd_scale, pos->Up.X * up_scale, pos->Right.X * right_scale );
 		Vec3D y_vec( pos->Fwd.Y * fwd_scale, pos->Up.Y * up_scale, pos->Right.Y * right_scale );
@@ -2533,7 +2696,6 @@ Vec3D ModelObject::GetExplosionMotion( int seed, Randomizer *randomizer ) const
 	seed = abs(seed);
 	
 	// Generate a predictable motion axis, mostly away from object center, based on seed.
-	// FIXME: Scale rx/ry/rz by Model.MaxRadius() / CenterPoint.Dist()?
 	randomizer->Seed( seed );
 	double center_motion_scale = randomizer->Double( 7., 11. );
 	double rx = randomizer->Double( -30., 30. );

@@ -40,6 +40,12 @@ Pos3D Math3D::WorldspacePos( const Pos3D *pos, double fwd, double up, double rig
 // ----------------------------------------------------------------------------
 
 
+double Math3D::Length( double x, double y, double z )
+{
+	return sqrt( x*x + y*y + z*z );
+}
+
+
 double Math3D::PointToPointDist( const Pos3D *pt1, const Pos3D *pt2 )
 {
 	Vec3D diff( pt2->X - pt1->X, pt2->Y - pt1->Y, pt2->Z - pt1->Z );
@@ -428,6 +434,9 @@ bool Math3D::LineIntersectsFace( const Pos3D *end1, const Pos3D *end2, const dou
 }
 
 
+// ----------------------------------------------------------------------------
+
+
 uint64_t Math3D::BlockMapIndex( double x, double y, double z, double block_size )
 {
 	int64_t bx = x / block_size + ((x >= 0.) ? 0.5 : -0.5);
@@ -439,9 +448,95 @@ uint64_t Math3D::BlockMapIndex( double x, double y, double z, double block_size 
 }
 
 
+uint64_t Math3D::BlockMapIndex( double x, double y, double z, double block_size, int64_t *bx, int64_t *by, int64_t *bz )
+{
+	*bx = x / block_size + ((x >= 0.) ? 0.5 : -0.5);
+	*by = y / block_size + ((y >= 0.) ? 0.5 : -0.5);
+	*bz = z / block_size + ((z >= 0.) ? 0.5 : -0.5);
+	return (*bx & 0x00000000001FFFFF)
+	    | ((*by & 0x00000000001FFFFF) << 21)
+	    | ((*bz & 0x00000000003FFFFF) << 42);
+}
+
+
+uint64_t Math3D::BlockFromParts( int64_t bx, int64_t by, int64_t bz )
+{
+	return (bx & 0x00000000001FFFFF)
+	    | ((by & 0x00000000001FFFFF) << 21)
+	    | ((bz & 0x00000000003FFFFF) << 42);
+}
+
+
+void Math3D::BlockToParts( uint64_t index, int64_t *bx, int64_t *by, int64_t *bz )
+{
+	*bx =  index        & 0x00000000001FFFFF;
+	*by = (index >> 21) & 0x00000000001FFFFF;
+	*bz = (index >> 42) & 0x00000000003FFFFF;
+	
+	// Restore upper bits of negative numbers.
+	if( index & 0x0000000000100000ULL )  // bx & 0x0000000000100000
+		*bx |= 0xFFFFFFFFFFE00000LL;
+	if( index & 0x0000020000000000ULL )  // by & 0x0000000000100000
+		*by |= 0xFFFFFFFFFFE00000LL;
+	if( index & 0x8000000000000000ULL )  // bz & 0x0000000000200000
+		*bz |= 0xFFFFFFFFFFC00000LL;
+}
+
+
+void Math3D::BlockCenter( uint64_t index, double block_size, double *x, double *y, double *z )
+{
+	int64_t bx,by,bz;
+	BlockToParts( index, &bx, &by, &bz );
+	*x = block_size * bx;
+	*y = block_size * by;
+	*z = block_size * bz;
+}
+
+
+std::set<uint64_t> Math3D::BlocksInCube( double min_x, double min_y, double min_z, double max_x, double max_y, double max_z, double block_size )
+{
+	std::set<uint64_t> blocks;
+	BlocksInCube( &blocks, min_x,min_y,min_z, max_x,max_y,max_z, block_size );
+	return blocks;
+}
+
+
+void Math3D::BlocksInCube( std::set<uint64_t> *blocks, double min_x, double min_y, double min_z, double max_x, double max_y, double max_z, double block_size )
+{
+	int64_t min_bx,min_by,min_bz, max_bx,max_by,max_bz;
+	BlockMapIndex( min_x, min_y, min_z, block_size, &min_bx,&min_by,&min_bz );
+	BlockMapIndex( max_x, max_y, max_z, block_size, &max_bx,&max_by,&max_bz );
+	BlocksInCube( blocks, min_bx,min_by,min_bz, max_bx,max_by,max_bz );
+}
+
+
+std::set<uint64_t> Math3D::BlocksInCube( int64_t min_bx, int64_t min_by, int64_t min_bz, int64_t max_bx, int64_t max_by, int64_t max_bz )
+{
+	std::set<uint64_t> blocks;
+	BlocksInCube( &blocks, min_bx,min_by,min_bz, max_bx,max_by,max_bz );
+	return blocks;
+}
+
+
+void Math3D::BlocksInCube( std::set<uint64_t> *blocks, int64_t min_bx, int64_t min_by, int64_t min_bz, int64_t max_bx, int64_t max_by, int64_t max_bz )
+{
+	for( int64_t bx = min_bx; bx <= max_bx; bx ++ )
+		for( int64_t by = min_by; by <= max_by; by ++ )
+			for( int64_t bz = min_bz; bz <= max_bz; bz ++ )
+				blocks->insert( BlockFromParts( bx, by, bz ) );
+}
+
+
 std::set<uint64_t> Math3D::BlocksInRadius( double x, double y, double z, double block_size, double radius )
 {
 	std::set<uint64_t> blocks;
+	BlocksInRadius( &blocks, x,y,z, block_size, radius );
+	return blocks;
+}
+
+
+void Math3D::BlocksInRadius( std::set<uint64_t> *blocks, double x, double y, double z, double block_size, double radius )
+{
 	int steps = ceil( radius / block_size );
 	
 	for( int i = -steps; i <= steps; i ++ )
@@ -463,10 +558,110 @@ std::set<uint64_t> Math3D::BlocksInRadius( double x, double y, double z, double 
 				double cx = x + i * block_size;
 				double cy = y + j * block_size;
 				double cz = z + k * block_size;
-				blocks.insert( BlockMapIndex( cx, cy, cz, block_size ) );
+				blocks->insert( BlockMapIndex( cx, cy, cz, block_size ) );
 			}
 		}
 	}
-	
+}
+
+
+std::set<uint64_t> Math3D::BlocksInLine( double x1, double y1, double z1, double x2, double y2, double z2, double block_size )
+{
+	std::set<uint64_t> blocks;
+	BlocksInLine( &blocks, x1,y1,z1, x2,y2,z2, block_size );
 	return blocks;
+}
+
+
+void Math3D::BlocksInLine( std::set<uint64_t> *blocks, double x1, double y1, double z1, double x2, double y2, double z2, double block_size )
+{
+	uint64_t index1 = BlockMapIndex( x1, y1, z1, block_size );
+	blocks->insert( index1 );
+	
+	uint64_t index2 = BlockMapIndex( x2, y2, z2, block_size );
+	if( index1 != index2 )
+	{
+		blocks->insert( index2 );
+		
+		Vec3D dir( x2 - x1, y2 - y1, z2 - z1 );
+		int midpoints = ceil( dir.Length() / (block_size * 0.25) ) - 1;
+		if( midpoints > 0 )
+		{
+			dir /= (midpoints + 1);
+			double x = x1, y = y1, z = z1;
+			uint64_t prev_index = index1;
+			for( int i = 0; i < midpoints; i ++ )
+			{
+				x += dir.X;
+				y += dir.Y;
+				z += dir.Z;
+				uint64_t index = BlockMapIndex( x, y, z, block_size );
+				if( index != prev_index )
+					blocks->insert( index );
+				prev_index = index;
+			}
+		}
+	}
+}
+
+
+std::set<uint64_t> Math3D::BlocksInTriangle( double x1, double y1, double z1, double x2, double y2, double z2, double x3, double y3, double z3, double block_size, int max_depth )
+{
+	std::set<uint64_t> blocks;
+	BlocksInTriangle( &blocks, x1,y1,z1, x2,y2,z2, x3,y3,z3, block_size, max_depth );
+	return blocks;
+}
+
+
+void Math3D::BlocksInTriangle( std::set<uint64_t> *blocks, double x1, double y1, double z1, double x2, double y2, double z2, double x3, double y3, double z3, double block_size, int max_depth, int depth )
+{
+	uint64_t index1 = BlockMapIndex( x1, y1, z1, block_size );
+	uint64_t index2 = BlockMapIndex( x2, y2, z2, block_size );
+	uint64_t index3 = BlockMapIndex( x3, y3, z3, block_size );
+	blocks->insert( index1 );
+	
+	// If all vertices are in the same block, we don't need to go any smaller.
+	if( (index1 == index2) && (index1 == index3) )
+		return;
+	
+	blocks->insert( index2 );
+	blocks->insert( index3 );
+	
+	if( (depth >= max_depth) && (max_depth >= 0) )
+		return;
+	
+	// Separate into 4 triangles and work recursively to fill.
+	double mid12x = (x1 + x2) * 0.5;
+	double mid12y = (y1 + y2) * 0.5;
+	double mid12z = (z1 + z2) * 0.5;
+	double mid23x = (x2 + x3) * 0.5;
+	double mid23y = (y2 + y3) * 0.5;
+	double mid23z = (z2 + z3) * 0.5;
+	double mid31x = (x3 + x1) * 0.5;
+	double mid31y = (y3 + y1) * 0.5;
+	double mid31z = (z3 + z1) * 0.5;
+	BlocksInTriangle( blocks, mid12x,mid12y,mid12z, mid23x,mid23y,mid23z, mid31x,mid31y,mid31z, block_size, max_depth, depth + 1 );
+	BlocksInTriangle( blocks, mid12x,mid12y,mid12z, mid31x,mid31y,mid31z, x1,y1,z1, block_size, max_depth, depth + 1 );
+	BlocksInTriangle( blocks, mid23x,mid23y,mid23z, mid12x,mid12y,mid12z, x2,y2,z2, block_size, max_depth, depth + 1 );
+	BlocksInTriangle( blocks, mid31x,mid31y,mid31z, mid23x,mid23y,mid23z, x3,y3,z3, block_size, max_depth, depth + 1 );
+}
+
+
+std::set<uint64_t> Math3D::BlocksNearTriangle( double x1, double y1, double z1, double x2, double y2, double z2, double x3, double y3, double z3, double block_size )
+{
+	std::set<uint64_t> blocks;
+	BlocksNearTriangle( &blocks, x1,y1,z1, x2,y2,z2, x3,y3,z3, block_size );
+	return blocks;
+}
+
+
+void Math3D::BlocksNearTriangle( std::set<uint64_t> *blocks, double x1, double y1, double z1, double x2, double y2, double z2, double x3, double y3, double z3, double block_size )
+{
+	double min_x = std::min<double>( x1, std::min<double>( x2, x3 ) );
+	double min_y = std::min<double>( y1, std::min<double>( y2, y3 ) );
+	double min_z = std::min<double>( z1, std::min<double>( z2, z3 ) );
+	double max_x = std::max<double>( x1, std::max<double>( x2, x3 ) );
+	double max_y = std::max<double>( y1, std::max<double>( y2, y3 ) );
+	double max_z = std::max<double>( z1, std::max<double>( z2, z3 ) );
+	BlocksInCube( blocks, min_x,min_y,min_z, max_x,max_y,max_z, block_size );
 }

@@ -15,7 +15,7 @@ GameData::GameData( void )
 ,	PlayerIDs( 1 )
 {
 	AntiJitter = 0.999;
-	MaxFrameTime = 0.125;  // Assume dropping below 8 FPS is a momentary hiccup.
+	MaxFrameTime = 0.5;  // Assume dropping below 2 FPS is a momentary hiccup.
 	TimeScale = 1.;
 	ThreadCount = 0;
 }
@@ -357,7 +357,7 @@ void GameData::Update( double dt )
 	}
 	
 	TimeScale = PropertyAsDouble("time_scale",1.);
-	MaxFrameTime = 0.125 * TimeScale;
+	MaxFrameTime = 0.5 * TimeScale;
 	
 	ThreadCount = Raptor::Game->Cfg.SettingAsInt("sv_threads");
 }

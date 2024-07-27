@@ -126,6 +126,8 @@ int SoundOut::Play( Mix_Chunk *sound, int16_t angle, uint8_t dist )
 
 int SoundOut::PlayAt( Mix_Chunk *sound, double x, double y, double z, double loudness )
 {
+	if( loudness <= 0. )
+		return -1;
 	return Pan3D( Play(sound), x, y, z, loudness );
 }
 

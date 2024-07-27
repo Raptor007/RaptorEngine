@@ -61,7 +61,9 @@ public:
 	double DistanceFromSphere( const Pos3D *pos, Pos3D *nearest, const std::set<std::string> *object_names, std::string *hit, double exploded, int explosion_seed, const Pos3D *pos2, const Vec3D *moved2, double radius, double block_size = 0. ) const;
 	bool CollidesWithSphere( const Pos3D *pos, Pos3D *at, const std::set<std::string> *object_names, std::string *hit, double exploded, int explosion_seed, const Pos3D *pos2, const Vec3D *moved2, double radius, double block_size = 0. ) const;
 	bool CollidesWithModel( const Pos3D *pos1, Pos3D *at, const std::set<std::string> *object_names1, std::string *hit1, double exploded1, int explosion_seed1, const Model *model2, const Pos3D *pos2, const std::set<std::string> *object_names2, std::string *hit2, double exploded2, int explosion_seed2, double block_size = 0., bool check_faces = true ) const;
+	bool CollidesWithModel( const Pos3D *pos1, Pos3D *at, const std::set<std::string> *object_names1, std::string *hit1, double exploded1, int explosion_seed1, const Model *model2, const Pos3D *pos2, const Vec3D *moved2, const std::set<std::string> *object_names2, std::string *hit2, double exploded2, int explosion_seed2, double block_size = 0., bool check_faces = true ) const;
 	void MarkBlockMap( std::map< uint64_t, std::set<const GLdouble*> > *blockmap, std::vector< std::pair<ModelArrays,std::string> > *keep_arrays, const Pos3D *pos, const std::set<std::string> *object_names, double exploded, int explosion_seed, double block_size = 0. ) const;
+	void MarkBlockMap( std::map< uint64_t, std::set<const GLdouble*> > *blockmap, std::vector< std::pair<ModelArrays,std::string> > *keep_arrays, const Pos3D *pos, const Vec3D *motion, const std::set<std::string> *object_names, double exploded, int explosion_seed, double block_size = 0. ) const;
 	
 	void Move( double fwd, double up, double right );
 	void ScaleBy( double scale );
@@ -103,6 +105,12 @@ public:
 	GLfloat *TexCoordArray;
 	GLfloat *NormalArray;
 	bool Allocated;
+	/*
+	// NOTE: Part of an incomplete change; disabled because it required making WillCollide non-const, which slowed everything way down.
+	Mutex WorldSpaceLock;
+	Pos3D WorldSpacePos;
+	double WorldSpaceFwdScale, WorldSpaceUpScale, WorldSpaceRightScale;
+	*/
 	
 	ModelArrays( void );
 	ModelArrays( const ModelArrays &other );

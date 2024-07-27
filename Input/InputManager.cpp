@@ -6,6 +6,7 @@
 
 #include <cmath>
 #include <climits>
+#include <algorithm>
 #include "RaptorGame.h"
 #include "Num.h"
 
@@ -550,6 +551,15 @@ void InputManager::Update( void )
 	for( std::map<Sint32,JoystickState>::const_iterator joy = Raptor::Game->Joy.Joysticks.begin(); joy != Raptor::Game->Joy.Joysticks.end(); joy ++ )
 	{
 		std::string joy_device_type = DeviceType( joy->second.Name );
+		
+		std::string joy_cal_prefix = "joy_cal_";
+		if( joy_device_type != "Joy" )
+		{
+			joy_cal_prefix += joy_device_type + std::string("_");
+			std::transform( joy_cal_prefix.begin(), joy_cal_prefix.end(), joy_cal_prefix.begin(), tolower );
+			std::replace( joy_cal_prefix.begin(), joy_cal_prefix.end(), ' ', '_' );
+		}
+		
 		for( std::map<std::string,std::map<Uint8,uint8_t> >::const_iterator dev = Raptor::Game->Cfg.JoyAxisBinds.begin(); dev != Raptor::Game->Cfg.JoyAxisBinds.end(); dev ++ )
 		{
 			if( dev->first != joy_device_type )
@@ -644,7 +654,20 @@ void InputManager::Update( void )
 							exponent = 1. + Raptor::Game->Cfg.SettingAsDouble( "joy_smooth_z", 0.5 );
 					}
 					
-					ControlValues[ bind->second ] += Num::SignedPow( joy->second.AxisScaled( bind->first, low, high, deadzone, deadedge ), exponent );
+					double axis_value = 0.;
+					std::vector<double> cal = Raptor::Game->Cfg.SettingAsDoubles( joy_cal_prefix + std::string("axis") + Num::ToString(bind->first+1) );
+					if( cal.size() >= 4 )
+					{
+						// Apply calibration data if available.
+						axis_value = joy->second.AxisScaled( bind->first, low, high, cal[ 1 ], cal[ 2 ], cal[ 0 ], cal[ 3 ] );
+						if( cal.size() >= 5 )
+							exponent = 1. + cal[ 4 ];
+					}
+					else
+						// Use basic deadzone settings.
+						axis_value = joy->second.AxisScaled( bind->first, low, high, -deadzone, deadzone, deadedge - 1., 1. - deadedge );
+					
+					ControlValues[ bind->second ] += Num::SignedPow( axis_value, exponent );
 				}
 			}
 		}

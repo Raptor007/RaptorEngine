@@ -76,7 +76,7 @@ bool JoystickState::HasAxis( Uint8 axis ) const
 }
 
 
-double JoystickState::Axis( Uint8 axis, double deadzone, double deadedge ) const
+double JoystickState::Axis( Uint8 axis, double deadzone_min, double deadzone_max, double range_min, double range_max ) const
 {
 	// Check an axis value.
 	// Assume it is 0 if its state has never been recorded.
@@ -87,30 +87,33 @@ double JoystickState::Axis( Uint8 axis, double deadzone, double deadedge ) const
 	{
 		double value = axis_iter->second;
 		
-		if( fabs(value) < deadzone )
-			value = 0.;
-		else if( value + deadedge > 1. )
-			value = 1.;
-		else if( value - deadedge < -1. )
-			value = -1.;
+		if( (value >= deadzone_min) && (value <= deadzone_max) )
+			return 0.;
+		else if( value >= range_max )
+			return 1.;
+		else if( value <= range_min )
+			return -1.;
+		else if( value > deadzone_max )
+		{
+			if( range_max <= deadzone_max )  // Prevent div/0 errors from bad calibration data.
+				return value;
+			// Reclaim the range of values lost to the deadzones.
+			return (value - deadzone_max) / (range_max - deadzone_max);
+		}
 		else
 		{
+			if( range_min >= deadzone_min )  // Prevent div/0 errors from bad calibration data.
+				return value;
 			// Reclaim the range of values lost to the deadzones.
-			if( value > 0. )
-				value -= deadzone;
-			else
-				value += deadzone;
-			value /= (1. - deadzone - deadedge);
+			return (value - deadzone_min) / (deadzone_min - range_min);
 		}
-		
-		return value;
 	}
 	
 	return 0.;
 }
 
 
-double JoystickState::AxisScaled( Uint8 axis, double low, double high, double deadzone, double deadedge ) const
+double JoystickState::AxisScaled( Uint8 axis, double low, double high, double deadzone_min, double deadzone_max, double range_min, double range_max ) const
 {
 	// Scale output to (low,high) range.
 	// This can also be used to invert an axis with low>high.
@@ -118,7 +121,7 @@ double JoystickState::AxisScaled( Uint8 axis, double low, double high, double de
 	if( ! HasAxis(axis) )
 		return 0.;
 	
-	return low + (high - low) * (Axis( axis, deadzone, deadedge ) + 1.) / 2.;
+	return low + (high - low) * (Axis( axis, deadzone_min, deadzone_max, range_min, range_max ) + 1.) / 2.;
 }
 
 

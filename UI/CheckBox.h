@@ -9,6 +9,7 @@ class CheckBox;
 
 #include "LabelledButton.h"
 #include "Font.h"
+#include "RaptorGame.h"
 
 
 class CheckBox : public LabelledButton
@@ -19,8 +20,7 @@ public:
 	Animation *ImageMouseDownChecked;
 	Animation *ImageMouseOverChecked;
 	
-	
-	CheckBox( SDL_Rect *rect, Font *font, std::string text, bool checked, Animation *u_normal, Animation *u_down, Animation *u_over, Animation *c_normal, Animation *c_down, Animation *c_over );
+	CheckBox( SDL_Rect *rect, Font *font, std::string text, bool checked = false, Animation *u_normal = Raptor::Game->Res.GetAnimation("box_unchecked.ani"), Animation *u_down = Raptor::Game->Res.GetAnimation("box_unchecked_mdown.ani"), Animation *u_over = NULL, Animation *c_normal = Raptor::Game->Res.GetAnimation("box_checked.ani"), Animation *c_down = Raptor::Game->Res.GetAnimation("box_checked_mdown.ani"), Animation *c_over = NULL );
 	virtual ~CheckBox();
 	
 	virtual void Draw( void );

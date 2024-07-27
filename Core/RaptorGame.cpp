@@ -507,13 +507,9 @@ void RaptorGame::Run( void )
 
 void RaptorGame::Draw( void )
 {
-	// Clear the framebuffer.
+	// Clear the framebuffer and draw all layers.
 	Gfx.Clear();
-	
-	// Draw all layers.
 	Layers.Draw();
-	Console.Draw();
-	Mouse.Draw();
 	
 	// Draw text overlay.
 	if( WaitText.length() )
@@ -523,10 +519,29 @@ void RaptorGame::Draw( void )
 		
 		SDL_Rect rect = {0,0,0,0};
 		WaitFont->TextSize( WaitText, &rect );
-		Gfx.DrawRect2D( Gfx.W/2 - rect.w/2 - 30, Gfx.H/2 - rect.h/2 - 20, Gfx.W/2 + rect.w/2 + 30, Gfx.H/2 + rect.h/2 + 20, 0, 0.f,0.f,0.f,0.75f );
 		
+		Gfx.Setup2D();
+		Gfx.DrawRect2D( Gfx.W/2 - rect.w/2 - 30, Gfx.H/2 - rect.h/2 - 20, Gfx.W/2 + rect.w/2 + 30, Gfx.H/2 + rect.h/2 + 20, 0, 0.f,0.f,0.f,0.75f );
 		WaitFont->DrawText( WaitText, Gfx.W/2, Gfx.H/2, Font::ALIGN_MIDDLE_CENTER );
 	}
+	
+	// Draw framerate(s).
+	if( FrameTime && Cfg.SettingAsBool("showfps") )
+	{
+		char fps_str[ 32 ] = "";
+		if( Server->FrameTime && Server->IsRunning() )
+			snprintf( fps_str, sizeof(fps_str), "%.0f\n%.0f", 1. / Server->FrameTime, 1. / FrameTime );
+		else
+			snprintf( fps_str, sizeof(fps_str), "%.0f", 1. / FrameTime );
+		
+		Gfx.Setup2D();
+		Console.MessageFont->DrawText( fps_str, Gfx.W,     Gfx.H,     Font::ALIGN_BOTTOM_RIGHT, 0.f,0.f,0.f,0.8f );
+		Console.MessageFont->DrawText( fps_str, Gfx.W - 2, Gfx.H - 2, Font::ALIGN_BOTTOM_RIGHT, 1.f,1.f,1.f,1.f );
+	}
+	
+	// Draw console and mouse cursor last.
+	Console.Draw();
+	Mouse.Draw();
 }
 
 
