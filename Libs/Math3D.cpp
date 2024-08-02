@@ -297,10 +297,15 @@ bool Math3D::PointWithinFace( const Pos3D *pt, const double *vertex_array, int v
 	
 	if( vertex_count >= 2 )
 	{
+		int zero_length_edges = 0;
 		Pos3D corner( vertex_array[ vertex_count*3 - 3 ], vertex_array[ vertex_count*3 - 2 ], vertex_array[ vertex_count*3 - 1 ] );
 		Pos3D on_face( &corner );
 		Vec3D edge( vertex_array[ 0 ] - corner.X, vertex_array[ 1 ] - corner.Y, vertex_array[ 2 ] - corner.Z );
 		Vec3D out = edge.Cross( &(plane.Up) );
+		if( ! (edge.X || edge.Y || edge.Z) )
+			zero_length_edges ++;
+		else
+			out.ScaleTo( 1. );
 		double dist = pt->DistAlong( &out, &corner );
 		if( dist > 0. )
 			return false;
@@ -311,11 +316,18 @@ bool Math3D::PointWithinFace( const Pos3D *pt, const double *vertex_array, int v
 			corner.SetPos( vertex_array[ i*3 ], vertex_array[ i*3 + 1 ], vertex_array[ i*3 + 2 ] );
 			edge.Set( vertex_array[ i*3 + 3 ] - corner.X, vertex_array[ i*3 + 4 ] - corner.Y, vertex_array[ i*3 + 5 ] - corner.Z );
 			out = edge.Cross( &(plane.Up) );
+			if( ! (edge.X || edge.Y || edge.Z) )
+				zero_length_edges ++;
+			else
+				out.ScaleTo( 1. );
 			dist = pt->DistAlong( &out, &corner );
 			if( dist > 0. )
 				return false;
 			on_face.MoveAlong( &out, dist );
 		}
+		
+		if( (vertex_count - zero_length_edges) < 3 )  // Make sure we have at least a valid triangle.
+			return false;
 		
 		if( pt_on_face )
 			pt_on_face->Copy( &on_face );

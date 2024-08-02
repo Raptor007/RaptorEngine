@@ -776,14 +776,14 @@ void Model::DrawWireframeAt( const Pos3D *pos, Color color, double scale, double
 }
 
 
-static void Model_SetHit( const std::vector< std::pair<ModelArrays,std::string> > *arrays, const GLdouble *face, std::string *hit )
+static void Model_SetHit( const std::vector< std::pair<ModelArrays*,std::string> > *arrays, const GLdouble *face, std::string *hit )
 {
 	// Determine the name of the model object with this face.
 	if( arrays && face && hit )
 	{
-		for( std::vector< std::pair<ModelArrays,std::string> >::const_iterator array_iter = arrays->begin(); array_iter != arrays->end(); array_iter ++ )
+		for( std::vector< std::pair<ModelArrays*,std::string> >::const_iterator array_iter = arrays->begin(); array_iter != arrays->end(); array_iter ++ )
 		{
-			if( array_iter->first.HasWorldSpaceVertex( face ) )
+			if( array_iter->first->HasWorldSpaceVertex( face ) )
 			{
 				*hit = array_iter->second;
 				break;
@@ -803,7 +803,7 @@ double Model::DistanceFromLine( const Pos3D *pos, Pos3D *nearest, const std::set
 double Model::DistanceFromSphere( const Pos3D *pos, Pos3D *nearest, const std::set<std::string> *object_names, std::string *hit, double exploded, int explosion_seed, const Pos3D *pos2, const Vec3D *moved2, double radius, double block_size ) const
 {
 	std::map< uint64_t, std::set<const GLdouble*> > blockmap;
-	std::vector< std::pair<ModelArrays,std::string> > arrays;
+	std::vector< std::pair<ModelArrays*,std::string> > arrays;
 	Pos3D pos2b( pos2 );
 	std::set<const GLdouble*> faces;
 	
@@ -865,6 +865,9 @@ double Model::DistanceFromSphere( const Pos3D *pos, Pos3D *nearest, const std::s
 	if( nearest )
 		nearest->Copy( &best_intersection );
 	
+	for( std::vector< std::pair<ModelArrays*,std::string> >::iterator array_iter = arrays.begin(); array_iter != arrays.end(); array_iter ++ )
+		delete array_iter->first;
+	
 	return min_dist;
 }
 
@@ -884,7 +887,7 @@ bool Model::CollidesWithModel( const Pos3D *pos1, Pos3D *at, const std::set<std:
 bool Model::CollidesWithModel( const Pos3D *pos1, Pos3D *at, const std::set<std::string> *object_names1, std::string *hit1, double exploded1, int explosion_seed1, const Model *model2, const Pos3D *pos2, const Vec3D *moved2, const std::set<std::string> *object_names2, std::string *hit2, double exploded2, int explosion_seed2, double block_size, bool check_faces ) const
 {
 	std::map< uint64_t, std::set<const GLdouble*> > blockmap1, blockmap2;
-	std::vector< std::pair<ModelArrays,std::string> > arrays1, arrays2;
+	std::vector< std::pair<ModelArrays*,std::string> > arrays1, arrays2;
 	
 	if( ! block_size )
 		block_size = std::max<double>( GetMaxTriangleEdge(), model2->GetMaxTriangleEdge() );
@@ -899,7 +902,14 @@ bool Model::CollidesWithModel( const Pos3D *pos1, Pos3D *at, const std::set<std:
 		{
 			// Both models marked the same block.
 			if( ! check_faces )
+			{
+				for( std::vector< std::pair<ModelArrays*,std::string> >::iterator array_iter = arrays1.begin(); array_iter != arrays1.end(); array_iter ++ )
+					delete array_iter->first;
+				for( std::vector< std::pair<ModelArrays*,std::string> >::iterator array_iter = arrays2.begin(); array_iter != arrays2.end(); array_iter ++ )
+					delete array_iter->first;
+				
 				return true;
+			}
 			
 			Pos3D vertices[ 6 ], intersection;
 			double line_motion[ 12 ] = {0};
@@ -919,6 +929,12 @@ bool Model::CollidesWithModel( const Pos3D *pos1, Pos3D *at, const std::set<std:
 						Model_SetHit( &arrays2, *face2, hit2 );
 						if( at )
 							at->Copy( &intersection );
+						
+						for( std::vector< std::pair<ModelArrays*,std::string> >::iterator array_iter = arrays1.begin(); array_iter != arrays1.end(); array_iter ++ )
+							delete array_iter->first;
+						for( std::vector< std::pair<ModelArrays*,std::string> >::iterator array_iter = arrays2.begin(); array_iter != arrays2.end(); array_iter ++ )
+							delete array_iter->first;
+						
 						return true;
 					}
 					
@@ -933,6 +949,12 @@ bool Model::CollidesWithModel( const Pos3D *pos1, Pos3D *at, const std::set<std:
 						Model_SetHit( &arrays2, *face2, hit2 );
 						if( at )
 							at->Copy( &intersection );
+						
+						for( std::vector< std::pair<ModelArrays*,std::string> >::iterator array_iter = arrays1.begin(); array_iter != arrays1.end(); array_iter ++ )
+							delete array_iter->first;
+						for( std::vector< std::pair<ModelArrays*,std::string> >::iterator array_iter = arrays2.begin(); array_iter != arrays2.end(); array_iter ++ )
+							delete array_iter->first;
+						
 						return true;
 					}
 					
@@ -958,6 +980,12 @@ bool Model::CollidesWithModel( const Pos3D *pos1, Pos3D *at, const std::set<std:
 							Model_SetHit( &arrays2, *face2, hit2 );
 							if( at )
 								at->Copy( &intersection );
+							
+							for( std::vector< std::pair<ModelArrays*,std::string> >::iterator array_iter = arrays1.begin(); array_iter != arrays1.end(); array_iter ++ )
+								delete array_iter->first;
+							for( std::vector< std::pair<ModelArrays*,std::string> >::iterator array_iter = arrays2.begin(); array_iter != arrays2.end(); array_iter ++ )
+								delete array_iter->first;
+							
 							return true;
 						}
 						
@@ -975,6 +1003,12 @@ bool Model::CollidesWithModel( const Pos3D *pos1, Pos3D *at, const std::set<std:
 							Model_SetHit( &arrays2, *face2, hit2 );
 							if( at )
 								at->Copy( &intersection );
+							
+							for( std::vector< std::pair<ModelArrays*,std::string> >::iterator array_iter = arrays1.begin(); array_iter != arrays1.end(); array_iter ++ )
+								delete array_iter->first;
+							for( std::vector< std::pair<ModelArrays*,std::string> >::iterator array_iter = arrays2.begin(); array_iter != arrays2.end(); array_iter ++ )
+								delete array_iter->first;
+							
 							return true;
 						}
 						
@@ -992,6 +1026,12 @@ bool Model::CollidesWithModel( const Pos3D *pos1, Pos3D *at, const std::set<std:
 							Model_SetHit( &arrays2, *face2, hit2 );
 							if( at )
 								at->Copy( &intersection );
+							
+							for( std::vector< std::pair<ModelArrays*,std::string> >::iterator array_iter = arrays1.begin(); array_iter != arrays1.end(); array_iter ++ )
+								delete array_iter->first;
+							for( std::vector< std::pair<ModelArrays*,std::string> >::iterator array_iter = arrays2.begin(); array_iter != arrays2.end(); array_iter ++ )
+								delete array_iter->first;
+							
 							return true;
 						}
 					}
@@ -1000,17 +1040,22 @@ bool Model::CollidesWithModel( const Pos3D *pos1, Pos3D *at, const std::set<std:
 		}
 	}
 	
+	for( std::vector< std::pair<ModelArrays*,std::string> >::iterator array_iter = arrays1.begin(); array_iter != arrays1.end(); array_iter ++ )
+		delete array_iter->first;
+	for( std::vector< std::pair<ModelArrays*,std::string> >::iterator array_iter = arrays2.begin(); array_iter != arrays2.end(); array_iter ++ )
+		delete array_iter->first;
+	
 	return false;
 }
 
 
-void Model::MarkBlockMap( std::map< uint64_t, std::set<const GLdouble*> > *blockmap, std::vector< std::pair<ModelArrays,std::string> > *keep_arrays, const Pos3D *pos, const std::set<std::string> *object_names, double exploded, int explosion_seed, double block_size ) const
+void Model::MarkBlockMap( std::map< uint64_t, std::set<const GLdouble*> > *blockmap, std::vector< std::pair<ModelArrays*,std::string> > *keep_arrays, const Pos3D *pos, const std::set<std::string> *object_names, double exploded, int explosion_seed, double block_size ) const
 {
 	return MarkBlockMap( blockmap, keep_arrays, pos, NULL, object_names, exploded, explosion_seed, block_size );
 }
 
 
-void Model::MarkBlockMap( std::map< uint64_t, std::set<const GLdouble*> > *blockmap, std::vector< std::pair<ModelArrays,std::string> > *keep_arrays, const Pos3D *pos, const Vec3D *motion, const std::set<std::string> *object_names, double exploded, int explosion_seed, double block_size ) const
+void Model::MarkBlockMap( std::map< uint64_t, std::set<const GLdouble*> > *blockmap, std::vector< std::pair<ModelArrays*,std::string> > *keep_arrays, const Pos3D *pos, const Vec3D *motion, const std::set<std::string> *object_names, double exploded, int explosion_seed, double block_size ) const
 {
 	if( ! block_size )
 		block_size = GetMaxTriangleEdge();
@@ -1050,12 +1095,12 @@ void Model::MarkBlockMap( std::map< uint64_t, std::set<const GLdouble*> > *block
 				array_iter->second.MakeWorldSpace( &obj_pos );  // NOTE: Overwrites WorldSpaceVertexArray if position differs from previous.
 				arrays->push_back( std::pair<ModelArrays*,std::string>( &(array_iter->second), obj_iter->first ) );
 				*/
-				keep_arrays->push_back( std::pair<ModelArrays,std::string>( ModelArrays(), obj_iter->first ) );
-				keep_arrays->back().first.BecomeInstance( &(array_iter->second) );
-				keep_arrays->back().first.MakeWorldSpace( &obj_pos );  // FIXME: This is slow, and we may call MarkBlockMap multiple times per server frame!  Reuse somehow!
+				keep_arrays->push_back( std::pair<ModelArrays*,std::string>( new ModelArrays(), obj_iter->first ) );
+				keep_arrays->back().first->BecomeInstance( &(array_iter->second) );
+				keep_arrays->back().first->MakeWorldSpace( &obj_pos );  // FIXME: This is slow, and we may call MarkBlockMap multiple times per server frame!  Reuse somehow!
 				
-				const GLdouble *worldspace_vertex_array = keep_arrays->back().first.WorldSpaceVertexArray;
-				size_t vertex_count = keep_arrays->back().first.VertexCount;
+				const GLdouble *worldspace_vertex_array = keep_arrays->back().first->WorldSpaceVertexArray;
+				size_t vertex_count = keep_arrays->back().first->VertexCount;
 				if( motion )
 				{
 					for( size_t i = 0; (i + 2) < vertex_count; i += 3 )
@@ -1444,6 +1489,7 @@ ModelArrays::ModelArrays( void )
 
 ModelArrays::ModelArrays( const ModelArrays &other )
 {
+	// FIXME: Is this called when a container holding it is resized, and is the other destructed?  May need to rethink allocation.
 	VertexCount = 0;
 	VertexArray = NULL;
 	TexCoordArray = NULL;
@@ -1584,6 +1630,8 @@ void ModelArrays::Resize( size_t vertex_count )
 		VertexArray   = (GLdouble*)( VertexArray   ? realloc( VertexArray,   vertex_array_mem )    : malloc( vertex_array_mem )    );
 		TexCoordArray = (GLfloat*)(  TexCoordArray ? realloc( TexCoordArray, tex_coord_array_mem ) : malloc( tex_coord_array_mem ) );
 		NormalArray   = (GLfloat*)(  NormalArray   ? realloc( NormalArray,   normal_array_mem )    : malloc( normal_array_mem )    );
+		
+		Allocated = true;
 	}
 	else
 		Clear();
