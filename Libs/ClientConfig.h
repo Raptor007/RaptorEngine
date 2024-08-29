@@ -36,9 +36,10 @@ public:
 	void SetDefaults( void );
 	
 	void Command( std::string str, bool show_in_console = false );
-
+	
 	void Load( std::string filename );
 	void Save( std::string filename ) const;
+	void Save( std::string filename, bool unbindall ) const;
 	
 	bool HasSetting( std::string name ) const;
 	std::string SettingAsString( std::string name, const char *ifndef = NULL, const char *ifempty = NULL ) const;

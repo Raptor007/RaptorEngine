@@ -63,10 +63,10 @@ public:
 	void Setup2D( void );
 	void Setup2D( double y1, double y2 );
 	void Setup2D( double x1, double y1, double x2, double y2 );
-	void Setup3D( Camera *cam );
+	void Setup3D( Camera *cam, double aspect_ratio = 0. );
 	void Setup3D( double fov_w, double cam_x, double cam_y, double cam_z, double yaw );
 	void Setup3D( double fov_w, double cam_x, double cam_y, double cam_z, double yaw, double pitch );
-	void Setup3D( double fov_w, double cam_x, double cam_y, double cam_z, double cam_look_x, double cam_look_y, double cam_look_z, double cam_up_x, double cam_up_y, double cam_up_z );
+	void Setup3D( double fov_w, double cam_x, double cam_y, double cam_z, double cam_look_x, double cam_look_y, double cam_look_z, double cam_up_x, double cam_up_y, double cam_up_z, double aspect_ratio = 0. );
 	
 	void DrawRect2D( int x1, int y1, int x2, int y2, GLuint texture = 0 );
 	void DrawRect2D( double x1, double y1, double x2, double y2, GLuint texture = 0 );

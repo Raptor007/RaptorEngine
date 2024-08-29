@@ -33,12 +33,14 @@ class ModelMaterial;
 class Model
 {
 public:
-	std::map<std::string,ModelObject> Objects;
-	std::map<std::string,ModelMaterial> Materials;
+	std::map<std::string,ModelObject*> Objects;
+	std::map<std::string,ModelMaterial*> Materials;
 	std::vector<std::string> MaterialFiles;
 	double Length, Height, Width, MinFwd, MaxFwd, MinUp, MaxUp, MinRight, MaxRight, MaxRadius;
 	
 	Model( void );
+	Model( const Model &other );
+	Model( const Model *other );
 	virtual ~Model();
 	
 	void Clear( void );
@@ -104,19 +106,15 @@ public:
 	GLdouble *VertexArray, *WorldSpaceVertexArray;
 	GLfloat *TexCoordArray;
 	GLfloat *NormalArray;
-	bool Allocated;
-	/*
-	// NOTE: Part of an incomplete change; disabled because it required making WillCollide non-const, which slowed everything way down.
-	Mutex WorldSpaceLock;
-	Pos3D WorldSpacePos;
-	double WorldSpaceFwdScale, WorldSpaceUpScale, WorldSpaceRightScale;
-	*/
+	bool Allocated, AllocatedWorldSpace;
 	
 	ModelArrays( void );
 	ModelArrays( const ModelArrays &other );
+	ModelArrays( const ModelArrays *other );
 	virtual ~ModelArrays();
 	
 	void Clear( void );
+	void BecomeCopy( void );
 	void BecomeCopy( const ModelArrays *other );
 	void BecomeInstance( const ModelArrays *other );
 	void Resize( size_t vertex_count );
@@ -186,14 +184,16 @@ class ModelObject
 {
 public:
 	std::string Name;
-	std::map<std::string,ModelArrays> Arrays;
+	std::map<std::string,ModelArrays*> Arrays;
 	std::vector<Vec3D> Points;
 	std::vector< std::vector<Vec3D> > Lines;
 	Pos3D CenterPoint;
 	double MinFwd, MaxFwd, MinUp, MaxUp, MinRight, MaxRight, MaxRadius, MaxTriangleEdge;
 	
 	ModelObject( void );
+	ModelObject( const std::string &name );
 	ModelObject( const ModelObject &other );
+	ModelObject( const ModelObject *other );
 	virtual ~ModelObject();
 	
 	void BecomeInstance( const ModelObject *other );
@@ -229,6 +229,7 @@ public:
 	
 	ModelMaterial( void );
 	ModelMaterial( const ModelMaterial &other );
+	ModelMaterial( const ModelMaterial *other );
 	virtual ~ModelMaterial();
 	
 	void BecomeInstance( const ModelMaterial *other );

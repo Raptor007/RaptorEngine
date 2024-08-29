@@ -25,15 +25,34 @@ Model::Model( void )
 }
 
 
+Model::Model( const Model &other )
+{
+	BecomeCopy( &other );
+}
+
+
+Model::Model( const Model *other )
+{
+	BecomeCopy( other );
+}
+
+
 Model::~Model()
 {
+	Clear();
 }
 
 
 void Model::Clear( void )
 {
+	for( std::map<std::string,ModelObject*>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
+		delete obj_iter->second;
 	Objects.clear();
+	
+	for( std::map<std::string,ModelMaterial*>::iterator mtl_iter = Materials.begin(); mtl_iter != Materials.end(); mtl_iter ++ )
+		delete mtl_iter->second;
 	Materials.clear();
+	
 	MaterialFiles.clear();
 	Length = 0.;
 	Width = 0.;
@@ -45,13 +64,16 @@ void Model::Clear( void )
 
 void Model::BecomeInstance( const Model *other )
 {
+	if( this == other )
+		return;
+	
 	Clear();
 	
-	for( std::map<std::string,ModelObject>::const_iterator obj_iter = other->Objects.begin(); obj_iter != other->Objects.end(); obj_iter ++ )
-		Objects[ obj_iter->first ].BecomeInstance( &(obj_iter->second) );
+	for( std::map<std::string,ModelObject*>::const_iterator obj_iter = other->Objects.begin(); obj_iter != other->Objects.end(); obj_iter ++ )
+		Objects[ obj_iter->first ] = new ModelObject( obj_iter->second );
 	
-	for( std::map<std::string,ModelMaterial>::const_iterator mtl_iter = other->Materials.begin(); mtl_iter != other->Materials.end(); mtl_iter ++ )
-		Materials[ mtl_iter->first ].BecomeInstance( &(mtl_iter->second) );
+	for( std::map<std::string,ModelMaterial*>::const_iterator mtl_iter = other->Materials.begin(); mtl_iter != other->Materials.end(); mtl_iter ++ )
+		Materials[ mtl_iter->first ] = new ModelMaterial( mtl_iter->second );
 	
 	MaterialFiles = other->MaterialFiles;
 	
@@ -67,14 +89,14 @@ void Model::BecomeCopy( const Model *other )
 	if( other != this )
 		BecomeInstance( other );
 	
-	for( std::map<std::string,ModelObject>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
+	for( std::map<std::string,ModelObject*>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
 	{
-		for( std::map<std::string,ModelArrays>::iterator array_iter = obj_iter->second.Arrays.begin(); array_iter != obj_iter->second.Arrays.end(); array_iter ++ )
-			array_iter->second.BecomeCopy( &(array_iter->second) );
+		for( std::map<std::string,ModelArrays*>::iterator array_iter = obj_iter->second->Arrays.begin(); array_iter != obj_iter->second->Arrays.end(); array_iter ++ )
+			array_iter->second->BecomeCopy();
 	}
 	
-	for( std::map<std::string,ModelMaterial>::iterator mtl_iter = Materials.begin(); mtl_iter != Materials.end(); mtl_iter ++ )
-		mtl_iter->second.Arrays.BecomeCopy( &(mtl_iter->second.Arrays) );
+	for( std::map<std::string,ModelMaterial*>::iterator mtl_iter = Materials.begin(); mtl_iter != Materials.end(); mtl_iter ++ )
+		mtl_iter->second->Arrays.BecomeCopy();
 }
 
 
@@ -264,8 +286,9 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 					if( (obj != new_obj) && ! faces.empty() )
 					{
 						// Build the previous object's arrays, since we're changing objects now.
-						Objects[ obj ].AddFaces( mtl, faces );
-						Objects[ obj ].Name = obj;
+						if( ! Objects[ obj ] )
+							Objects[ obj ] = new ModelObject( obj );
+						Objects[ obj ]->AddFaces( mtl, faces );
 						faces.clear();
 					}
 					
@@ -281,13 +304,15 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 				else if( elements.at( 0 ) == "usemtl" )
 				{
 					std::string new_mtl = (elements.size() >= 2) ? elements.at( 1 ) : "";
-					Materials[ new_mtl ];
+					if( ! Materials[ new_mtl ] )
+						Materials[ new_mtl ] = new ModelMaterial();
 					
 					if( (mtl != new_mtl) && ! faces.empty() )
 					{
 						// Build the previous object's arrays, since we're changing materials now.
-						Objects[ obj ].AddFaces( mtl, faces );
-						Objects[ obj ].Name = obj;
+						if( ! Objects[ obj ] )
+							Objects[ obj ] = new ModelObject( obj );
+						Objects[ obj ]->AddFaces( mtl, faces );
 						faces.clear();
 					}
 					
@@ -305,13 +330,17 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 							if( (size_t)vertex_num > vertices.size() )
 								continue;
 							
-							Objects[ obj ].Points.push_back( vertices[ vertex_num - 1 ] );
+							if( ! Objects[ obj ] )
+								Objects[ obj ] = new ModelObject( obj );
+							Objects[ obj ]->Points.push_back( vertices[ vertex_num - 1 ] );
 						}
 					}
 				}
 				else if( elements.at( 0 ) == "l" )
 				{
-					Objects[ obj ].Lines.push_back( std::vector<Vec3D>() );
+					if( ! Objects[ obj ] )
+						Objects[ obj ] = new ModelObject( obj );
+					Objects[ obj ]->Lines.push_back( std::vector<Vec3D>() );
 					
 					for( size_t i = 1; i < elements.size(); i ++ )
 					{
@@ -323,7 +352,9 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 							if( (size_t)vertex_num > vertices.size() )
 								continue;
 							
-							Objects[ obj ].Lines.back().push_back( vertices[ vertex_num - 1 ] );
+							if( ! Objects[ obj ] )
+								Objects[ obj ] = new ModelObject( obj );
+							Objects[ obj ]->Lines.back().push_back( vertices[ vertex_num - 1 ] );
 						}
 					}
 				}
@@ -370,7 +401,8 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 				else if( elements.at( 0 ) == "newmtl" )
 				{
 					mtl = (elements.size() >= 2) ? elements.at( 1 ) : "";
-					Materials[ mtl ];
+					if( ! Materials[ mtl ] )
+						Materials[ mtl ] = new ModelMaterial();
 				}
 				else if( elements.at( 0 ) == "map_Kd" )
 				{
@@ -391,34 +423,42 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 								tex_filename = std::string("/") + filename_here;
 						}
 						
-						Materials[ mtl ].Texture.BecomeInstance( Raptor::Game->Res.GetAnimation( tex_filename ) );
+						if( ! Materials[ mtl ] )
+							Materials[ mtl ] = new ModelMaterial();
+						Materials[ mtl ]->Texture.BecomeInstance( Raptor::Game->Res.GetAnimation( tex_filename ) );
 					}
 				}
 				else if( elements.at( 0 ) == "Ka" )
 				{
 					if( elements.size() >= 4 )
 					{
-						Materials[ mtl ].Ambient.Red = atof( elements.at( 1 ).c_str() );
-						Materials[ mtl ].Ambient.Green = atof( elements.at( 2 ).c_str() );
-						Materials[ mtl ].Ambient.Blue = atof( elements.at( 3 ).c_str() );
+						if( ! Materials[ mtl ] )
+							Materials[ mtl ] = new ModelMaterial();
+						Materials[ mtl ]->Ambient.Red   = atof( elements.at( 1 ).c_str() );
+						Materials[ mtl ]->Ambient.Green = atof( elements.at( 2 ).c_str() );
+						Materials[ mtl ]->Ambient.Blue  = atof( elements.at( 3 ).c_str() );
 					}
 				}
 				else if( elements.at( 0 ) == "Kd" )
 				{
 					if( elements.size() >= 4 )
 					{
-						Materials[ mtl ].Diffuse.Red = atof( elements.at( 1 ).c_str() );
-						Materials[ mtl ].Diffuse.Green = atof( elements.at( 2 ).c_str() );
-						Materials[ mtl ].Diffuse.Blue = atof( elements.at( 3 ).c_str() );
+						if( ! Materials[ mtl ] )
+							Materials[ mtl ] = new ModelMaterial();
+						Materials[ mtl ]->Diffuse.Red   = atof( elements.at( 1 ).c_str() );
+						Materials[ mtl ]->Diffuse.Green = atof( elements.at( 2 ).c_str() );
+						Materials[ mtl ]->Diffuse.Blue  = atof( elements.at( 3 ).c_str() );
 					}
 				}
 				else if( elements.at( 0 ) == "Ks" )
 				{
 					if( elements.size() >= 4 )
 					{
-						Materials[ mtl ].Specular.Red = atof( elements.at( 1 ).c_str() );
-						Materials[ mtl ].Specular.Green = atof( elements.at( 2 ).c_str() );
-						Materials[ mtl ].Specular.Blue = atof( elements.at( 3 ).c_str() );
+						if( ! Materials[ mtl ] )
+							Materials[ mtl ] = new ModelMaterial();
+						Materials[ mtl ]->Specular.Red   = atof( elements.at( 1 ).c_str() );
+						Materials[ mtl ]->Specular.Green = atof( elements.at( 2 ).c_str() );
+						Materials[ mtl ]->Specular.Blue  = atof( elements.at( 3 ).c_str() );
 					}
 				}
 				else if( elements.at( 0 ) == "d" )
@@ -427,14 +467,20 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 					{
 						float alpha = atof( elements.at( 1 ).c_str() );
 						// NOTE: Currently, only Ambient.Alpha is passed to the shaders.
-						Materials[ mtl ].Ambient.Alpha = alpha;
-						Materials[ mtl ].Diffuse.Alpha = alpha;
+						if( ! Materials[ mtl ] )
+							Materials[ mtl ] = new ModelMaterial();
+						Materials[ mtl ]->Ambient.Alpha = alpha;
+						Materials[ mtl ]->Diffuse.Alpha = alpha;
 					}
 				}
 				else if( elements.at( 0 ) == "Ns" )
 				{
 					if( elements.size() >= 2 )
-						Materials[ mtl ].Shininess = atof( elements.at( 1 ).c_str() );
+					{
+						if( ! Materials[ mtl ] )
+							Materials[ mtl ] = new ModelMaterial();
+						Materials[ mtl ]->Shininess = atof( elements.at( 1 ).c_str() );
+					}
 				}
 			}
 		}
@@ -442,8 +488,9 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 		if( ! faces.empty() )
 		{
 			// Build the final object's arrays.
-			Objects[ obj ].AddFaces( mtl, faces );
-			Objects[ obj ].Name = obj;
+			if( ! Objects[ obj ] )
+				Objects[ obj ] = new ModelObject( obj );
+			Objects[ obj ]->AddFaces( mtl, faces );
 			faces.clear();
 		}
 		
@@ -465,39 +512,39 @@ void Model::MakeMaterialArrays( void )
 	std::map<std::string,size_t> vertex_counts;
 	
 	// First count vertices for each material.
-	for( std::map<std::string,ModelObject>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
+	for( std::map<std::string,ModelObject*>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
 	{
-		for( std::map<std::string,ModelArrays>::iterator array_iter = obj_iter->second.Arrays.begin(); array_iter != obj_iter->second.Arrays.end(); array_iter ++ )
+		for( std::map<std::string,ModelArrays*>::iterator array_iter = obj_iter->second->Arrays.begin(); array_iter != obj_iter->second->Arrays.end(); array_iter ++ )
 		{
 			if( vertex_counts.find( array_iter->first ) != vertex_counts.end() )
-				vertex_counts[ array_iter->first ] += array_iter->second.VertexCount;
+				vertex_counts[ array_iter->first ] += array_iter->second->VertexCount;
 			else
-				vertex_counts[ array_iter->first ] = array_iter->second.VertexCount;
+				vertex_counts[ array_iter->first ] = array_iter->second->VertexCount;
 		}
 	}
 	
 	// Allocate and fill material arrays.
-	for( std::map<std::string,ModelMaterial>::iterator mtl_iter = Materials.begin(); mtl_iter != Materials.end(); mtl_iter ++ )
+	for( std::map<std::string,ModelMaterial*>::iterator mtl_iter = Materials.begin(); mtl_iter != Materials.end(); mtl_iter ++ )
 	{
 		size_t vertex_count = 0;
 		if( vertex_counts.find( mtl_iter->first ) != vertex_counts.end() )
 			vertex_count = vertex_counts[ mtl_iter->first ];
 		
-		mtl_iter->second.Arrays.Resize( vertex_count );
+		mtl_iter->second->Arrays.Resize( vertex_count );
 		
 		if( vertex_count )
 		{
 			size_t vertices_filled = 0;
-			for( std::map<std::string,ModelObject>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
+			for( std::map<std::string,ModelObject*>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
 			{
-				std::map<std::string,ModelArrays>::iterator array_iter = obj_iter->second.Arrays.find( mtl_iter->first );
-				if( (array_iter != obj_iter->second.Arrays.end()) && array_iter->second.VertexCount )
+				std::map<std::string,ModelArrays*>::iterator array_iter = obj_iter->second->Arrays.find( mtl_iter->first );
+				if( (array_iter != obj_iter->second->Arrays.end()) && array_iter->second->VertexCount )
 				{
-					memcpy( ((char*)( mtl_iter->second.Arrays.VertexArray )) + vertices_filled * 3 * sizeof(GLdouble), array_iter->second.VertexArray, array_iter->second.VertexCount * 3 * sizeof(GLdouble) );
-					memcpy( ((char*)( mtl_iter->second.Arrays.TexCoordArray )) + vertices_filled * 2 * sizeof(GLfloat), array_iter->second.TexCoordArray, array_iter->second.VertexCount * 2 * sizeof(GLfloat) );
-					memcpy( ((char*)( mtl_iter->second.Arrays.NormalArray )) + vertices_filled * 3 * sizeof(GLfloat), array_iter->second.NormalArray, array_iter->second.VertexCount * 3 * sizeof(GLfloat) );
+					memcpy( ((char*)( mtl_iter->second->Arrays.VertexArray   )) + vertices_filled * 3 * sizeof(GLdouble), array_iter->second->VertexArray,   array_iter->second->VertexCount * 3 * sizeof(GLdouble) );
+					memcpy( ((char*)( mtl_iter->second->Arrays.TexCoordArray )) + vertices_filled * 2 * sizeof(GLfloat),  array_iter->second->TexCoordArray, array_iter->second->VertexCount * 2 * sizeof(GLfloat) );
+					memcpy( ((char*)( mtl_iter->second->Arrays.NormalArray   )) + vertices_filled * 3 * sizeof(GLfloat),  array_iter->second->NormalArray,   array_iter->second->VertexCount * 3 * sizeof(GLfloat) );
 					
-					vertices_filled += array_iter->second.VertexCount;
+					vertices_filled += array_iter->second->VertexCount;
 				}
 			}
 		}
@@ -507,39 +554,39 @@ void Model::MakeMaterialArrays( void )
 
 void Model::CalculateNormals( void )
 {
-	for( std::map<std::string,ModelMaterial>::iterator mtl_iter = Materials.begin(); mtl_iter != Materials.end(); mtl_iter ++ )
-		mtl_iter->second.CalculateNormals();
-	for( std::map<std::string,ModelObject>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
-		obj_iter->second.CalculateNormals();
+	for( std::map<std::string,ModelMaterial*>::iterator mtl_iter = Materials.begin(); mtl_iter != Materials.end(); mtl_iter ++ )
+		mtl_iter->second->CalculateNormals();
+	for( std::map<std::string,ModelObject*>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
+		obj_iter->second->CalculateNormals();
 }
 
 
 void Model::ReverseNormals( void )
 {
-	for( std::map<std::string,ModelMaterial>::iterator mtl_iter = Materials.begin(); mtl_iter != Materials.end(); mtl_iter ++ )
-		mtl_iter->second.ReverseNormals();
-	for( std::map<std::string,ModelObject>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
-		obj_iter->second.ReverseNormals();
+	for( std::map<std::string,ModelMaterial*>::iterator mtl_iter = Materials.begin(); mtl_iter != Materials.end(); mtl_iter ++ )
+		mtl_iter->second->ReverseNormals();
+	for( std::map<std::string,ModelObject*>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
+		obj_iter->second->ReverseNormals();
 }
 
 
 void Model::SmoothNormals( void )
 {
-	for( std::map<std::string,ModelMaterial>::iterator mtl_iter = Materials.begin(); mtl_iter != Materials.end(); mtl_iter ++ )
-		mtl_iter->second.SmoothNormals();
-	for( std::map<std::string,ModelObject>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
-		obj_iter->second.SmoothNormals();
+	for( std::map<std::string,ModelMaterial*>::iterator mtl_iter = Materials.begin(); mtl_iter != Materials.end(); mtl_iter ++ )
+		mtl_iter->second->SmoothNormals();
+	for( std::map<std::string,ModelObject*>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
+		obj_iter->second->SmoothNormals();
 }
 
 
 void Model::Optimize( double vertex_tolerance, double normal_tolerance, double dot_tolerance )
 {
-	for( std::map<std::string,ModelMaterial>::iterator mtl_iter = Materials.begin(); mtl_iter != Materials.end(); mtl_iter ++ )
-		mtl_iter->second.Arrays.Optimize( vertex_tolerance, normal_tolerance, dot_tolerance );
-	for( std::map<std::string,ModelObject>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
+	for( std::map<std::string,ModelMaterial*>::iterator mtl_iter = Materials.begin(); mtl_iter != Materials.end(); mtl_iter ++ )
+		mtl_iter->second->Arrays.Optimize( vertex_tolerance, normal_tolerance, dot_tolerance );
+	for( std::map<std::string,ModelObject*>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
 	{
-		for( std::map<std::string,ModelArrays>::iterator array_iter = obj_iter->second.Arrays.begin(); array_iter != obj_iter->second.Arrays.end(); array_iter ++ )
-			array_iter->second.Optimize( vertex_tolerance, normal_tolerance, dot_tolerance );
+		for( std::map<std::string,ModelArrays*>::iterator array_iter = obj_iter->second->Arrays.begin(); array_iter != obj_iter->second->Arrays.end(); array_iter ++ )
+			array_iter->second->Optimize( vertex_tolerance, normal_tolerance, dot_tolerance );
 	}
 }
 
@@ -593,43 +640,43 @@ void Model::Draw( const Pos3D *pos, const std::set<std::string> *object_names, c
 			Raptor::Game->ShaderMgr.Set3f( "ZVec", z_vec.X, z_vec.Y, z_vec.Z );
 		}
 		
-		for( std::map<std::string,ModelMaterial>::iterator mtl_iter = Materials.begin(); mtl_iter != Materials.end(); mtl_iter ++ )
+		for( std::map<std::string,ModelMaterial*>::iterator mtl_iter = Materials.begin(); mtl_iter != Materials.end(); mtl_iter ++ )
 		{
-			if( mtl_iter->second.Arrays.VertexCount )
+			if( mtl_iter->second->Arrays.VertexCount )
 			{
 				if( use_shaders )
 				{
 					if( ! wireframe )
 					{
-						Raptor::Game->ShaderMgr.Set3f( "AmbientColor", mtl_iter->second.Ambient.Red, mtl_iter->second.Ambient.Green, mtl_iter->second.Ambient.Blue );
-						Raptor::Game->ShaderMgr.Set3f( "DiffuseColor", mtl_iter->second.Diffuse.Red, mtl_iter->second.Diffuse.Green, mtl_iter->second.Diffuse.Blue );
-						Raptor::Game->ShaderMgr.Set3f( "SpecularColor", mtl_iter->second.Specular.Red, mtl_iter->second.Specular.Green, mtl_iter->second.Specular.Blue );
-						Raptor::Game->ShaderMgr.Set1f( "Alpha", mtl_iter->second.Ambient.Alpha );
-						Raptor::Game->ShaderMgr.Set1f( "Shininess", mtl_iter->second.Shininess );
+						Raptor::Game->ShaderMgr.Set3f( "AmbientColor",  mtl_iter->second->Ambient.Red,  mtl_iter->second->Ambient.Green,  mtl_iter->second->Ambient.Blue );
+						Raptor::Game->ShaderMgr.Set3f( "DiffuseColor",  mtl_iter->second->Diffuse.Red,  mtl_iter->second->Diffuse.Green,  mtl_iter->second->Diffuse.Blue );
+						Raptor::Game->ShaderMgr.Set3f( "SpecularColor", mtl_iter->second->Specular.Red, mtl_iter->second->Specular.Green, mtl_iter->second->Specular.Blue );
+						Raptor::Game->ShaderMgr.Set1f( "Alpha", mtl_iter->second->Ambient.Alpha );
+						Raptor::Game->ShaderMgr.Set1f( "Shininess", mtl_iter->second->Shininess );
 						
 						glActiveTexture( GL_TEXTURE0 + 0 );
 						Raptor::Game->ShaderMgr.Set1i( "Texture", 0 );
 					}
 					
-					glVertexPointer( 3, GL_DOUBLE, 0, mtl_iter->second.Arrays.VertexArray );
+					glVertexPointer( 3, GL_DOUBLE, 0, mtl_iter->second->Arrays.VertexArray );
 				}
 				else
 				{
 					// Calculate worldspace coordinates on the CPU (slow for complex models).
-					mtl_iter->second.Arrays.MakeWorldSpace( pos, fwd_scale, up_scale, right_scale );
+					mtl_iter->second->Arrays.MakeWorldSpace( pos, fwd_scale, up_scale, right_scale );
 					
-					glVertexPointer( 3, GL_DOUBLE, 0, mtl_iter->second.Arrays.WorldSpaceVertexArray );
+					glVertexPointer( 3, GL_DOUBLE, 0, mtl_iter->second->Arrays.WorldSpaceVertexArray );
 				}
 				
 				if( ! wireframe )
 				{
-					glBindTexture( GL_TEXTURE_2D, mtl_iter->second.Texture.CurrentFrame() );
+					glBindTexture( GL_TEXTURE_2D, mtl_iter->second->Texture.CurrentFrame() );
 					
-					glTexCoordPointer( 2, GL_FLOAT, 0, mtl_iter->second.Arrays.TexCoordArray );
-					glNormalPointer( GL_FLOAT, 0, mtl_iter->second.Arrays.NormalArray );
+					glTexCoordPointer( 2, GL_FLOAT, 0, mtl_iter->second->Arrays.TexCoordArray );
+					glNormalPointer( GL_FLOAT, 0, mtl_iter->second->Arrays.NormalArray );
 				}
 				
-				glDrawArrays( GL_TRIANGLES, 0, mtl_iter->second.Arrays.VertexCount );
+				glDrawArrays( GL_TRIANGLES, 0, mtl_iter->second->Arrays.VertexCount );
 			}
 		}
 	}
@@ -641,7 +688,7 @@ void Model::Draw( const Pos3D *pos, const std::set<std::string> *object_names, c
 		Vec3D x_vec, y_vec, z_vec;
 		Randomizer randomizer(explosion_seed);
 		
-		for( std::map<std::string,ModelObject>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
+		for( std::map<std::string,ModelObject*>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
 		{
 			if( object_names && (object_names->find( obj_iter->first ) == object_names->end()) )
 				continue;
@@ -651,15 +698,15 @@ void Model::Draw( const Pos3D *pos, const std::set<std::string> *object_names, c
 			if( exploded > 0. )
 			{
 				// Convert explosion vectors to worldspace.
-				Vec3D explosion_motion = obj_iter->second.GetExplosionMotion( explosion_seed, &randomizer ) * exploded;
-				Vec3D modelspace_rotation_axis = obj_iter->second.GetExplosionRotationAxis( explosion_seed );
+				Vec3D explosion_motion = obj_iter->second->GetExplosionMotion( explosion_seed, &randomizer ) * exploded;
+				Vec3D modelspace_rotation_axis = obj_iter->second->GetExplosionRotationAxis( explosion_seed );
 				Vec3D worldspace_rotation_axis = (pos->Fwd * modelspace_rotation_axis.X) + (pos->Up * modelspace_rotation_axis.Y) + (pos->Right * modelspace_rotation_axis.Z);
 				
 				draw_pos.MoveAlong( &(pos->Fwd),   explosion_motion.X * fwd_scale   );
 				draw_pos.MoveAlong( &(pos->Up),    explosion_motion.Y * up_scale    );
 				draw_pos.MoveAlong( &(pos->Right), explosion_motion.Z * right_scale );
 				
-				double explosion_rotation_rate = obj_iter->second.GetExplosionRotationRate( explosion_seed );
+				double explosion_rotation_rate = obj_iter->second->GetExplosionRotationRate( explosion_seed );
 				draw_pos.Fwd.RotateAround( &worldspace_rotation_axis, exploded * explosion_rotation_rate );
 				draw_pos.Up.RotateAround( &worldspace_rotation_axis, exploded * explosion_rotation_rate );
 				draw_pos.Right.RotateAround( &worldspace_rotation_axis, exploded * explosion_rotation_rate );
@@ -678,43 +725,47 @@ void Model::Draw( const Pos3D *pos, const std::set<std::string> *object_names, c
 				Raptor::Game->ShaderMgr.Set3f( "ZVec", z_vec.X, z_vec.Y, z_vec.Z );
 			}
 			
-			for( std::map<std::string,ModelArrays>::iterator array_iter = obj_iter->second.Arrays.begin(); array_iter != obj_iter->second.Arrays.end(); array_iter ++ )
+			for( std::map<std::string,ModelArrays*>::iterator array_iter = obj_iter->second->Arrays.begin(); array_iter != obj_iter->second->Arrays.end(); array_iter ++ )
 			{
-				if( array_iter->second.VertexCount )
+				if( array_iter->second->VertexCount )
 				{
 					if( use_shaders )
 					{
 						if( ! wireframe )
 						{
-							Raptor::Game->ShaderMgr.Set3f( "AmbientColor", Materials[ array_iter->first ].Ambient.Red, Materials[ array_iter->first ].Ambient.Green, Materials[ array_iter->first ].Ambient.Blue );
-							Raptor::Game->ShaderMgr.Set3f( "DiffuseColor", Materials[ array_iter->first ].Diffuse.Red, Materials[ array_iter->first ].Diffuse.Green, Materials[ array_iter->first ].Diffuse.Blue );
-							Raptor::Game->ShaderMgr.Set3f( "SpecularColor", Materials[ array_iter->first ].Specular.Red, Materials[ array_iter->first ].Specular.Green, Materials[ array_iter->first ].Specular.Blue );
-							Raptor::Game->ShaderMgr.Set1f( "Alpha", Materials[ array_iter->first ].Ambient.Alpha );
-							Raptor::Game->ShaderMgr.Set1f( "Shininess", Materials[ array_iter->first ].Shininess );
+							if( ! Materials[ array_iter->first ] )
+								Materials[ array_iter->first ] = new ModelMaterial();
+							Raptor::Game->ShaderMgr.Set3f( "AmbientColor",  Materials[ array_iter->first ]->Ambient.Red,  Materials[ array_iter->first ]->Ambient.Green,  Materials[ array_iter->first ]->Ambient.Blue );
+							Raptor::Game->ShaderMgr.Set3f( "DiffuseColor",  Materials[ array_iter->first ]->Diffuse.Red,  Materials[ array_iter->first ]->Diffuse.Green,  Materials[ array_iter->first ]->Diffuse.Blue );
+							Raptor::Game->ShaderMgr.Set3f( "SpecularColor", Materials[ array_iter->first ]->Specular.Red, Materials[ array_iter->first ]->Specular.Green, Materials[ array_iter->first ]->Specular.Blue );
+							Raptor::Game->ShaderMgr.Set1f( "Alpha", Materials[ array_iter->first ]->Ambient.Alpha );
+							Raptor::Game->ShaderMgr.Set1f( "Shininess", Materials[ array_iter->first ]->Shininess );
 							
 							glActiveTexture( GL_TEXTURE0 + 0 );
 							Raptor::Game->ShaderMgr.Set1i( "Texture", 0 );
 						}
 						
-						glVertexPointer( 3, GL_DOUBLE, 0, array_iter->second.VertexArray );
+						glVertexPointer( 3, GL_DOUBLE, 0, array_iter->second->VertexArray );
 					}
 					else
 					{
 						// Calculate worldspace coordinates on the CPU (slow for complex models).
-						array_iter->second.MakeWorldSpace( &draw_pos, fwd_scale, up_scale, right_scale );
+						array_iter->second->MakeWorldSpace( &draw_pos, fwd_scale, up_scale, right_scale );
 						
-						glVertexPointer( 3, GL_DOUBLE, 0, array_iter->second.WorldSpaceVertexArray );
+						glVertexPointer( 3, GL_DOUBLE, 0, array_iter->second->WorldSpaceVertexArray );
 					}
 					
 					if( ! wireframe )
 					{
-						glBindTexture( GL_TEXTURE_2D, Materials[ array_iter->first ].Texture.CurrentFrame() );
+						if( ! Materials[ array_iter->first ] )
+							Materials[ array_iter->first ] = new ModelMaterial();
+						glBindTexture( GL_TEXTURE_2D, Materials[ array_iter->first ]->Texture.CurrentFrame() );
 						
-						glTexCoordPointer( 2, GL_FLOAT, 0, array_iter->second.TexCoordArray );
-						glNormalPointer( GL_FLOAT, 0, array_iter->second.NormalArray );
+						glTexCoordPointer( 2, GL_FLOAT, 0, array_iter->second->TexCoordArray );
+						glNormalPointer( GL_FLOAT, 0, array_iter->second->NormalArray );
 					}
 					
-					glDrawArrays( GL_TRIANGLES, 0, array_iter->second.VertexCount );
+					glDrawArrays( GL_TRIANGLES, 0, array_iter->second->VertexCount );
 				}
 			}
 		}
@@ -762,7 +813,7 @@ void Model::DrawObjectsAt( const std::list<std::string> *object_names, const Pos
 	}
 	else
 	{
-		for( std::map<std::string,ModelObject>::const_iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
+		for( std::map<std::string,ModelObject*>::const_iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
 			object_name_set.insert( obj_iter->first );
 	}
 	
@@ -808,7 +859,7 @@ double Model::DistanceFromSphere( const Pos3D *pos, Pos3D *nearest, const std::s
 	std::set<const GLdouble*> faces;
 	
 	if( ! block_size )
-		block_size = GetMaxTriangleEdge();
+		block_size = std::max<double>( GetMaxTriangleEdge(), moved2 ? moved2->Length() : 0. );
 	
 	MarkBlockMap( &blockmap, &arrays, pos, object_names, exploded, explosion_seed, block_size );
 	
@@ -890,7 +941,7 @@ bool Model::CollidesWithModel( const Pos3D *pos1, Pos3D *at, const std::set<std:
 	std::vector< std::pair<ModelArrays*,std::string> > arrays1, arrays2;
 	
 	if( ! block_size )
-		block_size = std::max<double>( GetMaxTriangleEdge(), model2->GetMaxTriangleEdge() );
+		block_size = std::max<double>( std::max<double>( GetMaxTriangleEdge(), model2->GetMaxTriangleEdge() ), moved2 ? moved2->Length() : 0. );
 	
 	MarkBlockMap( &blockmap1, &arrays1, pos1, object_names1, exploded1, explosion_seed1, block_size );
 	model2->MarkBlockMap( &blockmap2, &arrays2, pos2, moved2, object_names2, exploded2, explosion_seed2, block_size );
@@ -1058,11 +1109,11 @@ void Model::MarkBlockMap( std::map< uint64_t, std::set<const GLdouble*> > *block
 void Model::MarkBlockMap( std::map< uint64_t, std::set<const GLdouble*> > *blockmap, std::vector< std::pair<ModelArrays*,std::string> > *keep_arrays, const Pos3D *pos, const Vec3D *motion, const std::set<std::string> *object_names, double exploded, int explosion_seed, double block_size ) const
 {
 	if( ! block_size )
-		block_size = GetMaxTriangleEdge();
+		block_size = std::max<double>( GetMaxTriangleEdge(), motion ? motion->Length() : 0. );
 	
 	Randomizer randomizer(explosion_seed);
 	
-	for( std::map<std::string,ModelObject>::const_iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
+	for( std::map<std::string,ModelObject*>::const_iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
 	{
 		if( object_names && (object_names->find( obj_iter->first ) == object_names->end()) )
 			continue;
@@ -1072,35 +1123,30 @@ void Model::MarkBlockMap( std::map< uint64_t, std::set<const GLdouble*> > *block
 		if( exploded > 0. )
 		{
 			// Convert explosion vectors to worldspace.
-			Vec3D explosion_motion = obj_iter->second.GetExplosionMotion( explosion_seed, &randomizer ) * exploded;
-			Vec3D modelspace_rotation_axis = obj_iter->second.GetExplosionRotationAxis( explosion_seed );
+			Vec3D explosion_motion = obj_iter->second->GetExplosionMotion( explosion_seed, &randomizer ) * exploded;
+			Vec3D modelspace_rotation_axis = obj_iter->second->GetExplosionRotationAxis( explosion_seed );
 			Vec3D worldspace_rotation_axis = (pos->Fwd * modelspace_rotation_axis.X) + (pos->Up * modelspace_rotation_axis.Y) + (pos->Right * modelspace_rotation_axis.Z);
 			
 			obj_pos.MoveAlong( &(pos->Fwd),   explosion_motion.X );
 			obj_pos.MoveAlong( &(pos->Up),    explosion_motion.Y );
 			obj_pos.MoveAlong( &(pos->Right), explosion_motion.Z );
 			
-			double explosion_rotation_rate = obj_iter->second.GetExplosionRotationRate( explosion_seed );
+			double explosion_rotation_rate = obj_iter->second->GetExplosionRotationRate( explosion_seed );
 			obj_pos.Fwd.RotateAround(   &worldspace_rotation_axis, exploded * explosion_rotation_rate );
 			obj_pos.Up.RotateAround(    &worldspace_rotation_axis, exploded * explosion_rotation_rate );
 			obj_pos.Right.RotateAround( &worldspace_rotation_axis, exploded * explosion_rotation_rate );
 		}
 		
-		for( std::map<std::string,ModelArrays>::const_iterator array_iter = obj_iter->second.Arrays.begin(); array_iter != obj_iter->second.Arrays.end(); array_iter ++ )
+		for( std::map<std::string,ModelArrays*>::const_iterator array_iter = obj_iter->second->Arrays.begin(); array_iter != obj_iter->second->Arrays.end(); array_iter ++ )
 		{
-			if( array_iter->second.VertexCount )
+			if( array_iter->second->VertexCount )
 			{
-				/*
-				// NOTE: Part of an incomplete change; disabled because it required making WillCollide non-const, which slowed everything way down.
-				array_iter->second.MakeWorldSpace( &obj_pos );  // NOTE: Overwrites WorldSpaceVertexArray if position differs from previous.
-				arrays->push_back( std::pair<ModelArrays*,std::string>( &(array_iter->second), obj_iter->first ) );
-				*/
-				keep_arrays->push_back( std::pair<ModelArrays*,std::string>( new ModelArrays(), obj_iter->first ) );
-				keep_arrays->back().first->BecomeInstance( &(array_iter->second) );
-				keep_arrays->back().first->MakeWorldSpace( &obj_pos );  // FIXME: This is slow, and we may call MarkBlockMap multiple times per server frame!  Reuse somehow!
+				ModelArrays *arrays = new ModelArrays( array_iter->second );
+				arrays->MakeWorldSpace( &obj_pos );  // FIXME: This is slow, and we may call MarkBlockMap multiple times per server frame!  Reuse somehow!
+				keep_arrays->push_back( std::pair<ModelArrays*,std::string>( arrays, obj_iter->first ) );
 				
-				const GLdouble *worldspace_vertex_array = keep_arrays->back().first->WorldSpaceVertexArray;
-				size_t vertex_count = keep_arrays->back().first->VertexCount;
+				const GLdouble *worldspace_vertex_array = arrays->WorldSpaceVertexArray;
+				size_t vertex_count = arrays->VertexCount;
 				if( motion )
 				{
 					for( size_t i = 0; (i + 2) < vertex_count; i += 3 )
@@ -1142,25 +1188,25 @@ void Model::Move( double fwd, double up, double right )
 	
 	BecomeCopy( this );
 	
-	for( std::map<std::string,ModelObject>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
+	for( std::map<std::string,ModelObject*>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
 	{
-		for( std::map<std::string,ModelArrays>::iterator array_iter = obj_iter->second.Arrays.begin(); array_iter != obj_iter->second.Arrays.end(); array_iter ++ )
+		for( std::map<std::string,ModelArrays*>::iterator array_iter = obj_iter->second->Arrays.begin(); array_iter != obj_iter->second->Arrays.end(); array_iter ++ )
 		{
-			for( size_t i = 0; i < array_iter->second.VertexCount; i ++ )
+			for( size_t i = 0; i < array_iter->second->VertexCount; i ++ )
 			{
-				array_iter->second.VertexArray[ i*3     ] += fwd;
-				array_iter->second.VertexArray[ i*3 + 1 ] += up;
-				array_iter->second.VertexArray[ i*3 + 2 ] += right;
+				array_iter->second->VertexArray[ i*3     ] += fwd;
+				array_iter->second->VertexArray[ i*3 + 1 ] += up;
+				array_iter->second->VertexArray[ i*3 + 2 ] += right;
 			}
 		}
 		
-		obj_iter->second.CenterPoint.Move( fwd, up, right );
-		obj_iter->second.MinFwd   += fwd;
-		obj_iter->second.MaxFwd   += fwd;
-		obj_iter->second.MinUp    += up;
-		obj_iter->second.MaxUp    += up;
-		obj_iter->second.MinRight += right;
-		obj_iter->second.MaxRight += right;
+		obj_iter->second->CenterPoint.Move( fwd, up, right );
+		obj_iter->second->MinFwd   += fwd;
+		obj_iter->second->MaxFwd   += fwd;
+		obj_iter->second->MinUp    += up;
+		obj_iter->second->MaxUp    += up;
+		obj_iter->second->MinRight += right;
+		obj_iter->second->MaxRight += right;
 	}
 	
 	MakeMaterialArrays();
@@ -1186,26 +1232,26 @@ void Model::ScaleBy( double fwd_scale, double up_scale, double right_scale )
 	
 	BecomeCopy( this );
 	
-	for( std::map<std::string,ModelObject>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
+	for( std::map<std::string,ModelObject*>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
 	{
-		for( std::map<std::string,ModelArrays>::iterator array_iter = obj_iter->second.Arrays.begin(); array_iter != obj_iter->second.Arrays.end(); array_iter ++ )
+		for( std::map<std::string,ModelArrays*>::iterator array_iter = obj_iter->second->Arrays.begin(); array_iter != obj_iter->second->Arrays.end(); array_iter ++ )
 		{
-			for( size_t i = 0; i < array_iter->second.VertexCount; i ++ )
+			for( size_t i = 0; i < array_iter->second->VertexCount; i ++ )
 			{
-				array_iter->second.VertexArray[ i*3     ] *= fwd_scale;
-				array_iter->second.VertexArray[ i*3 + 1 ] *= up_scale;
-				array_iter->second.VertexArray[ i*3 + 2 ] *= right_scale;
+				array_iter->second->VertexArray[ i*3     ] *= fwd_scale;
+				array_iter->second->VertexArray[ i*3 + 1 ] *= up_scale;
+				array_iter->second->VertexArray[ i*3 + 2 ] *= right_scale;
 			}
 		}
 		
-		for( std::vector<Vec3D>::iterator point_iter = obj_iter->second.Points.begin(); point_iter != obj_iter->second.Points.end(); point_iter ++ )
+		for( std::vector<Vec3D>::iterator point_iter = obj_iter->second->Points.begin(); point_iter != obj_iter->second->Points.end(); point_iter ++ )
 		{
 			point_iter->X *= fwd_scale;
 			point_iter->Y *= up_scale;
 			point_iter->Z *= right_scale;
 		}
 		
-		for( std::vector< std::vector<Vec3D> >::iterator line_iter = obj_iter->second.Lines.begin(); line_iter != obj_iter->second.Lines.end(); line_iter ++ )
+		for( std::vector< std::vector<Vec3D> >::iterator line_iter = obj_iter->second->Lines.begin(); line_iter != obj_iter->second->Lines.end(); line_iter ++ )
 		{
 			for( std::vector<Vec3D>::iterator vertex_iter = line_iter->begin(); vertex_iter != line_iter->end(); vertex_iter ++ )
 			{
@@ -1215,7 +1261,7 @@ void Model::ScaleBy( double fwd_scale, double up_scale, double right_scale )
 			}
 		}
 		
-		obj_iter->second.Recalc();
+		obj_iter->second->Recalc();
 	}
 	
 	MakeMaterialArrays();
@@ -1239,13 +1285,13 @@ double Model::GetLength( void )
 		double front = 0., rear = 0.;
 		bool found_front = false, found_rear = false;
 		
-		for( std::map<std::string,ModelObject>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
+		for( std::map<std::string,ModelObject*>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
 		{
-			for( std::map<std::string,ModelArrays>::iterator array_iter = obj_iter->second.Arrays.begin(); array_iter != obj_iter->second.Arrays.end(); array_iter ++ )
+			for( std::map<std::string,ModelArrays*>::iterator array_iter = obj_iter->second->Arrays.begin(); array_iter != obj_iter->second->Arrays.end(); array_iter ++ )
 			{
-				for( size_t i = 0; i < array_iter->second.VertexCount; i ++ )
+				for( size_t i = 0; i < array_iter->second->VertexCount; i ++ )
 				{
-					double x = array_iter->second.VertexArray[ i*3     ];
+					double x = array_iter->second->VertexArray[ i*3     ];
 					
 					if( (x > front) || ! found_front )
 					{
@@ -1279,13 +1325,13 @@ double Model::GetHeight( void )
 		double top = 0., bottom = 0.;
 		bool found_top = false, found_bottom = false;
 		
-		for( std::map<std::string,ModelObject>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
+		for( std::map<std::string,ModelObject*>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
 		{
-			for( std::map<std::string,ModelArrays>::iterator array_iter = obj_iter->second.Arrays.begin(); array_iter != obj_iter->second.Arrays.end(); array_iter ++ )
+			for( std::map<std::string,ModelArrays*>::iterator array_iter = obj_iter->second->Arrays.begin(); array_iter != obj_iter->second->Arrays.end(); array_iter ++ )
 			{
-				for( size_t i = 0; i < array_iter->second.VertexCount; i ++ )
+				for( size_t i = 0; i < array_iter->second->VertexCount; i ++ )
 				{
-					double y = array_iter->second.VertexArray[ i*3 + 1 ];
+					double y = array_iter->second->VertexArray[ i*3 + 1 ];
 					
 					if( (y > top) || ! found_top )
 					{
@@ -1319,13 +1365,13 @@ double Model::GetWidth( void )
 		double right = 0., left = 0.;
 		bool found_right = false, found_left = false;
 		
-		for( std::map<std::string,ModelObject>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
+		for( std::map<std::string,ModelObject*>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
 		{
-			for( std::map<std::string,ModelArrays>::iterator array_iter = obj_iter->second.Arrays.begin(); array_iter != obj_iter->second.Arrays.end(); array_iter ++ )
+			for( std::map<std::string,ModelArrays*>::iterator array_iter = obj_iter->second->Arrays.begin(); array_iter != obj_iter->second->Arrays.end(); array_iter ++ )
 			{
-				for( size_t i = 0; i < array_iter->second.VertexCount; i ++ )
+				for( size_t i = 0; i < array_iter->second->VertexCount; i ++ )
 				{
-					double z = array_iter->second.VertexArray[ i*3 + 2 ];
+					double z = array_iter->second->VertexArray[ i*3 + 2 ];
 					
 					if( (z > right) || ! found_right )
 					{
@@ -1384,15 +1430,15 @@ double Model::GetMaxRadius( void )
 		double x = 0., y = 0., z = 0.;
 		double dist = 0.;
 		
-		for( std::map<std::string,ModelObject>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
+		for( std::map<std::string,ModelObject*>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
 		{
-			for( std::map<std::string,ModelArrays>::iterator array_iter = obj_iter->second.Arrays.begin(); array_iter != obj_iter->second.Arrays.end(); array_iter ++ )
+			for( std::map<std::string,ModelArrays*>::iterator array_iter = obj_iter->second->Arrays.begin(); array_iter != obj_iter->second->Arrays.end(); array_iter ++ )
 			{
-				for( size_t i = 0; i < array_iter->second.VertexCount; i ++ )
+				for( size_t i = 0; i < array_iter->second->VertexCount; i ++ )
 				{
-					x = array_iter->second.VertexArray[ i*3 ];
-					y = array_iter->second.VertexArray[ i*3 + 1 ];
-					z = array_iter->second.VertexArray[ i*3 + 2 ];
+					x = array_iter->second->VertexArray[ i*3 ];
+					y = array_iter->second->VertexArray[ i*3 + 1 ];
+					z = array_iter->second->VertexArray[ i*3 + 2 ];
 					
 					dist = sqrt( x*x + y*y + z*z );
 					
@@ -1411,10 +1457,10 @@ double Model::GetMaxTriangleEdge( void ) const
 {
 	double max_triangle_edge = 0.;
 	
-	for( std::map<std::string,ModelObject>::const_iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
+	for( std::map<std::string,ModelObject*>::const_iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
 	{
-		if( obj_iter->second.MaxTriangleEdge > max_triangle_edge )
-			max_triangle_edge = obj_iter->second.MaxTriangleEdge;
+		if( obj_iter->second->MaxTriangleEdge > max_triangle_edge )
+			max_triangle_edge = obj_iter->second->MaxTriangleEdge;
 	}
 	
 	return max_triangle_edge;
@@ -1425,8 +1471,8 @@ size_t Model::ArrayCount( void ) const
 {
 	size_t count = 0;
 	
-	for( std::map<std::string,ModelObject>::const_iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
-		count += obj_iter->second.Arrays.size();
+	for( std::map<std::string,ModelObject*>::const_iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
+		count += obj_iter->second->Arrays.size();
 	
 	return count;
 }
@@ -1442,9 +1488,9 @@ size_t Model::VertexCount( void ) const
 {
 	size_t count = 0;
 	
-	for( std::map<std::string,ModelObject>::const_iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
-		for( std::map<std::string,ModelArrays>::const_iterator array_iter = obj_iter->second.Arrays.begin(); array_iter != obj_iter->second.Arrays.end(); array_iter ++ )
-			count += array_iter->second.VertexCount;
+	for( std::map<std::string,ModelObject*>::const_iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
+		for( std::map<std::string,ModelArrays*>::const_iterator array_iter = obj_iter->second->Arrays.begin(); array_iter != obj_iter->second->Arrays.end(); array_iter ++ )
+			count += array_iter->second->VertexCount;
 	
 	return count;
 }
@@ -1476,34 +1522,37 @@ ModelArrays::ModelArrays( void )
 	VertexArray = NULL;
 	TexCoordArray = NULL;
 	NormalArray = NULL;
-	Allocated = false;
 	WorldSpaceVertexArray = NULL;
-	/*
-	WorldSpacePos.Fwd.Set(0,0,0);
-	WorldSpacePos.Up.Set(0,0,0);
-	WorldSpacePos.Right.Set(0,0,0);
-	WorldSpaceFwdScale = WorldSpaceUpScale = WorldSpaceRightScale = 0.;
-	*/
+	Allocated = false;
+	AllocatedWorldSpace = false;
 }
 
 
 ModelArrays::ModelArrays( const ModelArrays &other )
 {
-	// FIXME: Is this called when a container holding it is resized, and is the other destructed?  May need to rethink allocation.
 	VertexCount = 0;
 	VertexArray = NULL;
 	TexCoordArray = NULL;
 	NormalArray = NULL;
-	Allocated = false;
 	WorldSpaceVertexArray = NULL;
-	/*
-	WorldSpacePos.Fwd.Set(0,0,0);
-	WorldSpacePos.Up.Set(0,0,0);
-	WorldSpacePos.Right.Set(0,0,0);
-	WorldSpaceFwdScale = WorldSpaceUpScale = WorldSpaceRightScale = 0.;
-	*/
+	Allocated = false;
+	AllocatedWorldSpace = false;
 	
 	BecomeInstance( &other );
+}
+
+
+ModelArrays::ModelArrays( const ModelArrays *other )
+{
+	VertexCount = 0;
+	VertexArray = NULL;
+	TexCoordArray = NULL;
+	NormalArray = NULL;
+	WorldSpaceVertexArray = NULL;
+	Allocated = false;
+	AllocatedWorldSpace = false;
+	
+	BecomeInstance( other );
 }
 
 
@@ -1533,17 +1582,16 @@ void ModelArrays::Clear( void )
 	NormalArray = NULL;
 	
 	// Each instance is always responsible for its own WorldSpaceVertexArray.
-	if( WorldSpaceVertexArray )
-	{
+	if( AllocatedWorldSpace && WorldSpaceVertexArray )
 		free( WorldSpaceVertexArray );
-		WorldSpaceVertexArray = NULL;
-	}
-	/*
-	WorldSpacePos.Fwd.Set(0,0,0);
-	WorldSpacePos.Up.Set(0,0,0);
-	WorldSpacePos.Right.Set(0,0,0);
-	WorldSpaceFwdScale = WorldSpaceUpScale = WorldSpaceRightScale = 0.;
-	*/
+	WorldSpaceVertexArray = NULL;
+	AllocatedWorldSpace = false;
+}
+
+
+void ModelArrays::BecomeCopy( void )
+{
+	BecomeCopy( this );
 }
 
 
@@ -1701,9 +1749,10 @@ void ModelArrays::AddFaces( std::vector<ModelFace> &faces )
 	if( vertices_size )
 	{
 		// Get rid of the old worldspace array; it will be regenerated later if necessary.
-		if( WorldSpaceVertexArray )
+		if( AllocatedWorldSpace && WorldSpaceVertexArray )
 			free( WorldSpaceVertexArray );
 		WorldSpaceVertexArray = NULL;
+		AllocatedWorldSpace = false;
 		
 		// We have vertices to add, so we'll need to increase our allocations or make new ones.
 		size_t old_vertex_count = VertexCount;
@@ -1967,54 +2016,6 @@ void ModelArrays::MakeWorldSpace( const Pos3D *pos, double fwd_scale, double up_
 {
 	if( VertexCount )
 	{
-		/*
-		// NOTE: Part of an incomplete change; disabled because it required making WillCollide non-const, which slowed everything way down.
-		
-		WorldSpaceLock.Lock();
-		
-		// Make sure we have an array allocated for worldspace vertices.
-		bool do_it = true;
-		if( ! WorldSpaceVertexArray )
-		{
-			size_t vertex_array_mem = sizeof(GLdouble) * 3 * VertexCount;
-			WorldSpaceVertexArray = (GLdouble*) malloc( vertex_array_mem );
-		}
-		else if( VertexCount > 30 )
-		{
-			// Avoid redoing work on complex models.
-			do_it = (pos->X  != WorldSpacePos.X)       || (pos->Y       != WorldSpacePos.Y)       || (pos->Z       != WorldSpacePos.Z)
-			|| (pos->Fwd.X   != WorldSpacePos.Fwd.X)   || (pos->Fwd.Y   != WorldSpacePos.Fwd.Y)   || (pos->Fwd.Z   != WorldSpacePos.Fwd.Z)
-			|| (pos->Up.X    != WorldSpacePos.Up.X)    || (pos->Up.Y    != WorldSpacePos.Up.Y)    || (pos->Up.Z    != WorldSpacePos.Up.Z)
-			|| (pos->Right.X != WorldSpacePos.Right.X) || (pos->Right.Y != WorldSpacePos.Right.Y) || (pos->Right.Z != WorldSpacePos.Right.Z)
-			|| (WorldSpaceFwdScale != fwd_scale) || (WorldSpaceUpScale != up_scale) || (WorldSpaceRightScale != right_scale);
-		}
-		
-		if( do_it )
-		{
-			// In model space, X = fwd, Y = up, Z = right.
-			Vec3D x_vec( pos->Fwd.X * fwd_scale, pos->Up.X * up_scale, pos->Right.X * right_scale );
-			Vec3D y_vec( pos->Fwd.Y * fwd_scale, pos->Up.Y * up_scale, pos->Right.Y * right_scale );
-			Vec3D z_vec( pos->Fwd.Z * fwd_scale, pos->Up.Z * up_scale, pos->Right.Z * right_scale );
-			
-			// Translate from modelspace to worldspace.
-			for( size_t i = 0; i < VertexCount; i ++ )
-			{
-				Vec3D vertex( VertexArray[ i*3 ], VertexArray[ i*3 + 1 ], VertexArray[ i*3 + 2 ] );
-				WorldSpaceVertexArray[ i*3     ] = pos->X + x_vec.Dot(&vertex);
-				WorldSpaceVertexArray[ i*3 + 1 ] = pos->Y + y_vec.Dot(&vertex);
-				WorldSpaceVertexArray[ i*3 + 2 ] = pos->Z + z_vec.Dot(&vertex);
-			}
-			
-			// Remember where we did this so we can avoid redoing the same.
-			WorldSpacePos.Copy( pos );
-			WorldSpaceFwdScale   = fwd_scale;
-			WorldSpaceUpScale    = up_scale;
-			WorldSpaceRightScale = right_scale;
-		}
-		
-		WorldSpaceLock.Unlock();
-		*/
-		
 		// In model space, X = fwd, Y = up, Z = right.
 		Vec3D x_vec( pos->Fwd.X * fwd_scale, pos->Up.X * up_scale, pos->Right.X * right_scale );
 		Vec3D y_vec( pos->Fwd.Y * fwd_scale, pos->Up.Y * up_scale, pos->Right.Y * right_scale );
@@ -2025,15 +2026,19 @@ void ModelArrays::MakeWorldSpace( const Pos3D *pos, double fwd_scale, double up_
 		{
 			size_t vertex_array_mem = sizeof(GLdouble) * 3 * VertexCount;
 			WorldSpaceVertexArray = (GLdouble*) malloc( vertex_array_mem );
+			AllocatedWorldSpace = WorldSpaceVertexArray;
 		}
 		
 		// Translate from modelspace to worldspace.
-		for( size_t i = 0; i < VertexCount; i ++ )
+		if( WorldSpaceVertexArray )
 		{
-			Vec3D vertex( VertexArray[ i*3 ], VertexArray[ i*3 + 1 ], VertexArray[ i*3 + 2 ] );
-			WorldSpaceVertexArray[ i*3     ] = pos->X + x_vec.Dot(&vertex);
-			WorldSpaceVertexArray[ i*3 + 1 ] = pos->Y + y_vec.Dot(&vertex);
-			WorldSpaceVertexArray[ i*3 + 2 ] = pos->Z + z_vec.Dot(&vertex);
+			for( size_t i = 0; i < VertexCount; i ++ )
+			{
+				Vec3D vertex( VertexArray[ i*3 ], VertexArray[ i*3 + 1 ], VertexArray[ i*3 + 2 ] );
+				WorldSpaceVertexArray[ i*3     ] = pos->X + x_vec.Dot(&vertex);
+				WorldSpaceVertexArray[ i*3 + 1 ] = pos->Y + y_vec.Dot(&vertex);
+				WorldSpaceVertexArray[ i*3 + 2 ] = pos->Z + z_vec.Dot(&vertex);
+			}
 		}
 	}
 }
@@ -2522,24 +2527,49 @@ ModelObject::ModelObject( void )
 }
 
 
+ModelObject::ModelObject( const std::string &name )
+{
+	CenterPoint.SetPos( 0., 0., 0. );
+	MinFwd = MaxFwd = MinUp = MaxUp = MinRight = MaxRight = MaxRadius = MaxTriangleEdge = 0.;
+	NeedsRecalc = false;
+	
+	Name = name;
+}
+
+
 ModelObject::ModelObject( const ModelObject &other )
 {
 	BecomeInstance( &other );
 }
 
 
+ModelObject::ModelObject( const ModelObject *other )
+{
+	BecomeInstance( other );
+}
+
+
 ModelObject::~ModelObject()
 {
+	for( std::map<std::string,ModelArrays*>::iterator array_iter = Arrays.begin(); array_iter != Arrays.end(); array_iter ++ )
+		delete array_iter->second;
+	Arrays.clear();
 }
 
 
 void ModelObject::BecomeInstance( const ModelObject *other )
 {
+	if( this == other )  // Prevent clobbering Arrays if I do something dumb.
+		return;
+	
 	Name = other->Name;
 	
+	for( std::map<std::string,ModelArrays*>::iterator array_iter = Arrays.begin(); array_iter != Arrays.end(); array_iter ++ )
+		delete array_iter->second;
 	Arrays.clear();
-	for( std::map<std::string,ModelArrays>::const_iterator array_iter = other->Arrays.begin(); array_iter != other->Arrays.end(); array_iter ++ )
-		Arrays[ array_iter->first ].BecomeInstance( &(array_iter->second) );
+	
+	for( std::map<std::string,ModelArrays*>::const_iterator array_iter = other->Arrays.begin(); array_iter != other->Arrays.end(); array_iter ++ )
+		Arrays[ array_iter->first ] = new ModelArrays( array_iter->second );
 	
 	Points = other->Points;
 	Lines = other->Lines;
@@ -2560,7 +2590,9 @@ void ModelObject::BecomeInstance( const ModelObject *other )
 
 void ModelObject::AddFaces( std::string mtl, std::vector<ModelFace> &faces )
 {
-	Arrays[ mtl ].AddFaces( faces );
+	if( ! Arrays[ mtl ] )
+		Arrays[ mtl ] = new ModelArrays();
+	Arrays[ mtl ]->AddFaces( faces );
 	
 	NeedsRecalc = true;
 }
@@ -2580,16 +2612,16 @@ void ModelObject::Recalc( void )
 	MaxUp = -FLT_MAX;
 	MaxRight = -FLT_MAX;
 	
-	for( std::map<std::string,ModelArrays>::iterator array_iter = Arrays.begin(); array_iter != Arrays.end(); array_iter ++ )
+	for( std::map<std::string,ModelArrays*>::iterator array_iter = Arrays.begin(); array_iter != Arrays.end(); array_iter ++ )
 	{
-		vertex_count += array_iter->second.VertexCount;
+		vertex_count += array_iter->second->VertexCount;
 		
-		for( size_t i = 0; i < array_iter->second.VertexCount; i ++ )
+		for( size_t i = 0; i < array_iter->second->VertexCount; i ++ )
 		{
 			// In model space, X = fwd, Y = up, Z = right.
-			double x = array_iter->second.VertexArray[ i*3     ];
-			double y = array_iter->second.VertexArray[ i*3 + 1 ];
-			double z = array_iter->second.VertexArray[ i*3 + 2 ];
+			double x = array_iter->second->VertexArray[ i*3     ];
+			double y = array_iter->second->VertexArray[ i*3 + 1 ];
+			double z = array_iter->second->VertexArray[ i*3 + 2 ];
 			
 			if( x < MinFwd )
 				MinFwd = x;
@@ -2609,12 +2641,12 @@ void ModelObject::Recalc( void )
 			if( (i % 3) == 2 )
 			{
 				// Check each triangle for edge lengths.
-				double x1 = array_iter->second.VertexArray[ i*3 - 6 ];
-				double y1 = array_iter->second.VertexArray[ i*3 - 5 ];
-				double z1 = array_iter->second.VertexArray[ i*3 - 4 ];
-				double x2 = array_iter->second.VertexArray[ i*3 - 3 ];
-				double y2 = array_iter->second.VertexArray[ i*3 - 2 ];
-				double z2 = array_iter->second.VertexArray[ i*3 - 1 ];
+				double x1 = array_iter->second->VertexArray[ i*3 - 6 ];
+				double y1 = array_iter->second->VertexArray[ i*3 - 5 ];
+				double z1 = array_iter->second->VertexArray[ i*3 - 4 ];
+				double x2 = array_iter->second->VertexArray[ i*3 - 3 ];
+				double y2 = array_iter->second->VertexArray[ i*3 - 2 ];
+				double z2 = array_iter->second->VertexArray[ i*3 - 1 ];
 				double len_sq = (x1-x) * (x1-x) + (y1-y) * (y1-y) + (z1-z) * (z1-z);
 				if( len_sq > max_triangle_edge_squared )
 					max_triangle_edge_squared = len_sq;
@@ -2636,13 +2668,13 @@ void ModelObject::Recalc( void )
 		CenterPoint.Z = (MinRight + MaxRight) / 2.;
 		MaxTriangleEdge = sqrt(max_triangle_edge_squared);
 		
-		for( std::map<std::string,ModelArrays>::iterator array_iter = Arrays.begin(); array_iter != Arrays.end(); array_iter ++ )
+		for( std::map<std::string,ModelArrays*>::iterator array_iter = Arrays.begin(); array_iter != Arrays.end(); array_iter ++ )
 		{
-			for( size_t i = 0; i < array_iter->second.VertexCount; i ++ )
+			for( size_t i = 0; i < array_iter->second->VertexCount; i ++ )
 			{
-				double x = array_iter->second.VertexArray[ i*3     ] - CenterPoint.X;
-				double y = array_iter->second.VertexArray[ i*3 + 1 ] - CenterPoint.Y;
-				double z = array_iter->second.VertexArray[ i*3 + 2 ] - CenterPoint.Z;
+				double x = array_iter->second->VertexArray[ i*3     ] - CenterPoint.X;
+				double y = array_iter->second->VertexArray[ i*3 + 1 ] - CenterPoint.Y;
+				double z = array_iter->second->VertexArray[ i*3 + 2 ] - CenterPoint.Z;
 				double dist = sqrt( x*x + y*y + z*z );
 				if( dist > MaxRadius )
 					MaxRadius = dist;
@@ -2666,22 +2698,22 @@ void ModelObject::Recalc( void )
 
 void ModelObject::CalculateNormals( void )
 {
-	for( std::map<std::string,ModelArrays>::iterator array_iter = Arrays.begin(); array_iter != Arrays.end(); array_iter ++ )
-		array_iter->second.CalculateNormals();
+	for( std::map<std::string,ModelArrays*>::iterator array_iter = Arrays.begin(); array_iter != Arrays.end(); array_iter ++ )
+		array_iter->second->CalculateNormals();
 }
 
 
 void ModelObject::ReverseNormals( void )
 {
-	for( std::map<std::string,ModelArrays>::iterator array_iter = Arrays.begin(); array_iter != Arrays.end(); array_iter ++ )
-		array_iter->second.ReverseNormals();
+	for( std::map<std::string,ModelArrays*>::iterator array_iter = Arrays.begin(); array_iter != Arrays.end(); array_iter ++ )
+		array_iter->second->ReverseNormals();
 }
 
 
 void ModelObject::SmoothNormals( void )
 {
-	for( std::map<std::string,ModelArrays>::iterator array_iter = Arrays.begin(); array_iter != Arrays.end(); array_iter ++ )
-		array_iter->second.SmoothNormals();
+	for( std::map<std::string,ModelArrays*>::iterator array_iter = Arrays.begin(); array_iter != Arrays.end(); array_iter ++ )
+		array_iter->second->SmoothNormals();
 }
 
 
@@ -2732,11 +2764,6 @@ double ModelObject::GetMaxRadius( void )
 
 Vec3D ModelObject::GetExplosionMotion( int seed, Randomizer *randomizer ) const
 {
-	/*
-	if( NeedsRecalc )
-		Recalc();  // FIXME: Commented-out because Recalc is not const.
-	*/
-	
 	// Generate a per-object seed based on the object name.
 	seed *= Name.length();
 	for( size_t i = 0; i < Name.length(); i ++ )
@@ -2790,18 +2817,18 @@ ModelMaterial::ModelMaterial( void )
 
 ModelMaterial::ModelMaterial( const ModelMaterial &other )
 {
-	Texture.BecomeInstance( &(other.Texture) );
-	Ambient = other.Ambient;
-	Diffuse = other.Diffuse;
-	Specular = other.Specular;
-	Shininess = other.Shininess;
-	Arrays.BecomeInstance( &(other.Arrays) );
+	BecomeInstance( &other );
+}
+
+
+ModelMaterial::ModelMaterial( const ModelMaterial *other )
+{
+	BecomeInstance( other );
 }
 
 
 ModelMaterial::~ModelMaterial()
 {
-	Arrays.Clear();
 }
 
 

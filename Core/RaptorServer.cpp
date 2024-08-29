@@ -5,6 +5,7 @@
 #define GAMESERVER_CPP
 
 #include "RaptorServer.h"
+#include "RaptorGame.h"
 
 #include <cstddef>
 #include <cmath>
@@ -277,6 +278,16 @@ bool RaptorServer::ProcessPacket( Packet *packet, ConnectedClient *from_client )
 	{
 		// Lazy solution: Just resend this packet back to everyone.
 		Net.SendAll( packet );
+		
+		// Dedicated servers print chat to console.
+		if( Console != &(Raptor::Game->Console) )
+		{
+			std::string message = packet->NextString();
+			uint32_t msg_type = 0;
+			if( packet->Remaining() )
+				msg_type = packet->NextUInt();
+			Console->Print( message, msg_type );
+		}
 	}
 	
 	return false;

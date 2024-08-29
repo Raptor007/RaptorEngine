@@ -824,14 +824,19 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 						}
 						else if( sv_cmd == "who" )
 						{
-							for( std::map<uint16_t,Player*>::const_iterator player_iter = Raptor::Server->Data.Players.begin(); player_iter != Raptor::Server->Data.Players.end(); player_iter ++ )
+							if( Raptor::Server->Data.Players.size() )
 							{
-								std::string name = player_iter->second->Name;
-								std::string version = player_iter->second->PropertyAsString( "version", Raptor::Server->Version.c_str(), Raptor::Server->Version.c_str() );
-								if( version != Raptor::Server->Version )
-									name += std::string(" [v") + version + std::string("]");
-								Raptor::Game->Console.Print( name );
+								for( std::map<uint16_t,Player*>::const_iterator player_iter = Raptor::Server->Data.Players.begin(); player_iter != Raptor::Server->Data.Players.end(); player_iter ++ )
+								{
+									std::string name = player_iter->second->Name;
+									std::string version = player_iter->second->PropertyAsString( "version", Raptor::Server->Version.c_str(), Raptor::Server->Version.c_str() );
+									if( version != Raptor::Server->Version )
+										name += std::string(" [v") + version + std::string("]");
+									Raptor::Game->Console.Print( name );
+								}
 							}
+							else
+								Raptor::Game->Console.Print( "No players connected.", TextConsole::MSG_ERROR );
 						}
 						else if( sv_cmd == "say" )
 						{
@@ -840,7 +845,7 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 								Packet message = Packet( Raptor::Packet::MESSAGE );
 								message.AddString( (std::string("Server: ") + Str::Join( elements, " " )).c_str() );
 								message.AddUInt( TextConsole::MSG_CHAT );
-								Raptor::Server->Net.SendAll( &message );
+								Raptor::Server->ProcessPacket( &message, NULL );
 							}
 							else
 								Raptor::Game->Console.Print( "Usage: sv say <message>", TextConsole::MSG_ERROR );
@@ -948,6 +953,12 @@ void ClientConfig::Load( std::string filename )
 
 void ClientConfig::Save( std::string filename ) const
 {
+	Save( filename, (Raptor::Game->Input.ControlNames.size() > 1) );
+}
+
+
+void ClientConfig::Save( std::string filename, bool unbindall ) const
+{
 	FILE *output = fopen( filename.c_str(), "wt" );
 	if( output )
 	{
@@ -958,7 +969,7 @@ void ClientConfig::Save( std::string filename ) const
 			for( std::set<std::string>::const_iterator dev_iter = Raptor::Game->Input.DeviceTypes.begin(); dev_iter != Raptor::Game->Input.DeviceTypes.end(); dev_iter ++ )
 				fprintf( output, "joy_class \"%s\"\n", dev_iter->c_str() );
 		
-		if( Raptor::Game->Input.ControlNames.size() > 1 )
+		if( unbindall )
 			fprintf( output, "\nunbindall\n" );
 		
 		for( std::map<Uint8,uint8_t>::const_iterator mouse_iter = MouseBinds.begin(); mouse_iter != MouseBinds.end(); mouse_iter ++ )

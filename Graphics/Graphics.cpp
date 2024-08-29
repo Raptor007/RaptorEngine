@@ -480,9 +480,9 @@ void Graphics::Setup2D( double x1, double y1, double x2, double y2 )
 }
 
 
-void Graphics::Setup3D( Camera *cam )
+void Graphics::Setup3D( Camera *cam, double aspect_ratio )
 {
-	Setup3D( cam->FOV,  cam->X, cam->Y, cam->Z,  cam->X + cam->Fwd.X, cam->Y + cam->Fwd.Y, cam->Z + cam->Fwd.Z,  cam->Up.X, cam->Up.Y, cam->Up.Z );
+	Setup3D( cam->FOV,  cam->X, cam->Y, cam->Z,  cam->X + cam->Fwd.X, cam->Y + cam->Fwd.Y, cam->Z + cam->Fwd.Z,  cam->Up.X, cam->Up.Y, cam->Up.Z,  aspect_ratio );
 }
 
 
@@ -498,7 +498,7 @@ void Graphics::Setup3D( double fov_w, double cam_x, double cam_y, double cam_z, 
 }
 
 
-void Graphics::Setup3D( double fov_w, double cam_x, double cam_y, double cam_z, double cam_look_x, double cam_look_y, double cam_look_z, double cam_up_x, double cam_up_y, double cam_up_z )
+void Graphics::Setup3D( double fov_w, double cam_x, double cam_y, double cam_z, double cam_look_x, double cam_look_y, double cam_look_z, double cam_up_x, double cam_up_y, double cam_up_z, double aspect_ratio )
 {
 	if( DrawTo )
 	{
@@ -506,17 +506,20 @@ void Graphics::Setup3D( double fov_w, double cam_x, double cam_y, double cam_z, 
 		return;
 	}
 	
+	if( ! aspect_ratio )
+		aspect_ratio = AspectRatio;
+	
 	// If we pass FOV=0, calculate a good default.  4:3 is FOV 80, widescreen is scaled appropriately.
 	if( fov_w == 0. )
-		fov_w = 60. * AspectRatio;
+		fov_w = 60. * aspect_ratio;
 	// If we pass FOV<0, treat its absolute value as fov_h.
 	else if( fov_w < 0. )
-		fov_w *= -AspectRatio;
+		fov_w *= -aspect_ratio;
 	
 	glEnable( GL_DEPTH_TEST );
 	glMatrixMode( GL_PROJECTION );
 	glLoadIdentity();
-	gluPerspective( fov_w / AspectRatio, AspectRatio, ZNear, ZFar );
+	gluPerspective( fov_w / aspect_ratio, aspect_ratio, ZNear, ZFar );
 	glMatrixMode( GL_MODELVIEW );
 	glLoadIdentity();
 	gluLookAt( cam_x, cam_y, cam_z,  cam_look_x, cam_look_y, cam_look_z,  cam_up_x, cam_up_y, cam_up_z );

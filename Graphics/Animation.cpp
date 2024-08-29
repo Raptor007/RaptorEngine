@@ -175,60 +175,36 @@ GLuint Animation::CurrentFrame( void )
 	if( LoadedTime.ElapsedSeconds() > Raptor::Game->Res.ResetTime.ElapsedSeconds() )
 		Reload();
 	
-	int count = FrameTimes.size();
-	if( count )
+	size_t count = FrameTimes.size();
+	if( count && Frames.size() )
 	{
 		if( Finished() )
 		{
 			// If the animation is done looping, always return the last frame.
-			
-			try
-			{
-				MostRecentFrame = Frames.at( count - 1 );
-				return MostRecentFrame;
-			}
-			catch( std::out_of_range &exception )
-			{
-				fprintf( stderr, "Animation::CurrentFrame: std::out_of_range\n" );
-			}
-			
-			MostRecentFrame = 0;
+			MostRecentFrame = *(Frames.rbegin());
 			return MostRecentFrame;
 		}
 		
 		
 		// Figure out where we are in the cycle and return that frame.
 		
-		double time_in_animation = fmod( Timer.ElapsedSeconds(), LoopTime() );
+		double loop_time = LoopTime();
+		double time_in_animation = loop_time ? fmod( Timer.ElapsedSeconds(), loop_time ) : 0.;
 		
-		for( int i = 0; i < count; i ++ )
+		for( size_t i = 0; i < count; i ++ )
 		{
-			try
+			time_in_animation -= FrameTimes.at( i ) / Speed;
+			if( time_in_animation < 0.0 )
 			{
-				time_in_animation -= FrameTimes.at( i ) / Speed;
-				if( time_in_animation < 0.0 )
-				{
-					MostRecentFrame = Frames.at( i );
-					return MostRecentFrame;
-				}
-			}
-			catch( std::out_of_range &exception )
-			{
-				fprintf( stderr, "Animation::CurrentFrame: std::out_of_range\n" );
+				MostRecentFrame = (Frames.size() > i) ? Frames.at( i ) : *(Frames.rbegin());
+				return MostRecentFrame;
 			}
 		}
 		
 		
 		// If there was a problem determining the current frame, return the last frame.
-		
-		try
-		{
-			return Frames.at( count - 1 );
-		}
-		catch( std::out_of_range &exception )
-		{
-			fprintf( stderr, "Animation::CurrentFrame: std::out_of_range\n" );
-		}
+		MostRecentFrame = *(Frames.rbegin());
+		return MostRecentFrame;
 	}
 	
 	
@@ -239,34 +215,25 @@ GLuint Animation::CurrentFrame( void )
 }
 
 
-double Animation::StoredTime( void )
+double Animation::StoredTime( void ) const
 {
 	double total = 0.0;
 	
 	int count = FrameTimes.size();
 	for( int i = 0; i < count; i ++ )
-	{
-		try
-		{
-			total += FrameTimes.at( i );
-		}
-		catch( std::out_of_range &exception )
-		{
-			fprintf( stderr, "Animation::StoredTime: std::out_of_range\n" );
-		}
-	}
+		total += FrameTimes.at( i );
 	
 	return total;
 }
 
 
-double Animation::LoopTime( void )
+double Animation::LoopTime( void ) const
 {
 	return StoredTime() / Speed;
 }
 
 
-bool Animation::Finished( void )
+bool Animation::Finished( void ) const
 {
 	// PlayCount 0 means loop forever, so it's never finished.
 	if( PlayCount <= 0 )

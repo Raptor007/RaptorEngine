@@ -37,9 +37,9 @@ public:
 	void Start( void );
 	
 	GLuint CurrentFrame( void );
-	double StoredTime( void );
-	double LoopTime( void );
-	bool Finished( void );
+	double StoredTime( void ) const;
+	double LoopTime( void ) const;
+	bool Finished( void ) const;
 	
 private:
 	Clock LoadedTime;
