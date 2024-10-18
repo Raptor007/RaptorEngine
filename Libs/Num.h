@@ -15,7 +15,7 @@
 namespace Num
 {
 	std::string ToString( int num );
-	std::string ToString( double num );
+	std::string ToString( double num, int max_precision = -1 );
 	std::string ToHexString( int num );
 	
 	int8_t Sign( double num );

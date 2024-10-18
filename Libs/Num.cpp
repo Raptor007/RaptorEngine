@@ -22,10 +22,13 @@ std::string Num::ToString( int num )
 }
 
 
-std::string Num::ToString( double num )
+std::string Num::ToString( double num, int max_precision )
 {
 	char cstr[ 1024 ] = "";
-	snprintf( cstr, 1024, "%f", num );
+	char format[ 32 ] = "%f";
+	if( max_precision >= 0 )
+		snprintf( format, sizeof(format), "%%.%if", max_precision );
+	snprintf( cstr, 1024, format, num );
 	
 	// Trim trailing zeros after decimal point.
 	char *dot = strchr( cstr, '.' );

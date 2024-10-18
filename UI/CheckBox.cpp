@@ -117,7 +117,7 @@ void CheckBox::Draw( void )
 				LabelFont->DrawText( LabelText, x, y, LabelAlign, RedOver, GreenOver, BlueOver, AlphaOver );
 		}
 		else
-			LabelFont->DrawText( LabelText, x, y, LabelAlign, Red, Green, Blue, Alpha );
+			LabelFont->DrawText( LabelText, x, y, LabelAlign, RedNormal, GreenNormal, BlueNormal, AlphaNormal );
 	}
 }
 

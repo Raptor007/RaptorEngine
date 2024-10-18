@@ -287,6 +287,7 @@ void DropDown::Changed( void )
 DropDownListBox::DropDownListBox( DropDown *dropdown )
 : ListBox( &(dropdown->CalcRect), dropdown->LabelFont, dropdown->ScrollBarSize, dropdown->Items )
 {
+	AllowDeselect = false;
 	CalledBy = dropdown;
 	Alpha = 1.f;
 	

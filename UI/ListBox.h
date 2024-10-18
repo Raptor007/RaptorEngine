@@ -22,6 +22,7 @@ class ListBoxButton;
 #include "Font.h"
 #include "Animation.h"
 #include "Button.h"
+#include "Color.h"
 
 
 class ListBox : public Layer
@@ -29,6 +30,7 @@ class ListBox : public Layer
 public:
 	std::vector<ListBoxItem> Items;
 	ListBoxItem *Selected;
+	bool AllowDeselect;
 	uint8_t TextAlign;
 	Font *TextFont;
 	float TextRed, TextGreen, TextBlue, TextAlpha;
@@ -42,7 +44,7 @@ public:
 	ListBox( SDL_Rect *rect, Font *font, int scroll_bar_size, std::vector<ListBoxItem> items );
 	virtual ~ListBox();
 	
-	void AddItem( std::string value, std::string text );
+	void AddItem( std::string value, std::string text, const Color *color = NULL );
 	int FindItem( std::string value );
 	void RemoveItem( std::string value );
 	void RemoveItem( int index );
@@ -86,8 +88,11 @@ class ListBoxItem
 public:
 	std::string Value;
 	std::string Text;
+	bool HasCustomColor;
+	Color CustomColor;
 	
 	ListBoxItem( std::string value, std::string text );
+	void SetColor( float r, float g, float b, float a = 1.f );
 };
 
 

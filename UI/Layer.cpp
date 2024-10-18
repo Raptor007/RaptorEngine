@@ -249,12 +249,12 @@ bool Layer::HandleEvent( SDL_Event *event )
 #if SDL_VERSION_ATLEAST(2,0,0)
 	else if( (event->type == SDL_MOUSEWHEEL) && event->wheel.y && WithinCalcRect( event->wheel.mouseX, event->wheel.mouseY ) )
 	{
-		// For now, convert to MouseDown and MouseUp, and never consider it handled.
+		// Convert scroll events to MouseDown and MouseUp, and consider it handled if either returned true.
 		mouse_button = (event->wheel.y > 0) ? SDL_BUTTON_WHEELUP : SDL_BUTTON_WHEELDOWN;
-		MouseDown( mouse_button );
-		MouseUp( mouse_button );
+		bool handled_down = MouseDown( mouse_button );
+		bool handled_up = MouseUp( mouse_button );
+		handled = handled_down || handled_up;
 	}
-	// FIXME: SDL_TEXTINPUT
 #endif
 	else if( event->type == SDL_KEYDOWN )
 	{

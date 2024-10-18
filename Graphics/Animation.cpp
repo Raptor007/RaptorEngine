@@ -4,8 +4,8 @@
 
 #include "Animation.h"
 
-#include <stdexcept>
 #include <fstream>
+#include <algorithm>
 #include <math.h>
 #include "Str.h"
 #include "RaptorGame.h"
@@ -185,31 +185,42 @@ GLuint Animation::CurrentFrame( void )
 			return MostRecentFrame;
 		}
 		
-		
-		// Figure out where we are in the cycle and return that frame.
-		
 		double loop_time = LoopTime();
-		double time_in_animation = loop_time ? fmod( Timer.ElapsedSeconds(), loop_time ) : 0.;
-		
-		for( size_t i = 0; i < count; i ++ )
+		if( loop_time )
 		{
-			time_in_animation -= FrameTimes.at( i ) / Speed;
-			if( time_in_animation < 0.0 )
+			// Figure out where we are in the cycle and return that frame.
+			double time_in_animation = fmod( Timer.ElapsedSeconds(), loop_time );
+			for( size_t i = 0; i < count; i ++ )
 			{
-				MostRecentFrame = (Frames.size() > i) ? Frames.at( i ) : *(Frames.rbegin());
+				time_in_animation -= FrameTimes.at( i ) / Speed;
+				if( time_in_animation < 0.0 )
+				{
+					MostRecentFrame = (Frames.size() > i) ? Frames.at( i ) : *(Frames.rbegin());
+					return MostRecentFrame;
+				}
+			}
+		}
+		else if( count > 1 )
+		{
+			// Multiple frames with zero time means play as fast as possible.
+			std::vector<GLuint>::const_iterator frame_iter = std::find( Frames.begin(), Frames.end(), MostRecentFrame );
+			if( frame_iter != Frames.end() )
+			{
+				if( (! Raptor::Game->Gfx.DrawTo) || (Raptor::Game->Gfx.DrawTo != Raptor::Game->Head.EyeR) ) // Make sure both eyes see the same frame in VR.
+				{
+					frame_iter ++;
+					MostRecentFrame = (frame_iter != Frames.end()) ? *frame_iter : *(Frames.begin());
+				}
 				return MostRecentFrame;
 			}
 		}
-		
 		
 		// If there was a problem determining the current frame, return the last frame.
 		MostRecentFrame = *(Frames.rbegin());
 		return MostRecentFrame;
 	}
 	
-	
 	// If there are no frames or something went wrong, return 0.
-	
 	MostRecentFrame = 0;
 	return MostRecentFrame;
 }

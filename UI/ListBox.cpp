@@ -11,6 +11,7 @@
 ListBox::ListBox( SDL_Rect *rect, Font *font, int scroll_bar_size ) : Layer( rect )
 {
 	Selected = NULL;
+	AllowDeselect = true;
 	TextAlign = Font::ALIGN_TOP_LEFT;
 	TextFont = font;
 	
@@ -47,6 +48,7 @@ ListBox::ListBox( SDL_Rect *rect, Font *font, int scroll_bar_size ) : Layer( rec
 ListBox::ListBox( SDL_Rect *rect, Font *font, int scroll_bar_size, std::vector<ListBoxItem> items ) : Layer( rect )
 {
 	Selected = NULL;
+	AllowDeselect = true;
 	TextAlign = Font::ALIGN_TOP_LEFT;
 	TextFont = font;
 	
@@ -87,9 +89,12 @@ ListBox::~ListBox()
 }
 
 
-void ListBox::AddItem( std::string value, std::string text )
+void ListBox::AddItem( std::string value, std::string text, const Color *color )
 {
 	Items.push_back( ListBoxItem( value, text ) );
+	
+	if( color )
+		Items.back().SetColor( color->Red, color->Green, color->Blue, color->Alpha );
 }
 
 
@@ -281,6 +286,8 @@ void ListBox::DrawItem( const ListBoxItem *item, const SDL_Rect *rect )
 {
 	if( Selected == item )
 		TextFont->DrawText( item->Text, rect, TextAlign, SelectedRed, SelectedGreen, SelectedBlue, SelectedAlpha );
+	else if( item->HasCustomColor )
+		TextFont->DrawText( item->Text, rect, TextAlign, item->CustomColor.Red, item->CustomColor.Green, item->CustomColor.Blue, item->CustomColor.Alpha );
 	else
 		TextFont->DrawText( item->Text, rect, TextAlign, TextRed, TextGreen, TextBlue, TextAlpha );
 }
@@ -380,7 +387,6 @@ bool ListBox::MouseUp( Uint8 button )
 	else
 	{
 		int y = Raptor::Game->Mouse.Y - CalcRect.y;
-		
 		int index = (y + Scroll) / LineScroll();
 		
 		if( (size_t) index < Items.size() )
@@ -394,6 +400,11 @@ bool ListBox::MouseUp( Uint8 button )
 			{
 				fprintf( stderr, "ListBox::MouseUp: std::out_of_range\n" );
 			}
+		}
+		else if( AllowDeselect )
+		{
+			Selected = NULL;
+			Changed();
 		}
 	}
 	
@@ -455,6 +466,17 @@ ListBoxItem::ListBoxItem( std::string value, std::string text )
 {
 	Value = value;
 	Text = text;
+	HasCustomColor = false;
+}
+
+
+void ListBoxItem::SetColor( float r, float g, float b, float a )
+{
+	CustomColor.Red   = r;
+	CustomColor.Green = g;
+	CustomColor.Blue  = b;
+	CustomColor.Alpha = a;
+	HasCustomColor = true;
 }
 
 
