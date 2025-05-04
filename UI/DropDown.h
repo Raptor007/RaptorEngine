@@ -19,6 +19,7 @@ public:
 	std::string Value;
 	int ScrollBarSize;
 	DropDownListBox *MyListBox;
+	bool InvertMouseWheel;
 	
 	bool ClickOutEventHandle;
 	std::set<const SDL_Event*> EventsHandled;

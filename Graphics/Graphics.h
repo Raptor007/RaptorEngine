@@ -34,7 +34,7 @@ public:
 	SDL_Surface *Screen;
 #endif
 	bool Initialized;
-	int W, H, RealW, RealH, DesktopW, DesktopH, BPP;
+	int W, H, RealW, RealH, DesktopW, DesktopH, BPP, LightQuality;
 	float AspectRatio;
 	bool Fullscreen, VSync, Framebuffers;
 	int FSAA, AF, ZBits;

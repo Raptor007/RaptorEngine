@@ -66,7 +66,7 @@ public:
 	virtual void AcceptedClient( ConnectedClient *client );
 	virtual void DroppedClient( ConnectedClient *client );
 	virtual void SendUpdate( ConnectedClient *client );
-	virtual bool SetPlayerProperty( Player *player, std::string name, std::string value );
+	virtual bool SetPlayerProperty( Player *player, std::string name, std::string value, bool force = false );
 	
 	virtual void ChangeState( int state );
 	virtual void SetProperty( std::string name, std::string value );

@@ -75,6 +75,12 @@ bool CStr::EqualsInsensitive( const char *a, const char *b )
 }
 
 
+bool CStr::ContainsInsensitive( const char *str, const char *search_for )
+{
+	return (FindInsensitive( str, search_for ) >= 0);
+}
+
+
 int CStr::FindInsensitive( const char *str, const char *search_for )
 {
 	size_t search_len = strlen(search_for);
@@ -419,6 +425,12 @@ bool Str::AsBool( std::string str )
 bool Str::EqualsInsensitive( std::string a, std::string b )
 {
 	return CStr::EqualsInsensitive( a.c_str(), b.c_str() );
+}
+
+
+bool Str::ContainsInsensitive( std::string str, std::string search_for )
+{
+	return CStr::ContainsInsensitive( str.c_str(), search_for.c_str() );
 }
 
 

@@ -162,6 +162,17 @@ double Num::Clamp( double num, double min, double max )
 }
 
 
+int16_t Num::ScaleInt16( int16_t num, double scale )
+{
+	double scaled = num * scale;
+	if( scaled <= -32768. )
+		return -32768;
+	if( scaled >= 32767. )
+		return 32767;
+	return scaled + Num::Sign(scaled) * 0.5;
+}
+
+
 bool Num::Valid( double num )
 {
 	return (num == num);  // Detect floating-point NaN/IND.

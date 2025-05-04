@@ -37,4 +37,5 @@ public:
 	bool Set3f( const char *name, double x, double y, double z );
 	bool Set4f( const char *name, double x, double y, double z, double w );
 	bool Set1i( const char *name, int value );
+	GLint AttribLoc( const char *name );
 };

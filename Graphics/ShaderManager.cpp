@@ -144,3 +144,12 @@ bool ShaderManager::Set1i( const char *name, int value )
 	
 	return false;
 }
+
+
+GLint ShaderManager::AttribLoc( const char *name )
+{
+	if( Selected )  // FIXME: Make sure shader is active?
+		return Selected->AttribLoc( name );
+	
+	return -1;
+}

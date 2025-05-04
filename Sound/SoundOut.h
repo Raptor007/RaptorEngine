@@ -27,6 +27,7 @@ class SoundOutDelayed;
 #endif
 
 #include "PanningSound.h"
+#include "PlaybackBuffer.h"
 #include "GameObject.h"
 
 
@@ -35,13 +36,16 @@ class SoundOut
 public:
 	bool Initialized;
 	int Channels;
-	float MasterVolume, SoundVolume, MusicVolume;
+	float MasterVolume, SoundVolume, MusicVolume, VoiceVolume;
 	double DistScale;
 	Pos3D Cam;
 	std::set<int> ActiveChannels;
+	std::map<int, Mix_Chunk*> Allocated;
+	std::map<int, PlaybackBuffer*> PlayingBuffers;
 	std::map<int, PanningSound> ActivePans;
 	std::map<uint32_t, int> ObjectPans;
 	std::map<uint32_t, Clock> RecentPans;
+	std::map<uint16_t, PlaybackBuffer*> VoiceBuffers;
 	std::list<SoundOutDelayed> Delayed;
 	float SoundAttenuate, MusicAttenuate;
 	int AttenuateFor;
@@ -59,9 +63,13 @@ public:
 	void Initialize( void );
 	void Initialize( int channels, int rate, int depth, int buffer, int mix_channels );
 	
-	int Play( Mix_Chunk *sound );
+	int Play( Mix_Chunk *sound, int channel = -1 );
 	int Play( Mix_Chunk *sound, int16_t angle, uint8_t dist );
+	int PlayBuffer( PlaybackBuffer *buffer, int channel = -1 );
+	int PlayBuffer( PlaybackBuffer *buffer, int16_t angle, uint8_t dist );
 	int PlayAt( Mix_Chunk *sound, double x, double y, double z, double loudness = 1. );
+	
+	Mix_Chunk *AllocatePCM( const void *data, size_t samples, uint32_t sample_rate, uint8_t bytes_per_sample = 2, uint8_t channels = 1 );
 	
 	void StopSounds( void );
 	
@@ -69,6 +77,7 @@ public:
 	
 	int Pan2D( int channel, int16_t angle, uint8_t dist );
 	int Pan3D( int channel, double x, double y, double z, double loudness = 1. );
+	int PanWithObject( int channel, uint32_t object_id, double loudness = 1. );
 	
 	int PlayPanned( Mix_Chunk *sound, double x, double y, double z, double loudness = 1. );
 	int PlayFromObject( Mix_Chunk *sound, const GameObject *obj, double loudness = 1. );

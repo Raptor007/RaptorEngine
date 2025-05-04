@@ -22,6 +22,7 @@ namespace CStr
 	bool AsBool( const char *str );
 	
 	bool EqualsInsensitive( const char *a, const char *b );
+	bool ContainsInsensitive( const char *str, const char *search_for );
 	int FindInsensitive( const char *str, const char *search_for );
 	int FindLastInsensitive( const char *str, const char *search_for );
 	bool BeginsWith( const char *str, const char *search_for );
@@ -59,6 +60,7 @@ namespace Str
 	bool AsBool( std::string str );
 	
 	bool EqualsInsensitive( std::string a, std::string b );
+	bool ContainsInsensitive( std::string str, std::string search_for );
 	int FindInsensitive( std::string str, std::string search_for );
 	int FindLastInsensitive( std::string str, std::string search_for );
 	bool BeginsWith( std::string str, std::string search_for );

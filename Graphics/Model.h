@@ -106,6 +106,7 @@ public:
 	GLdouble *VertexArray, *WorldSpaceVertexArray;
 	GLfloat *TexCoordArray;
 	GLfloat *NormalArray;
+	GLfloat *TangentArray, *BitangentArray;
 	bool Allocated, AllocatedWorldSpace;
 	
 	ModelArrays( void );
@@ -120,9 +121,10 @@ public:
 	void Resize( size_t vertex_count );
 	void AddFaces( std::vector<ModelFace> &faces );
 	void RemoveFace( size_t face_index );
-	void CalculateNormals( void );
-	void ReverseNormals( void );
-	void SmoothNormals( void );
+	void CalculateNormals( size_t start_vertex = 0 );
+	void ReverseNormals( size_t start_vertex = 0 );
+	void SmoothNormals( size_t start_vertex = 0 );
+	void CalculateTangents( size_t start_vertex = 0 );
 	void Optimize( double vertex_tolerance = 0.0001, double normal_tolerance = 0.1, double dot_tolerance = 0.001 );
 	void MakeWorldSpace( const Pos3D *pos, double fwd_scale = 1., double up_scale = 1., double right_scale = 1. );
 	bool HasWorldSpaceVertex( const GLdouble *vertex ) const;
@@ -222,9 +224,9 @@ private:
 class ModelMaterial
 {
 public:
-	Animation Texture;
+	Animation Texture, BumpMap;
 	Color Ambient, Diffuse, Specular;
-	float Shininess;
+	float Shininess, BumpScale;
 	ModelArrays Arrays;
 	
 	ModelMaterial( void );

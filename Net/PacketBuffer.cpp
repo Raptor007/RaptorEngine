@@ -7,6 +7,7 @@
 #include "RaptorDefs.h"
 #include <cstddef>
 #include <cstring>
+#include "Num.h"
 
 
 PacketBuffer::PacketBuffer( void )
@@ -58,7 +59,7 @@ void PacketBuffer::AddData( void *data, PacketSize size )
 				memset( PartialHeaderData, 0, sizeof(PartialHeaderData) );
 				
 				Packet *packet = new Packet( Raptor::Packet::DISCONNECT );
-				packet->AddString( "Packet size error." );
+				packet->AddString( std::string("Packet size error: ") + Num::ToString((int)packet_size) );
 				Push( packet );
 				
 				return;

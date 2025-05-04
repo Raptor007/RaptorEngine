@@ -25,6 +25,7 @@ class RaptorGame;
 #include "ShaderManager.h"
 #include "Camera.h"
 #include "SoundOut.h"
+#include "Microphone.h"
 #include "LayerManager.h"
 #include "ClientConsole.h"
 #include "ResourceManager.h"
@@ -55,6 +56,7 @@ public:
 	ShaderManager ShaderMgr;
 	Camera Cam;
 	SoundOut Snd;
+	Microphone Mic;
 	LayerManager Layers;
 	ClientConsole Console;
 	TextConsole Msg;
@@ -106,7 +108,7 @@ public:
 	virtual void MessageReceived( std::string text, uint32_t type = TextConsole::MSG_NORMAL );
 	virtual bool ProcessPacket( Packet *packet );
 	virtual void SendUpdate( int8_t precision = 0 );
-	virtual bool SetPlayerProperty( std::string name, std::string value );
+	virtual bool SetPlayerProperty( std::string name, std::string value, bool force = false );
 	
 	virtual void ChangeState( int state );
 	virtual void Disconnected( void );

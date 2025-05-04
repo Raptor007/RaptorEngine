@@ -31,6 +31,7 @@ ConnectedClient::ConnectedClient( TCPsocket socket, double net_rate, int8_t prec
 	CleanupThread = NULL;
 	
 	PlayerID = 0;
+	DropPlayerID = 0;
 	
 	Connected = true;
 	

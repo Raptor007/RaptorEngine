@@ -27,13 +27,12 @@ public:
 	Clock Lifetime;
 	
 	Vec3D MotionVector;
-	double RollRate;
-	double PitchRate;
-	double YawRate;
+	double RollRate, PitchRate, YawRate;
 	
 	Pos3D PrevPos;
 	Vec3D PrevMotionVector;
-	bool SmoothPos;
+	double PrevRollRate, PrevPitchRate, PrevYawRate;
+	double SmoothRadius;
 	
 	
 	GameObject( uint32_t id = 0, uint32_t type_code = '    ', uint16_t player_id = 0 );

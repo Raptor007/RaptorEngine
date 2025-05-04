@@ -115,11 +115,11 @@ void Packet::AddData( const void *data, PacketSize size )
 		return;
 	
 	// Append additional packet data.
-	for( size_t i = 0; i < size; i ++ )
-		Data[ Size() + i ] = ((uint8_t *)( data ))[ i ];
+	PacketSize old_size = Size();
+	memcpy( Data + old_size, data, size );
 	
 	// Increase the stored size.
-	SetSize( Size() + size );
+	SetSize( old_size + size );
 }
 
 
@@ -193,11 +193,7 @@ bool Packet::MakeRoom( PacketSize addition_size )
 		// Determine how much to allocate.
 		size_t add_mem = addition_size;
 		if( AllocationChunkSize > 1 )
-		{
-			add_mem = AllocationChunkSize;
-			while( add_mem < addition_size )
-				add_mem += AllocationChunkSize;
-		}
+			add_mem = std::max<size_t>( 1, (addition_size + AllocationChunkSize - 1) / AllocationChunkSize ) * AllocationChunkSize;
 		
 		// Create data allocation for this packet.
 		Data = (uint8_t *) malloc( add_mem );
@@ -214,13 +210,9 @@ bool Packet::MakeRoom( PacketSize addition_size )
 	else if( Size() + addition_size > Allocated )
 	{
 		// Determine how much to add.
-		int add_mem = addition_size;
+		size_t add_mem = addition_size;
 		if( AllocationChunkSize > 1 )
-		{
-			add_mem = AllocationChunkSize;
-			while( Allocated + add_mem < Size() + addition_size )
-				add_mem += AllocationChunkSize;
-		}
+			add_mem = std::max<size_t>( 1, (Size() + addition_size - Allocated + AllocationChunkSize - 1) / AllocationChunkSize ) * AllocationChunkSize;
 		
 		// Increase allocation for this packet.
 		uint8_t *new_data = (uint8_t *) realloc( Data, Allocated + add_mem );

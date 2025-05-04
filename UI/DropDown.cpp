@@ -13,6 +13,7 @@ DropDown::DropDown( SDL_Rect *rect, Font *font, uint8_t align, int scroll_bar_si
 {
 	ScrollBarSize = scroll_bar_size;
 	MyListBox = NULL;
+	InvertMouseWheel = false;
 	ClickOutEventHandle = false;
 }
 
@@ -133,7 +134,11 @@ void DropDown::TrackEvent( SDL_Event *event )
 bool DropDown::HandleEvent( SDL_Event *event )
 {
 #if SDL_VERSION_ATLEAST(2,0,0)
+#if SDL_VERSION_ATLEAST(2,26,0)
 	if( Enabled && (event->type == SDL_MOUSEWHEEL) && event->wheel.y && WithinCalcRect( event->wheel.mouseX, event->wheel.mouseY ) )
+#else
+	if( Enabled && (event->type == SDL_MOUSEWHEEL) && event->wheel.y && WithinCalcRect( Raptor::Game->Mouse.X - Raptor::Game->Mouse.OffsetX, Raptor::Game->Mouse.Y - Raptor::Game->Mouse.OffsetY ) ) // FIXME: Messy.
+#endif
 	{
 		Clicked( (event->wheel.y > 0) ? SDL_BUTTON_WHEELUP : SDL_BUTTON_WHEELDOWN );
 		return true;
@@ -166,6 +171,14 @@ bool DropDown::HandleEvent( SDL_Event *event )
 
 void DropDown::Clicked( Uint8 button )
 {
+	if( InvertMouseWheel )
+	{
+		if( button == SDL_BUTTON_WHEELUP )
+			button = SDL_BUTTON_WHEELDOWN;
+		else if( button == SDL_BUTTON_WHEELDOWN )
+			button = SDL_BUTTON_WHEELUP;
+	}
+	
 	if( button == SDL_BUTTON_WHEELUP )
 	{
 		// Scrolling up should move to the previous item without showing the listbox.
@@ -290,6 +303,7 @@ DropDownListBox::DropDownListBox( DropDown *dropdown )
 	AllowDeselect = false;
 	CalledBy = dropdown;
 	Alpha = 1.f;
+	VRHeight = 2;
 	
 	AutoSize();
 	ScrollTo( CalledBy->Value, CalledBy->Rect.y - Rect.y );

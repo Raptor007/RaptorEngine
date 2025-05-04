@@ -21,6 +21,7 @@ SoundOut::SoundOut( void )
 	MasterVolume = 1.f;
 	SoundVolume = 1.f;
 	MusicVolume = 1.f;
+	VoiceVolume = 1.f;
 	DistScale = 0.25;
 	
 	PlayMusic = false;
@@ -49,18 +50,64 @@ SoundOut::~SoundOut()
 
 void SoundOut::Initialize( void )
 {
-	Initialize( 2, 44100, 16, 4096, Channels );
+	Initialize( Raptor::Game->Cfg.SettingAsInt("s_channels",2), Raptor::Game->Cfg.SettingAsInt("s_rate",44100), Raptor::Game->Cfg.SettingAsInt("s_depth",16), Raptor::Game->Cfg.SettingAsInt("s_buffer",4096), Raptor::Game->Cfg.SettingAsInt("s_mix_channels",64) );
 }
 
 
 void SoundOut::Initialize( int channels, int rate, int depth, int buffer, int mix_channels )
 {
+	bool had_mic = Raptor::Game->Mic.Device;
+	std::string music_subdir;
+	
 	// Determine the audio format; default to 16-bit if an unsupported depth is passed.
-	uint16_t format = AUDIO_S16SYS;
+	Uint16 format = AUDIO_S16SYS;
 	if( depth == 8 )
 		format = AUDIO_U8;
 	else if( depth == 16 )
 		format = AUDIO_S16SYS;
+#if SDL_VERSION_ATLEAST(2,0,0)
+	else if( depth == 24 )
+		format = AUDIO_S32SYS;
+	else if( depth == 32 )
+		format = AUDIO_F32SYS;
+#else
+	// SDL1 can't handle more than 16-bit stereo.
+	if( channels > 2 )
+		channels = 2;
+	// SDL1 stretches the music at sample rates above 44.1KHz.
+	if( rate > 44100 )
+		rate = 44100;
+#endif
+	
+	if( Initialized )
+	{
+		// Remember the music we were playing so we can restart it.
+		if( Mix_PlayingMusic() )
+			music_subdir = MusicSubdir;
+		
+		StopSounds();
+		StopMusic();
+		
+		SDL_Delay( 1 );
+		
+		Raptor::Game->Res.DeleteSounds();
+		Raptor::Game->Res.DeleteMusic();
+		Mix_CloseAudio();
+		
+#if SDL_VERSION_ATLEAST(2,0,0)
+		if( had_mic )
+		{
+			// FIXME: Move this into Microphone?
+			SDL_CloseAudioDevice( Raptor::Game->Mic.Device );
+			Raptor::Game->Mic.Device = 0;
+		}
+		else
+			had_mic = Raptor::Game->Cfg.SettingAsBool("s_mic_init");
+#endif
+		
+		SDL_QuitSubSystem( SDL_INIT_AUDIO );
+		Initialized = false;
+	}
 	
 	// NOTE: This must happen after graphics are initialized!
 	SDL_InitSubSystem( SDL_INIT_AUDIO );
@@ -81,17 +128,25 @@ void SoundOut::Initialize( int channels, int rate, int depth, int buffer, int mi
 	
 	// Done initializing.
 	Initialized = true;
+	
+	// Restart music if it was playing before.
+	if( music_subdir.length() )
+		PlayMusicSubdir( music_subdir );
+	
+	// If we had initialized a microphone before, do that again.
+	if( had_mic )
+		Raptor::Game->Mic.Initialize( Raptor::Game->Cfg.SettingAsString("s_mic_device"), Raptor::Game->Cfg.SettingAsInt("s_mic_buffer",2048) );
 }
 
 
-int SoundOut::Play( Mix_Chunk *sound )
+int SoundOut::Play( Mix_Chunk *sound, int channel )
 {
 	if( ! Initialized )
 		return -1;
 	if( ! sound )
 		return -1;
 	
-	int channel = Mix_PlayChannelTimed( -1, sound, 0, -1 );
+	channel = Mix_PlayChannelTimed( channel, sound, 0, -1 );
 	
 	if( channel >= 0 )
 		ActiveChannels.insert( channel );
@@ -124,11 +179,74 @@ int SoundOut::Play( Mix_Chunk *sound, int16_t angle, uint8_t dist )
 }
 
 
+int SoundOut::PlayBuffer( PlaybackBuffer *buffer, int channel )
+{
+	if( ! buffer )
+		return -1;
+	
+	return buffer->PlayAvailable( channel );
+}
+
+
+int SoundOut::PlayBuffer( PlaybackBuffer *buffer, int16_t angle, uint8_t dist )
+{
+	if( ! buffer )
+		return -1;
+	
+	int channel = buffer->PlayAvailable();
+	if( channel >= 0 )
+		Pan2D( channel, angle, dist );
+	
+	return channel;
+}
+
+
 int SoundOut::PlayAt( Mix_Chunk *sound, double x, double y, double z, double loudness )
 {
 	if( loudness <= 0. )
 		return -1;
 	return Pan3D( Play(sound), x, y, z, loudness );
+}
+
+
+Mix_Chunk *SoundOut::AllocatePCM( const void *data, size_t samples, uint32_t sample_rate, uint8_t bytes_per_sample, uint8_t channels )
+{
+	if( ! (data && bytes_per_sample && sample_rate && channels) )
+		return NULL;
+	
+	uint8_t  bytes_per_frame = channels * bytes_per_sample;
+	uint32_t byte_rate = sample_rate * bytes_per_frame;
+	uint32_t size2 = samples * bytes_per_frame;
+	uint32_t size1 = 36 + size2;
+	
+	unsigned char wave_header[ 44 ] = { 'R','I','F','F',
+		(unsigned char)(size1&0xFF),(unsigned char)((size1>>8)&0xFF),(unsigned char)((size1>>16)&0xFF),(unsigned char)((size1>>24)&0xFF),
+		'W','A','V','E', 'f','m','t',' ', 16,0,0,0, 1,0, channels,0,
+		(unsigned char)(sample_rate&0xFF),(unsigned char)((sample_rate>>8)&0xFF),(unsigned char)((sample_rate>>16)&0xFF),(unsigned char)((sample_rate>>24)&0xFF),
+		(unsigned char)(  byte_rate&0xFF),(unsigned char)((  byte_rate>>8)&0xFF),(unsigned char)((  byte_rate>>16)&0xFF),(unsigned char)((  byte_rate>>24)&0xFF),
+		bytes_per_frame,0,
+		(unsigned char)(8*bytes_per_sample),0,
+		'd','a','t','a',
+		(unsigned char)(size2&0xFF),(unsigned char)((size2>>8)&0xFF),(unsigned char)((size2>>16)&0xFF),(unsigned char)((size2>>24)&0xFF) };
+	
+	size_t buffer_size = sizeof(wave_header) + size2;
+	uint8_t *buffer = (uint8_t*) malloc( buffer_size );
+	if( ! buffer )
+	{
+		Raptor::Game->Console.Print( "SoundOut::AllocateChunk: malloc failed!", TextConsole::MSG_ERROR );
+		return NULL;
+	}
+	
+	memcpy( buffer, wave_header, sizeof(wave_header) );  // FIXME: Get rid of wave_header and just write straight into buffer?
+	memcpy( buffer + sizeof(wave_header), data, size2 );
+	
+	SDL_RWops *rw = SDL_RWFromConstMem( buffer, buffer_size );
+	if( ! rw )
+		Raptor::Game->Console.Print( "SoundOut::AllocateChunk: SDL_RWFromMem failed!", TextConsole::MSG_ERROR );
+	Mix_Chunk *chunk = Mix_LoadWAV_RW( rw, 1 );  // 1 means auto-free the SDL_RWops.
+	
+	free( buffer );
+	return chunk;
 }
 
 
@@ -172,20 +290,34 @@ int SoundOut::Pan2D( int channel, int16_t angle, uint8_t dist )
 int SoundOut::Pan3D( int channel, double x, double y, double z, double loudness )
 {
 	Vec3D cam_to_pt( x - Cam.X, y - Cam.Y, z - Cam.Z );
-	double fwd_dot = Cam.Fwd.Dot( &cam_to_pt );
+	double fwd_dot   = Cam.Fwd.Dot(   &cam_to_pt );
 	double right_dot = Cam.Right.Dot( &cam_to_pt );
 	
 	double angle = Num::RadToDeg( atan2( right_dot, fwd_dot ) );
 	if( angle < 0. )
 		angle += 360.;
 	
-	double dist = sqrt( (Cam.X-x)*(Cam.X-x) + (Cam.Y-y)*(Cam.Y-y) + (Cam.Z-z)*(Cam.Z-z) ) * DistScale / loudness;
+	double real_dist = sqrt( (Cam.X-x)*(Cam.X-x) + (Cam.Y-y)*(Cam.Y-y) + (Cam.Z-z)*(Cam.Z-z) ) * DistScale;
+	double dist = loudness ? (real_dist / loudness) : 255.1;
 	if( dist > 255.1 )
 		dist = 255.1;
-	else if( dist < 0.1 )
+	else if( real_dist < 0.1 )  // Prevent jittery sound direction when extremely close to camera.
 		angle = 0.;
 	
 	return Pan2D( channel, angle, dist );
+}
+
+
+int SoundOut::PanWithObject( int channel, uint32_t object_id, double loudness )
+{
+	if( channel >= 0 )
+	{
+		ActivePans[ channel ] = PanningSound( channel, object_id, loudness );
+		ObjectPans[ object_id ] = channel;
+		RecentPans[ object_id ].Reset();
+	}
+	
+	return channel;
 }
 
 
@@ -275,8 +407,35 @@ void SoundOut::Update( const Pos3D *cam )
 		std::set<int>::const_iterator channel_next = channel_iter;
 		channel_next ++;
 		
-		if( ! IsPlaying( *channel_iter ) )
-			ActiveChannels.erase( channel_iter );
+		int channel = *channel_iter;
+		
+		if( ! IsPlaying( channel ) )
+		{
+			bool ended = true;
+			
+			std::map<int, Mix_Chunk*>::iterator alloc_iter = Allocated.find( channel );
+			if( alloc_iter != Allocated.end() )
+			{
+				Mix_FreeChunk( alloc_iter->second );
+				Allocated.erase( alloc_iter );
+			}
+			
+			std::map<int, PlaybackBuffer*>::iterator buffer_iter = PlayingBuffers.find( channel );
+			if( buffer_iter != PlayingBuffers.end() )
+			{
+				if( buffer_iter->second->Filled )
+					ended = (buffer_iter->second->PlayAvailable() < 0);
+				
+				if( ended )
+				{
+					buffer_iter->second->AudioChannel = -1;
+					PlayingBuffers.erase( buffer_iter );
+				}
+			}
+			
+			if( ended )
+				ActiveChannels.erase( channel_iter );
+		}
 		
 		channel_iter = channel_next;
 	}
@@ -421,6 +580,11 @@ void SoundOut::UpdateVolumes( void )
 	else if( MusicVolume < 0.f )
 		MusicVolume = 0.f;
 	
+	if( VoiceVolume > 1.f )
+		VoiceVolume = 1.f;
+	else if( VoiceVolume < 0.f )
+		VoiceVolume = 0.f;
+	
 	if( ! IsPlaying(AttenuateFor) )
 	{
 		SoundAttenuate = 1.f;
@@ -442,18 +606,21 @@ void SoundOut::UpdateVolumes( void )
 	
 	if( Initialized )
 	{
-		if( AttenuateFor >= 0 )
+		if( (AttenuateFor < 0) && PlayingBuffers.empty() )
+			Mix_Volume( -1, MasterVolume * SoundVolume * MIX_MAX_VOLUME + 0.25f );
+		else
 		{
 			for( std::set<int>::const_iterator channel_iter = ActiveChannels.begin(); channel_iter != ActiveChannels.end(); channel_iter ++ )
 			{
-				if( *channel_iter == AttenuateFor )
-					Mix_Volume( AttenuateFor, MasterVolume * MIX_MAX_VOLUME + 0.25f );
+				int channel = *channel_iter;
+				if( PlayingBuffers.find(channel) != PlayingBuffers.end() )  // FIXME: Check if this is in VoiceBuffers?
+					Mix_Volume( channel, MasterVolume * VoiceVolume * MIX_MAX_VOLUME + 0.25f );
+				else if( channel == AttenuateFor )
+					Mix_Volume( channel, MasterVolume * MIX_MAX_VOLUME + 0.25f );
 				else
-					Mix_Volume( *channel_iter, MasterVolume * SoundVolume * SoundAttenuate * MIX_MAX_VOLUME + 0.25f );
+					Mix_Volume( channel, MasterVolume * SoundVolume * SoundAttenuate * MIX_MAX_VOLUME + 0.25f );
 			}
 		}
-		else
-			Mix_Volume( -1, MasterVolume * SoundVolume * SoundAttenuate * MIX_MAX_VOLUME + 0.25f );
 		
 		Mix_VolumeMusic( MasterVolume * MusicVolume * MusicAttenuate * MIX_MAX_VOLUME + 0.25f );
 	}

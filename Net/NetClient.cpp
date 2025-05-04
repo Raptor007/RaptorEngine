@@ -277,7 +277,8 @@ void NetClient::Cleanup( void )
 {
 	if( ! Connected )
 	{
-		Raptor::Game->ChangeState( Raptor::State::DISCONNECTED );
+		if( Raptor::Game->State > Raptor::State::DISCONNECTED )
+			Raptor::Game->ChangeState( Raptor::State::DISCONNECTED );
 		
 		// Make sure the old thread is done before we do anything else (like reconnect).
 		if( Thread )
@@ -499,6 +500,7 @@ void NetClient::SendUpdates( void )
 void NetClient::SendUpdate( void )
 {
 	Raptor::Game->SendUpdate( Precision );
+	Raptor::Game->Mic.Transmit();
 }
 
 

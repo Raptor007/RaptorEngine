@@ -15,6 +15,13 @@ bool File::Exists( const char *filename )
 }
 
 
+bool File::Exists( const std::string &filename )
+{
+	struct stat buffer;
+	return (stat( filename.c_str(), &buffer ) == 0);
+}
+
+
 std::string File::AsString( const char *filename )
 {
 	std::string return_string;
@@ -34,4 +41,38 @@ std::string File::AsString( const char *filename )
 	}
 	
 	return return_string;
+}
+
+
+std::string File::AsString( const std::string &filename )
+{
+	return AsString( filename.c_str() );
+}
+
+
+std::vector<std::string> File::AsLines( const char *filename )
+{
+	std::vector<std::string> lines;
+	char buffer[ 1024*128 ] = "";
+	
+	std::ifstream input( filename );
+	if( input.is_open() )
+	{
+		while( ! input.eof() )
+		{
+			buffer[ 0 ] = '\0';
+			input.getline( buffer, 1024*128 );
+			lines.push_back( buffer );
+		}
+		
+		input.close();
+	}
+	
+	return lines;
+}
+
+
+std::vector<std::string> File::AsLines( const std::string &filename )
+{
+	return AsLines( filename.c_str() );
 }

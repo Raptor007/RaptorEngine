@@ -77,9 +77,11 @@ public:
 	
 	virtual double Dot( const Vec3D &other ) const;
 	virtual double Dot( double x, double y, double z ) const;
+	virtual double DotPlane( const Vec3D &plane_normal ) const;
 	virtual Vec3D Cross( const Vec3D &other ) const;
 	virtual double AngleBetween( const Vec3D &other ) const;
 	
+	virtual Vec3D AlongPlane( const Vec3D &plane_normal ) const;
 	virtual Vec3D Reflect( const Vec3D *normal ) const;
 	virtual Vec3D ReflectAnySide( const Vec3D *normal ) const;
 	

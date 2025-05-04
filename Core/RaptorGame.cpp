@@ -7,6 +7,7 @@
 #include "PlatformSpecific.h"
 
 #include <cstdio>
+#include "IMA.h"
 
 #ifdef WIN32
 #include <tchar.h>
@@ -197,6 +198,7 @@ void RaptorGame::Initialize( int argc, char **argv )
 	Cfg.Command( "version" );
 	
 	SetDefaults();
+	SetDefaultJoyTypes();
 	SetDefaultControls();
 	
 	Cfg.Load( "settings.cfg" );
@@ -264,6 +266,7 @@ void RaptorGame::Initialize( int argc, char **argv )
 			Cfg.Settings[ "g_res_fullscreen_x" ] = "0";
 			Cfg.Settings[ "g_res_fullscreen_y" ] = "0";
 			Cfg.Settings[ "s_volume" ] = "0";
+			Cfg.Settings[ "s_mic_enable" ] = "false";
 			Cfg.Settings[ "vr_enable" ] = "false";
 		}
 	}
@@ -290,10 +293,11 @@ void RaptorGame::Initialize( int argc, char **argv )
 	
 	Console.Initialize();
 	
-	Snd.Initialize( Cfg.SettingAsInt("s_channels",2), Cfg.SettingAsInt("s_rate",44100), Cfg.SettingAsInt("s_depth",16), Cfg.SettingAsInt("s_buffer",4096), Cfg.SettingAsInt("s_mix_channels",64) );
+	Snd.Initialize();
 	Snd.MasterVolume = Cfg.SettingAsDouble( "s_volume", 0.5 );
 	Snd.SoundVolume = Cfg.SettingAsDouble( "s_effect_volume", 0.5 );
 	Snd.MusicVolume = Cfg.SettingAsDouble( "s_music_volume", 1. );
+	Snd.VoiceVolume = Cfg.SettingAsDouble( "s_voice_volume", 1. );
 	
 	ShaderMgr.Initialize();
 	
@@ -315,6 +319,12 @@ void RaptorGame::Initialize( int argc, char **argv )
 	// Run game-specific Setup method.
 	
 	Setup( argc, argv );
+	
+	
+	// Initialize microphone if enabled.
+	
+	if( Cfg.SettingAsBool("s_mic_init") )
+		Mic.Initialize( Cfg.SettingAsString("s_mic_device"), Cfg.SettingAsInt("s_mic_buffer",2048) );
 	
 	
 	// Start Saitek DirectOutput if enabled.
@@ -342,6 +352,13 @@ void RaptorGame::Initialize( int argc, char **argv )
 
 void RaptorGame::Run( void )
 {
+	#ifdef WIN32
+		SYSTEM_INFO system_info;
+		GetSystemInfo( &system_info );
+		if( system_info.dwNumberOfProcessors >= 2 )
+			SetThreadPriority( GetCurrentThread(), (system_info.dwNumberOfProcessors >= 3) ? THREAD_PRIORITY_HIGHEST : THREAD_PRIORITY_ABOVE_NORMAL );
+	#endif
+	
 	Clock GameClock;
 	Clock NetClock;
 	
@@ -389,8 +406,13 @@ void RaptorGame::Run( void )
 					if( event.type == SDL_QUIT )
 						Quit();
 #if SDL_VERSION_ATLEAST(2,0,0)
-					else if( event.type == SDL_WINDOWEVENT_RESIZED )
-						Gfx.SetMode( event.window.data1, event.window.data2 );
+					else if( event.type == SDL_WINDOWEVENT )
+					{
+						if( (event.window.event == SDL_WINDOWEVENT_RESIZED) && ! Gfx.Fullscreen )  // FIXME: This occurs before SDL_WINDOWEVENT_MAXIMIZED when maximizing.
+							Gfx.SetMode( event.window.data1, event.window.data2 );
+						else if( (event.window.event == SDL_WINDOWEVENT_MAXIMIZED) && Cfg.SettingAsBool("g_maximize_fullscreen") )
+							Gfx.SetMode( 0, 0, Gfx.BPP, true, Gfx.FSAA, Gfx.AF, Gfx.ZBits );
+					}
 #else
 					else if( event.type == SDL_VIDEORESIZE )
 						Gfx.SetMode( event.resize.w, event.resize.h );
@@ -404,6 +426,7 @@ void RaptorGame::Run( void )
 			Snd.MasterVolume = Cfg.SettingAsDouble( "s_volume", 0.5 );
 			Snd.SoundVolume = Cfg.SettingAsDouble( "s_effect_volume", 0.5 );
 			Snd.MusicVolume = Cfg.SettingAsDouble( "s_music_volume", 1. );
+			Snd.VoiceVolume = Cfg.SettingAsDouble( "s_voice_volume", 1. );
 			Snd.Update( &Cam );
 			
 			// Honor the maxfps variable.
@@ -535,8 +558,8 @@ void RaptorGame::Draw( void )
 			snprintf( fps_str, sizeof(fps_str), "%.0f", 1. / FrameTime );
 		
 		Gfx.Setup2D();
-		Console.MessageFont->DrawText( fps_str, Gfx.W,     Gfx.H,     Font::ALIGN_BOTTOM_RIGHT, 0.f,0.f,0.f,0.8f );
-		Console.MessageFont->DrawText( fps_str, Gfx.W - 2, Gfx.H - 2, Font::ALIGN_BOTTOM_RIGHT, 1.f,1.f,1.f,1.f );
+		Console.MessageFont->DrawText( fps_str, Gfx.W - 1, Gfx.H,     Font::ALIGN_BOTTOM_RIGHT, 0.f,0.f,0.f,0.8f );
+		Console.MessageFont->DrawText( fps_str, Gfx.W - 2, Gfx.H - 1, Font::ALIGN_BOTTOM_RIGHT, 1.f,1.f,1.f,1.f );
 	}
 	
 	// Draw console and mouse cursor last.
@@ -552,6 +575,7 @@ void RaptorGame::Setup( int argc, char **argv )
 
 void RaptorGame::Update( double dt )
 {
+	Gfx.LightQuality = Cfg.SettingAsInt( "g_shader_light_quality", 4 );
 	Data.Update( dt );
 }
 
@@ -681,6 +705,129 @@ bool RaptorGame::ProcessPacket( Packet *packet )
 		return true;
 	}
 	
+	else if( type == Raptor::Packet::VOICE )
+	{
+		double global_volume = Cfg.SettingAsDouble( "s_voice_volume", 1. );
+		if( ! global_volume )
+			return true;
+		
+		uint16_t player_id = packet->NextUShort();
+		if( (player_id == PlayerID) && ! Cfg.SettingAsBool("echo") )
+			return true;
+		
+		uint32_t object_id   = packet->NextUInt();
+		uint8_t  channel     = packet->NextUChar();
+		uint32_t sample_rate = packet->NextUInt();
+		uint32_t samples     = packet->NextUInt();
+		
+		if( ! (sample_rate && samples) )
+		{
+			packet->Rewind();
+			return false;
+		}
+		
+		bool final = channel & 0x80;
+		channel &= 0x7F;
+		
+		uint8_t  channels = 1;
+		uint8_t  bytes_per_sample = 2;
+		uint8_t  bytes_per_frame = channels * bytes_per_sample;
+		uint32_t pcm_bytes = samples * bytes_per_frame;
+		
+		int16_t *pcm = (int16_t*) malloc( pcm_bytes );
+		//memset( pcm, 0, pcm_bytes );
+		
+		int16_t ima_prev = 0;
+		int8_t ima_index = 0;
+		for( size_t i = 0; i < samples; i += 2 )
+		{
+			uint8_t ima_byte = packet->NextUChar();
+			
+			pcm[ i ] = IMA::Decode( (ima_byte & 0xF0) >> 4, &ima_prev, &ima_index );
+			if( (i + 1) < samples )
+				pcm[ i + 1 ] = IMA::Decode( ima_byte & 0x0F, &ima_prev, &ima_index );
+		}
+		
+		double packet_volume = 1.;
+		if( packet->Remaining() )
+			packet_volume = packet->NextFloat();
+		
+		if( Cfg.SettingAsBool("s_voice_autogain_always") || ! packet_volume )
+		{
+			packet_volume = 1.;
+			double max_peak = 0.;
+			for( Uint32 sample = 0; sample < samples; sample ++ )
+				max_peak = std::max<double>( max_peak, abs( pcm[ sample ] ) / 32767. );
+			if( max_peak )
+				packet_volume /= max_peak;
+		}
+		
+		// Sanity check for both auto-gain and other players' custom gain settings.
+		double volume_limit = Cfg.SettingAsDouble( "s_voice_autogain_volume", 16., 1. );
+		if( (volume_limit > 0.) && (fabs(packet_volume) > volume_limit) )
+			packet_volume = volume_limit;
+		
+		double volume = global_volume * packet_volume;
+		if( volume != 1. )
+		{
+			for( Uint32 sample = 0; sample < samples; sample ++ )
+				pcm[ sample ] = Num::ScaleInt16( pcm[ sample ], volume );
+		}
+		
+		PlaybackBuffer *buffer = Snd.VoiceBuffers[ player_id ];
+		if( ! buffer )
+		{
+			buffer = new PlaybackBuffer();  // FIXME: Sort of leaky when players disconnect (though it may get reused).
+			Snd.VoiceBuffers[ player_id ] = buffer;
+		}
+		
+		if( ! buffer->Filled )
+		{
+			buffer->SampleRate     = sample_rate;
+			buffer->Channels       = channels;
+			buffer->BytesPerSample = bytes_per_sample;
+		}
+		
+		if( buffer->ReadySeconds() < 30. )
+			buffer->AddBytes( pcm, pcm_bytes );
+		
+		int snd_channel = buffer->AudioChannel;
+		if( (snd_channel < 0) && (final || (buffer->ReadySeconds() >= Cfg.SettingAsDouble( "s_voice_delay", 0.2 ))) )
+			snd_channel = buffer->PlayAvailable();
+		
+		if( snd_channel >= 0 )
+		{
+			int positional = Cfg.SettingAsInt( "s_voice_positional", 1 );
+			if( object_id && positional )
+			{
+				if( (channel == Raptor::VoiceChannel::TEAM) || (positional >= 2) )
+					Snd.PanWithObject( snd_channel, object_id, 7777777. );
+				else
+					Snd.Pan2D( snd_channel, 0, 0 );
+			}
+			else
+			{
+				int16_t angle = 0;
+				if( channel == Raptor::VoiceChannel::ALL )
+					angle = Cfg.SettingAsInt("s_voice_angle") * -1;
+				else if( channel == Raptor::VoiceChannel::TEAM )
+					angle = Cfg.SettingAsInt("s_voice_angle");
+				
+				if( angle < 0 )
+					angle += 360;
+				
+				Snd.Pan2D( snd_channel, angle, 0 );
+			}
+			
+			Snd.AttenuateFor = snd_channel;  // Keep updating to the most recently received voice.
+			Snd.SoundAttenuate = 1.f;        // Make sure we don't attenuate other voices.
+			Snd.MusicAttenuate = std::min<float>( Snd.MusicAttenuate, Cfg.SettingAsDouble( "s_voice_scale_music", 0.5, 1. ) );
+			buffer->VoiceChannel = channel;
+		}
+		
+		free( pcm );
+	}
+	
 	else if( type == Raptor::Packet::PLAYER_ADD )
 	{
 		uint16_t id = packet->NextUShort();
@@ -797,25 +944,37 @@ bool RaptorGame::ProcessPacket( Packet *packet )
 		float music_volume = 1.f;
 		float sound_volume = 1.f;
 		bool attenuate = false;
+		uint32_t object_id = 0;
+		double loudness = 7777777.;  // Do not attenuate with distance unless specified.
 		
+		// Optionally attenuate music and other sound channels.
 		if( packet->Remaining() )
 		{
 			music_volume = Num::UnitFloatFrom8( packet->NextChar() );
 			attenuate = true;
 		}
-		
 		if( packet->Remaining() )
 			sound_volume = Num::UnitFloatFrom8( packet->NextChar() );
+		
+		// Optionally pan with an object.
+		if( packet->Remaining() )
+			object_id = packet->NextUInt();
+		if( packet->Remaining() )
+			loudness = packet->NextFloat();
 		
 		if( sound )
 		{
 			int channel = Snd.Play( sound );
+			
 			if( attenuate && (channel >= 0) )
 			{
 				Snd.AttenuateFor = channel;
 				Snd.SoundAttenuate = sound_volume;
 				Snd.MusicAttenuate = music_volume;
 			}
+			
+			if( object_id && (channel >= 0) )
+				Snd.PanWithObject( channel, object_id, loudness );
 		}
 		
 		return true;
@@ -875,18 +1034,19 @@ void RaptorGame::SendUpdate( int8_t precision )
 }
 
 
-bool RaptorGame::SetPlayerProperty( std::string name, std::string value )
+bool RaptorGame::SetPlayerProperty( std::string name, std::string value, bool force )
 {
-	if( name == "name" )
+	bool is_name = (name == "name");
+	if( is_name )
 		Cfg.Settings[ "name" ] = value;
 	
 	Player *player = Data.GetPlayer( PlayerID );
 	if( ! player )
 		return false;
 	
-	if( player->Properties[ name ] != value )
+	if( force || ((is_name ? player->Name : player->Properties[ name ]) != value) )
 	{
-		if( name == "name" )
+		if( is_name )
 			player->Name = value;
 		else
 			player->Properties[ name ] = value;

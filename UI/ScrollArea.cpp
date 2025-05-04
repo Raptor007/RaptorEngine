@@ -240,10 +240,13 @@ bool ScrollArea::HandleEvent( SDL_Event *event )
 	
 	bool handled = Layer::HandleEvent( event );
 	
-	#if SDL_VERSION_ATLEAST(2,0,0)
-		if( (event->type == SDL_MOUSEWHEEL) && event->wheel.y && WithinCalcRect( event->wheel.mouseX, event->wheel.mouseY ) )
-			return true;
-	#endif
+#if SDL_VERSION_ATLEAST(2,26,0)
+	if( (event->type == SDL_MOUSEWHEEL) && event->wheel.y && WithinCalcRect( event->wheel.mouseX, event->wheel.mouseY ) )
+		return true;
+#elif SDL_VERSION_ATLEAST(2,0,0)
+	if( (event->type == SDL_MOUSEWHEEL) && event->wheel.y && WithinCalcRect( Raptor::Game->Mouse.X - Raptor::Game->Mouse.OffsetX, Raptor::Game->Mouse.Y - Raptor::Game->Mouse.OffsetY ) ) // FIXME: Messy.
+		return true;
+#endif
 	
 	return handled;
 }

@@ -32,6 +32,9 @@ PanningSound::PanningSound( int audio_channel, uint32_t object_id, double loudne
 	ObjectID = object_id;
 	Loudness = loudness;
 	Update();
+	
+	if( AudioChannel >= 0 )
+		Raptor::Game->Snd.Pan3D( AudioChannel, X, Y, Z, loudness );
 }
 
 

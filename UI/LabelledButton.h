@@ -17,7 +17,7 @@ public:
 	std::string LabelText;
 	uint8_t LabelAlign;
 	Font *LabelFont;
-	double RedNormal, GreenNormal, BlueNormal, AlphaNormal;
+	double RedNormal, GreenNormal, BlueNormal, AlphaNormal, AlphaDisabled;
 	double RedDown, GreenDown, BlueDown, AlphaDown;
 	double RedOver, GreenOver, BlueOver, AlphaOver;
 	

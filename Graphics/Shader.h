@@ -37,6 +37,7 @@ public:
 	bool Set3f( const char *name, double x, double y, double z );
 	bool Set4f( const char *name, double x, double y, double z, double w );
 	bool Set1i( const char *name, int value );
+	GLint AttribLoc( const char *name );
 	
 	int CopyVarsFrom( const Shader *other );
 	
@@ -80,6 +81,7 @@ public:
 		TYPE_1F,
 		TYPE_3F,
 		TYPE_4F,
-		TYPE_1I
+		TYPE_1I,
+		TYPE_ATTRIB
 	};
 };

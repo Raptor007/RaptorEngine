@@ -59,6 +59,13 @@ void MouseState::TrackEvent( SDL_Event *event )
 		Y = (event->button.y += OffsetY);
 		ButtonsDown[ event->button.button ] = false;
 	}
+#if SDL_VERSION_ATLEAST(2,26,0)
+	else if( event->type == SDL_MOUSEWHEEL )
+	{
+		X = (event->wheel.mouseX + OffsetX);
+		Y = (event->wheel.mouseY + OffsetY);
+	}
+#endif
 }
 
 

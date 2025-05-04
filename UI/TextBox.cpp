@@ -28,6 +28,8 @@ TextBox::TextBox( SDL_Rect *rect, Font *font, uint8_t align ) : Layer( rect )
 	CursorAppearance = "|";
 	CenterCursor = true;
 	
+	IgnoreNext = '\0';
+	
 	Red = 0.f;
 	Green = 0.f;
 	Blue = 0.f;
@@ -325,6 +327,15 @@ bool TextBox::HandleEvent( SDL_Event *event )
 				continue;
 			if( strchr( "\n\r\t", c ) )
 				continue;
+			
+			// If a key press just activated this textbox, do not duplicate it as input.
+			if( IgnoreNext )
+			{
+				bool ignore_this = (IgnoreNext == c);
+				IgnoreNext = '\0';
+				if( ignore_this )
+					continue;
+			}
 			
 			InsertAtCursor( c );
 		}

@@ -36,6 +36,8 @@ ListBox::ListBox( SDL_Rect *rect, Font *font, int scroll_bar_size ) : Layer( rec
 	ScrollBarBlue = 1.0f;
 	ScrollBarAlpha = 1.0f;
 	
+	VRHeight = 0;
+	
 	Scroll = 0;
 	ClickedScrollBar = false;
 	
@@ -237,12 +239,20 @@ void ListBox::Draw( void )
 {
 	UpdateRects();
 	
+	int x_offset = 0;
+	if( ! Raptor::Game->Gfx.DrawTo )
+		;
+	else if( Raptor::Game->Gfx.DrawTo == Raptor::Game->Head.EyeL )
+		x_offset = VRHeight;
+	else if( Raptor::Game->Gfx.DrawTo == Raptor::Game->Head.EyeR )
+		x_offset = -VRHeight;
+	
 	glColor4f( Red, Green, Blue, Alpha );
 	glBegin( GL_QUADS );
-		glVertex2i( 0, 0 );
-		glVertex2i( Rect.w, 0 );
-		glVertex2i( Rect.w, Rect.h );
-		glVertex2i( 0, Rect.h );
+		glVertex2i( x_offset, 0 );
+		glVertex2i( Rect.w + x_offset, 0 );
+		glVertex2i( Rect.w + x_offset, Rect.h );
+		glVertex2i( x_offset, Rect.h );
 	glEnd();
 	
 	int max_scroll = MaxScroll();
@@ -251,13 +261,15 @@ void ListBox::Draw( void )
 		double percent_displayed = Rect.h / (double)( LineScroll() * Items.size() );
 		double scroll_start = (Scroll / (double) max_scroll) * (1. - percent_displayed);
 		int h = Rect.h - ScrollBarSize * 2;
-		Raptor::Game->Gfx.DrawRect2D( Rect.w - ScrollBarSize, (int)( ScrollBarSize + h * scroll_start ), Rect.w, (int)( ScrollBarSize + h * (scroll_start + percent_displayed) ), 0, ScrollBarRed, ScrollBarGreen, ScrollBarBlue, ScrollBarAlpha );
+		Raptor::Game->Gfx.DrawRect2D( Rect.w + x_offset - ScrollBarSize, (int)( ScrollBarSize + h * scroll_start ), Rect.w + x_offset, (int)( ScrollBarSize + h * (scroll_start + percent_displayed) ), 0, ScrollBarRed, ScrollBarGreen, ScrollBarBlue, ScrollBarAlpha );
 	}
 	
 	glPushMatrix();
 	glPushAttrib( GL_VIEWPORT_BIT );
+	if( Raptor::Game->Gfx.DrawTo )  // FIXME: Dirty hack to fix VR text positioning.  Find the real bug elsewhere, then remove this!
+		x_offset += ( ((CalcRect.x + CalcRect.w / 2.) / (double) Raptor::Game->Gfx.DrawTo->W) - 0.5 ) * 100.;  // Arbitrary adjustment that looks about right.
+	Raptor::Game->Gfx.SetViewport( CalcRect.x + x_offset, CalcRect.y, Rect.w - ScrollBarSize, Rect.h );
 	Raptor::Game->Gfx.Setup2D( 0, 0, Rect.w - ScrollBarSize, Rect.h );
-	Raptor::Game->Gfx.SetViewport( CalcRect.x, CalcRect.y, Rect.w - ScrollBarSize, Rect.h );
 	
 	if( TextFont )
 	{
@@ -317,7 +329,11 @@ void ListBox::TrackEvent( SDL_Event *event )
 bool ListBox::HandleEvent( SDL_Event *event )
 {
 #if SDL_VERSION_ATLEAST(2,0,0)
+#if SDL_VERSION_ATLEAST(2,26,0)
 	if( (event->type == SDL_MOUSEWHEEL) && event->wheel.y && WithinCalcRect( event->wheel.mouseX, event->wheel.mouseY ) )
+#else
+	if( (event->type == SDL_MOUSEWHEEL) && event->wheel.y && WithinCalcRect( Raptor::Game->Mouse.X - Raptor::Game->Mouse.OffsetX, Raptor::Game->Mouse.Y - Raptor::Game->Mouse.OffsetY ) ) // FIXME: Messy.
+#endif
 	{
 		if( event->wheel.y > 0 )
 			ScrollUp();

@@ -16,6 +16,7 @@ LabelledButton::LabelledButton( SDL_Rect *rect, Font *label_font, std::string te
 	GreenNormal = 1.0;
 	BlueNormal = 1.0;
 	AlphaNormal = 0.8;
+	AlphaDisabled = 0.5;
 	
 	RedDown = 1.0;
 	GreenDown = 1.0;
@@ -41,7 +42,7 @@ void LabelledButton::Draw( void )
 	
 	if( LabelFont )
 	{
-		if( MouseIsWithin )
+		if( MouseIsWithin && Enabled )
 		{
 			if( MouseIsDown )
 				LabelFont->DrawText( LabelText, 0, 0, Rect.w, Rect.h, LabelAlign, RedDown, GreenDown, BlueDown, AlphaDown );
@@ -49,7 +50,7 @@ void LabelledButton::Draw( void )
 				LabelFont->DrawText( LabelText, 0, 0, Rect.w, Rect.h, LabelAlign, RedOver, GreenOver, BlueOver, AlphaOver );
 		}
 		else
-			LabelFont->DrawText( LabelText, 0, 0, Rect.w, Rect.h, LabelAlign, RedNormal, GreenNormal, BlueNormal, AlphaNormal );
+			LabelFont->DrawText( LabelText, 0, 0, Rect.w, Rect.h, LabelAlign, RedNormal, GreenNormal, BlueNormal, Enabled ? AlphaNormal : AlphaDisabled );
 	}
 }
 

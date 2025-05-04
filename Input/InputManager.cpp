@@ -180,19 +180,15 @@ void InputManager::ResetDeviceTypes( void )
 	DeviceTypes.insert( "Pedal" );
 	DeviceTypes.insert( "Throttle" );
 	DeviceTypes.insert( "Wheel" );
+	DeviceTypes.insert( "MFD" );
 	
 	#if SDL_VERSION_ATLEAST(2,0,0)
 		// SDL2 does not normalize joystick axis mappings across devices; use separate binds for different layouts.
 		DeviceTypes.insert( "X52" );
 		DeviceTypes.insert( "SideWinder" );
-	#else
-		// SDL2 does not detect F16 MFD button panels as joysticks, but SDL1 does.
-		DeviceTypes.insert( "MFD" );
-		
-		#ifndef WIN32
-			// Linux SDL1 detects Xbox controllers as "Pad".
-			DeviceTypes.insert( "Pad" );
-		#endif
+	#elif ! defined(WIN32)
+		// Linux SDL1 detects Xbox controllers as "Pad".
+		DeviceTypes.insert( "Pad" );
 	#endif
 }
 

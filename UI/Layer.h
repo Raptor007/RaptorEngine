@@ -74,6 +74,7 @@ public:
 	size_t RemoveOthersAbove( bool and_containers = false );
 	
 	Layer *FindElement( const std::string &name, bool recursive = true );
+	Layer *FindParent( const std::string &name ) const;
 	
 	void SizeToContainer( int buffer = 0 );
 	void SizeToElements( int max_buffer = 10 );

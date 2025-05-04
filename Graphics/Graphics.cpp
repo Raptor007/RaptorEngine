@@ -32,6 +32,7 @@ Graphics::Graphics( void )
 	FSAA = 0;
 	AF = 16;
 	Framebuffers = true;
+	LightQuality = 4;
 	
 	Screen = NULL;
 	DrawTo = NULL;
@@ -103,6 +104,23 @@ void Graphics::Initialize( void )
 
 void Graphics::SetMode( int x, int y )
 {
+	#if SDL_VERSION_ATLEAST(2,0,0)
+		// SDL2 preserves OpenGL environment during window resize.
+		if( Initialized && Screen && (x > 0) && (y > 0) && ! Fullscreen )
+		{
+			W = RealW = x;
+			H = RealH = y;
+			
+			AspectRatio = (W && H) ? ((float)( W )) / ((float)( H )) : 1.f;
+			glViewport( 0, 0, W, H );
+			
+			Raptor::Game->Cfg.Settings[ "g_res_windowed_x" ] = Num::ToString(x);
+			Raptor::Game->Cfg.Settings[ "g_res_windowed_y" ] = Num::ToString(y);
+			
+			return;
+		}
+	#endif
+	
 	SetMode( x, y, BPP, Fullscreen, FSAA, AF, ZBits );
 }
 
@@ -250,15 +268,15 @@ void Graphics::SetMode( int x, int y, int bpp, bool fullscreen, int fsaa, int af
 	// We successfully set the video mode, so pull the resolution from the SDL_Screen.
 	#if SDL_VERSION_ATLEAST(2,0,0)
 		SDL_GL_GetDrawableSize( Screen, &W, &H );
-		SDL_GetWindowSize( Screen, &RealW, &RealH );
+		//SDL_GetWindowSize( Screen, &RealW, &RealH );
 		BPP = SDL_BITSPERPIXEL( SDL_GetWindowPixelFormat( Screen ) );
 	#else
 		W = Screen->w;
 		H = Screen->h;
-		RealW = W;
-		RealH = H;
 		BPP = Screen->format->BitsPerPixel;
 	#endif
+	RealW = W;
+	RealH = H;
 	AspectRatio = (W && H) ? ((float)( W )) / ((float)( H )) : 1.f;
 	
 	// If we weren't able to use the requested anti-aliasing samples, update the setting.
@@ -308,6 +326,9 @@ void Graphics::SetMode( int x, int y, int bpp, bool fullscreen, int fsaa, int af
 	// Enable alpha blending.
 	glEnable( GL_BLEND );
 	glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+	
+	// Keep track of light quality for model drawing.
+	LightQuality = Raptor::Game->Cfg.SettingAsInt( "g_shader_light_quality", 4 );
 	
 	// Disable the system cursor.
 	SDL_ShowCursor( SDL_DISABLE );

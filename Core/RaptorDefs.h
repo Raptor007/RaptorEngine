@@ -50,7 +50,20 @@ namespace Raptor
 			
 			MESSAGE = 'Note',
 			PLAY_SOUND = 'PSnd',
-			PLAY_MUSIC = 'PMus'
+			PLAY_MUSIC = 'PMus',
+			
+			VOICE = 'Voic'
+		};
+	}
+	
+	namespace VoiceChannel
+	{
+		enum
+		{
+			NONE = 0,
+			TEAM,
+			ALL,
+			GAME_SPECIFIC
 		};
 	}
 }

@@ -262,6 +262,30 @@ bool Shader::Set1i( const char *name, int value )
 }
 
 
+GLint Shader::AttribLoc( const char *name )
+{
+	if( ProgramHandle )
+	{
+		ShaderVar *var = &(Vars[ std::string(name) ]);
+		
+		// Avoid repeated failed lookups.
+		if( var->Type == ShaderVar::TYPE_ERROR )
+			return -1;
+		
+		// See if we already know the variable's loc.  If not, look it up in the shader.
+		if( var->Loc < 0 )
+		{
+			var->Loc = glGetAttribLocation( ProgramHandle, name );
+			var->Type = (var->Loc >= 0) ? ShaderVar::TYPE_ATTRIB : ShaderVar::TYPE_ERROR;
+		}
+		
+		return var->Loc;
+	}
+	
+	return -1;
+}
+
+
 int Shader::CopyVarsFrom( const Shader *other )
 {
 	int count = 0;

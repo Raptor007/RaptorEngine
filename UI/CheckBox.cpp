@@ -109,7 +109,7 @@ void CheckBox::Draw( void )
 				break;
 		}
 		
-		if( MouseIsWithin )
+		if( MouseIsWithin && Enabled )
 		{
 			if( MouseIsDown )
 				LabelFont->DrawText( LabelText, x, y, LabelAlign, RedDown, GreenDown, BlueDown, AlphaDown );
@@ -117,7 +117,7 @@ void CheckBox::Draw( void )
 				LabelFont->DrawText( LabelText, x, y, LabelAlign, RedOver, GreenOver, BlueOver, AlphaOver );
 		}
 		else
-			LabelFont->DrawText( LabelText, x, y, LabelAlign, RedNormal, GreenNormal, BlueNormal, AlphaNormal );
+			LabelFont->DrawText( LabelText, x, y, LabelAlign, RedNormal, GreenNormal, BlueNormal, Enabled ? AlphaNormal : AlphaDisabled );
 	}
 }
 
@@ -158,6 +158,9 @@ void CheckBox::MouseLeave( void )
 
 bool CheckBox::MouseDown( Uint8 button )
 {
+	if( button != SDL_BUTTON_LEFT )
+		return false;
+	
 	if( Checked )
 	{
 		if( ImageMouseDownChecked )
@@ -175,6 +178,9 @@ bool CheckBox::MouseDown( Uint8 button )
 
 bool CheckBox::MouseUp( Uint8 button )
 {
+	if( button != SDL_BUTTON_LEFT )
+		return false;
+	
 	if( Checked )
 	{
 		if( ImageMouseDownChecked )

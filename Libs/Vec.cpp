@@ -346,6 +346,12 @@ double Vec3D::Dot( double x, double y, double z ) const
 }
 
 
+double Vec3D::DotPlane( const Vec3D &plane_normal ) const
+{
+	return AlongPlane( plane_normal ).Length();
+}
+
+
 Vec3D Vec3D::Cross( const Vec3D &other ) const
 {
 	Vec3D cross;
@@ -362,6 +368,12 @@ double Vec3D::AngleBetween( const Vec3D &other ) const
 	unit1.ScaleTo( 1. );
 	unit2.ScaleTo( 1. );
 	return Num::RadToDeg( acos( Num::Clamp( unit1.Dot(&unit2), -1., 1. ) ) );
+}
+
+
+Vec3D Vec3D::AlongPlane( const Vec3D &plane_normal ) const
+{
+	return *this - plane_normal * Dot(plane_normal);
 }
 
 

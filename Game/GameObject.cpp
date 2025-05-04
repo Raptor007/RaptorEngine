@@ -11,9 +11,6 @@
 #include "RaptorGame.h"
 
 
-#define SMOOTH_RADIUS 128.
-
-
 GameObject::GameObject( uint32_t id, uint32_t type_code, uint16_t player_id ) : Pos3D()
 {
 	ID = id;
@@ -23,11 +20,9 @@ GameObject::GameObject( uint32_t id, uint32_t type_code, uint16_t player_id ) : 
 	Fwd.Set( 1., 0., 0. );
 	Up.Set( 0., 0., 1. );
 	FixVectors();
-	MotionVector.Set( 0., 0., 0. );
-	RollRate = 0.;
-	PitchRate = 0.;
-	YawRate = 0.;
-	SmoothPos = true;
+	RollRate = PitchRate = YawRate = 0.;
+	PrevRollRate = PrevPitchRate = PrevYawRate = 0.;
+	SmoothRadius = 128.;
 }
 
 
@@ -38,11 +33,15 @@ GameObject::GameObject( const GameObject &other ) : Pos3D( other )
 	PlayerID = other.PlayerID;
 	Data = other.Data;
 	MotionVector = other.MotionVector;
-	RollRate = other.RollRate;
+	RollRate  = other.RollRate;
 	PitchRate = other.PitchRate;
-	YawRate = other.YawRate;
+	YawRate   = other.YawRate;
+	PrevMotionVector = other.PrevMotionVector;
+	PrevRollRate  = other.PrevRollRate;
+	PrevPitchRate = other.PrevPitchRate;
+	PrevYawRate   = other.PrevYawRate;
 	Lifetime = other.Lifetime;
-	SmoothPos = other.SmoothPos;
+	SmoothRadius = other.SmoothRadius;
 }
 
 
@@ -124,10 +123,10 @@ void GameObject::AddToInitPacket( Packet *packet, int8_t precision )
 
 void GameObject::ReadFromInitPacket( Packet *packet, int8_t precision )
 {
-	bool smooth_pos = SmoothPos;
-	SmoothPos = false;
+	double smooth_radius = SmoothRadius;
+	SmoothRadius = 0.;
 	ReadFromUpdatePacketFromServer( packet, precision );
-	SmoothPos = smooth_pos;
+	SmoothRadius = smooth_radius;
 }
 
 
@@ -182,6 +181,9 @@ void GameObject::ReadFromUpdatePacket( Packet *packet, int8_t precision )
 {
 	PrevPos.Copy( this );
 	PrevMotionVector.Copy( &MotionVector );
+	PrevRollRate  = RollRate;
+	PrevPitchRate = PitchRate;
+	PrevYawRate   = YawRate;
 	
 	X = packet->NextDouble();
 	Y = packet->NextDouble();
@@ -229,7 +231,7 @@ void GameObject::ReadFromUpdatePacket( Packet *packet, int8_t precision )
 	
 	// Remove jitter from delayed position updates by moving object forward to predicted position.
 	double speed = MotionVector.Length();
-	if( SmoothPos && Data && Data->AntiJitter && (Dist(&PrevPos) < SMOOTH_RADIUS) && speed )
+	if( SmoothRadius && Data && Data->AntiJitter && (Dist(&PrevPos) < SmoothRadius) && speed )
 	{
 		Vec3D unit_motion = MotionVector.Unit();
 		double dist_behind = PrevPos.DistAlong( &unit_motion, this );
@@ -256,7 +258,7 @@ void GameObject::ReadFromUpdatePacketFromServer( Packet *packet, int8_t precisio
 	PlayerID = packet->NextUShort();
 	
 	// Further reduce jitter by averaging anti-jittered received position with previous predicted position.
-	if( SmoothPos && Data && Data->AntiJitter && (Dist(&PrevPos) < SMOOTH_RADIUS) )
+	if( SmoothRadius && Data && Data->AntiJitter && (Dist(&PrevPos) < SmoothRadius) )
 	{
 		X   = (X   + PrevPos.X   * Data->AntiJitter) / (1. + Data->AntiJitter);
 		Y   = (Y   + PrevPos.Y   * Data->AntiJitter) / (1. + Data->AntiJitter);
@@ -348,6 +350,9 @@ void GameObject::Update( double dt )
 {
 	PrevPos.Copy( this );
 	PrevMotionVector.Copy( &MotionVector );
+	PrevRollRate  = RollRate;
+	PrevPitchRate = PitchRate;
+	PrevYawRate   = YawRate;
 	
 	// Limit over-prediction from momentary hiccups, such as when loading assets mid-game.
 	if( (dt > Data->MaxFrameTime) && (Data->MaxFrameTime > 0.) )

@@ -19,6 +19,8 @@
 #include "Clock.h"
 #include "Rand.h"
 #include "Str.h"
+#include "Num.h"
+#include "IMA.h"
 
 
 namespace Raptor
@@ -200,20 +202,43 @@ bool RaptorServer::ProcessPacket( Packet *packet, ConnectedClient *from_client )
 		return true;
 	}
 	
+	else if( type == Raptor::Packet::VOICE )
+	{
+		uint16_t player_id   = packet->NextUShort();
+		/*uint32_t object_id = */ packet->NextUInt();
+		uint8_t  channel     = packet->NextUChar() & 0x7F;
+		uint32_t sample_rate = packet->NextUInt();
+		uint32_t samples     = packet->NextUInt();
+		
+		if( (samples > 0x00080000) || ! (sample_rate && samples) )
+			return true;
+		
+		const Player *from_player = from_client ? Data.GetPlayer( from_client->PlayerID ) : NULL;
+		if( (! from_player) || (from_player->ID != player_id) )
+			return true;
+		
+		std::string match_team = (channel == Raptor::VoiceChannel::TEAM) ? from_player->PropertyAsString("team") : "";
+		
+		for( std::map<uint16_t,Player*>::const_iterator player_iter = Data.Players.begin(); player_iter != Data.Players.end(); player_iter ++ )
+		{
+			if( (player_iter->second == from_player) && ! Data.PropertyAsBool("echo") )
+				continue;
+			if( match_team.length() && (player_iter->second->PropertyAsString("team") != match_team) )
+				continue;
+			Net.SendToPlayer( packet, player_iter->first );
+		}
+		
+		return true;
+	}
+	
 	else if( type == Raptor::Packet::PLAYER_PROPERTIES )
 	{
-		// Read the player ID and look them up.
-		// FIXME: Make sure the sending client is authorized to update this player?
 		uint16_t id = packet->NextUShort();
 		Player *player = Data.GetPlayer( id );
+		// FIXME: Make sure the sending client is authorized to update this player?
 		
-		// Then read the number of properties.
 		uint32_t property_count = packet->NextUInt();
 		
-		// We'll keep track of these properties so we can report them to the clients.
-		std::map<std::string,std::string> changed_properties;
-		
-		// Loop through for each property being changed.
 		while( property_count )
 		{
 			property_count --;
@@ -221,37 +246,13 @@ bool RaptorServer::ProcessPacket( Packet *packet, ConnectedClient *from_client )
 			std::string property_name = packet->NextString();
 			std::string property_value = packet->NextString();
 			
-			if( player )
-			{
-				if( property_name == "name" )
-					player->Name = property_value;
-				else
-					player->Properties[ property_name ] = property_value;
-				
-				changed_properties[ property_name ] = property_value;
-			}
-			else
-			{
-				// The client thinks we should have this player, so we're out of sync!
-				//ConsolePrint( "Sync error: PLAYER_PROPERTIES", TextConsole::MSG_ERROR );
-			}
+			// Set property and retransmit if changed (unless intercepted by game-specific code).
+			SetPlayerProperty( player, property_name, property_value );
 		}
 		
-		if( changed_properties.size() )
-		{
-			// Now tell everyone what properties were changed.
-			Packet player_properties( Raptor::Packet::PLAYER_PROPERTIES );
-			player_properties.AddUShort( id );
-			player_properties.AddUInt( changed_properties.size() );
-			for( std::map<std::string,std::string>::iterator property_iter = changed_properties.begin(); property_iter != changed_properties.end(); property_iter ++ )
-			{
-				player_properties.AddString( property_iter->first.c_str() );
-				player_properties.AddString( property_iter->second.c_str() );
-			}
-			Net.SendAll( &player_properties );
-		}
+		return true;
 	}
-
+	
 	else if( type == Raptor::Packet::INFO )
 	{
 		// First read the number of properties.
@@ -494,14 +495,15 @@ void RaptorServer::SendUpdate( ConnectedClient *client )
 }
 
 
-bool RaptorServer::SetPlayerProperty( Player *player, std::string name, std::string value )
+bool RaptorServer::SetPlayerProperty( Player *player, std::string name, std::string value, bool force )
 {
 	if( ! player )
 		return false;
 	
-	if( player->Properties[ name ] != value )
+	bool is_name = Str::EqualsInsensitive( name, "name" );
+	if( force || ((is_name ? player->Name : player->Properties[ name ]) != value) )
 	{
-		if( name == "name" )
+		if( is_name )
 			player->Name = value;
 		else
 			player->Properties[ name ] = value;
@@ -542,6 +544,13 @@ int RaptorServer::RaptorServerThread( void *game_server )
 {
 	RaptorServer *server = (RaptorServer*) game_server;
 	Rand::Seed( time(NULL) );
+	
+	#ifdef WIN32
+		SYSTEM_INFO system_info;
+		GetSystemInfo( &system_info );
+		if( system_info.dwNumberOfProcessors >= 3 )
+			SetThreadPriority( GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL );
+	#endif
 	
 	server->Net.Initialize( server->Port );
 	

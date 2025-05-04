@@ -40,6 +40,26 @@ void ClientConfig::SetDefaults( void )
 	Settings.clear();
 	
 	
+	// Determine refresh rate and resolution if possible.
+	
+	int refresh_rate = 60;
+	
+	#ifdef WIN32
+		DEVMODE dm;
+		memset( &dm, 0, sizeof(dm) );
+		dm.dmSize = sizeof(DEVMODE);
+		if( EnumDisplaySettings( NULL, ENUM_CURRENT_SETTINGS, &dm ) )
+		{
+			if( (dm.dmFields & DM_DISPLAYFREQUENCY) && (dm.dmDisplayFrequency >= 60) )
+				refresh_rate = dm.dmDisplayFrequency;
+			if( (dm.dmFields & DM_PELSWIDTH) && ! Raptor::Game->Gfx.DesktopW )
+				Raptor::Game->Gfx.DesktopW = dm.dmPelsWidth;
+			if( (dm.dmFields & DM_PELSHEIGHT) && ! Raptor::Game->Gfx.DesktopH )
+				Raptor::Game->Gfx.DesktopH = dm.dmPelsHeight;
+		}
+	#endif
+	
+	
 	// Default client settings.
 	
 	Settings[ "g_res_fullscreen_x" ] = Num::ToString( Raptor::Game->Gfx.DesktopW );
@@ -65,7 +85,7 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "g_framebuffers_anyres" ] = "true";
 	Settings[ "g_shader_enable" ] = "true";
 	Settings[ "g_shader_version" ] = "110";
-	Settings[ "g_shader_light_quality" ] = "2";
+	Settings[ "g_shader_light_quality" ] = "4";
 	Settings[ "g_shader_point_lights" ] = "4";
 	
 	Settings[ "s_channels" ] = "2";
@@ -73,9 +93,20 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "s_depth" ] = "16";
 	Settings[ "s_buffer" ] = "4096";
 	Settings[ "s_mix_channels" ] = "64";
+	Settings[ "s_mic_init" ] = "false";  // NOTE: Disabled because SDL_OpenAudioDevice causes a long delay on Windows if no mic detected.
+	Settings[ "s_mic_device" ] = "";
+	Settings[ "s_mic_buffer" ] = "2048";
+	Settings[ "s_mic_volume" ] = "auto";
 	Settings[ "s_volume" ] = "0.3";
 	Settings[ "s_effect_volume" ] = "0.5";
 	Settings[ "s_music_volume" ] = "0.8";
+	Settings[ "s_voice_volume" ] = "1";
+	Settings[ "s_voice_autogain_always" ] = "false";
+	Settings[ "s_voice_autogain_volume" ] = "16";
+	Settings[ "s_voice_scale_music" ] = "0.3";
+	Settings[ "s_voice_angle" ] = "30";
+	Settings[ "s_voice_positional" ] = "true";
+	Settings[ "s_voice_delay" ] = "0.2";
 	
 	Settings[ "vr_enable" ] = "false";
 	Settings[ "vr_mirror" ] = "true";
@@ -111,19 +142,8 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "name" ] = name;
 	
 	Settings[ "netrate" ] = "30";
-	Settings[ "maxfps" ] = "60";
+	Settings[ "maxfps" ] = Num::ToString(refresh_rate);
 	Settings[ "showfps" ] = "false";
-	
-	#ifdef WIN32
-		// Ideal maxfps is the display's refresh rate, especially when using vsync.
-		DEVMODE dm;
-		memset( &dm, 0, sizeof(dm) );
-		dm.dmSize = sizeof(DEVMODE);
-		if( EnumDisplaySettings( NULL, ENUM_CURRENT_SETTINGS, &dm )
-		&& (dm.dmFields & DM_DISPLAYFREQUENCY)
-		&& (dm.dmDisplayFrequency >= 60) )
-			Settings[ "maxfps" ] = Num::ToString( (int) dm.dmDisplayFrequency );
-	#endif
 	
 	#ifdef APPLE_POWERPC
 		Settings[ "g_fsaa" ] = "2";
@@ -254,7 +274,8 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 						uint8_t control = ControlID( elements.at(1) );
 						if( control || (elements.at(1) == ControlName(0)) )
 						{
-							if( ! Bind( elements.at(0), control ) )
+							bool bound = Bind( elements.at(0), control );  // This also handles "Unbound" but returns false if nothing was previously bound.
+							if( control && ! bound )
 								Raptor::Game->Console.Print( "Unknown key/button/axis: " + elements.at(0), TextConsole::MSG_ERROR );
 						}
 						else
@@ -342,6 +363,11 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 				else if( cmd == "g_reload" )
 				{
 					Raptor::Game->Res.ReloadGraphics();
+				}
+				
+				else if( cmd == "s_restart" )
+				{
+					Raptor::Game->Snd.Initialize();
 				}
 				
 				else if( cmd == "s_reload" )
@@ -523,6 +549,8 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 					snprintf( cstr, sizeof(cstr), "Shaders: %s", Raptor::Game->ShaderMgr.Ready() ? "OK" : "Failed" );
 					Raptor::Game->Console.Print( cstr );
 					snprintf( cstr, sizeof(cstr), "VR: %s", Raptor::Game->Head.Initialized ? (Raptor::Game->Head.VR ? "Available" : "Unavailable") : "Disabled" );
+					Raptor::Game->Console.Print( cstr );
+					snprintf( cstr, sizeof(cstr), "Microphone: %s", Raptor::Game->Mic.Device ? "Yes" : "No" );
 					Raptor::Game->Console.Print( cstr );
 					snprintf( cstr, sizeof(cstr), "Camera Facing: %f %f %f", Raptor::Game->Cam.Fwd.X, Raptor::Game->Cam.Fwd.Y, Raptor::Game->Cam.Fwd.Z );
 					Raptor::Game->Console.Print( cstr );
@@ -973,23 +1001,28 @@ void ClientConfig::Save( std::string filename, bool unbindall ) const
 			fprintf( output, "\nunbindall\n" );
 		
 		for( std::map<Uint8,uint8_t>::const_iterator mouse_iter = MouseBinds.begin(); mouse_iter != MouseBinds.end(); mouse_iter ++ )
-			fprintf( output, "bind \"%s\" \"%s\"\n", Str::Escape( MouseName(mouse_iter->first), ORIGINAL, ESCAPED ).c_str(), Str::Escape( ControlName(mouse_iter->second), ORIGINAL, ESCAPED ).c_str() );
+			if( mouse_iter->second )
+				fprintf( output, "bind \"%s\" \"%s\"\n", Str::Escape( MouseName(mouse_iter->first), ORIGINAL, ESCAPED ).c_str(), Str::Escape( ControlName(mouse_iter->second), ORIGINAL, ESCAPED ).c_str() );
 		
 		for( std::map<SDLKey,uint8_t>::const_iterator key_iter = KeyBinds.begin(); key_iter != KeyBinds.end(); key_iter ++ )
-			fprintf( output, "bind \"%s\" \"%s\"\n", Str::Escape( KeyName(key_iter->first), ORIGINAL, ESCAPED ).c_str(), Str::Escape( ControlName(key_iter->second), ORIGINAL, ESCAPED ).c_str() );
+			if( key_iter->second )
+				fprintf( output, "bind \"%s\" \"%s\"\n", Str::Escape( KeyName(key_iter->first), ORIGINAL, ESCAPED ).c_str(), Str::Escape( ControlName(key_iter->second), ORIGINAL, ESCAPED ).c_str() );
 		
 		for( std::map<std::string,std::map<Uint8,uint8_t> >::const_iterator dev_iter = JoyAxisBinds.begin(); dev_iter != JoyAxisBinds.end(); dev_iter ++ )
 			for( std::map<Uint8,uint8_t>::const_iterator bind = dev_iter->second.begin(); bind != dev_iter->second.end(); bind ++ )
-				fprintf( output, "bind \"%s\" \"%s\"\n", Str::Escape( Raptor::Game->Input.JoyAxisName(dev_iter->first,bind->first), ORIGINAL, ESCAPED ).c_str(), Str::Escape( ControlName(bind->second), ORIGINAL, ESCAPED ).c_str() );
+				if( bind->second )
+					fprintf( output, "bind \"%s\" \"%s\"\n", Str::Escape( Raptor::Game->Input.JoyAxisName(dev_iter->first,bind->first), ORIGINAL, ESCAPED ).c_str(), Str::Escape( ControlName(bind->second), ORIGINAL, ESCAPED ).c_str() );
 		
 		for( std::map<std::string,std::map<Uint8,uint8_t> >::const_iterator dev_iter = JoyButtonBinds.begin(); dev_iter != JoyButtonBinds.end(); dev_iter ++ )
 			for( std::map<Uint8,uint8_t>::const_iterator bind = dev_iter->second.begin(); bind != dev_iter->second.end(); bind ++ )
-				fprintf( output, "bind \"%s\" \"%s\"\n", Str::Escape( Raptor::Game->Input.JoyButtonName(dev_iter->first,bind->first), ORIGINAL, ESCAPED ).c_str(), Str::Escape( ControlName(bind->second), ORIGINAL, ESCAPED ).c_str() );
+				if( bind->second )
+					fprintf( output, "bind \"%s\" \"%s\"\n", Str::Escape( Raptor::Game->Input.JoyButtonName(dev_iter->first,bind->first), ORIGINAL, ESCAPED ).c_str(), Str::Escape( ControlName(bind->second), ORIGINAL, ESCAPED ).c_str() );
 		
 		for( std::map<std::string,std::map<Uint8,std::map<Uint8,uint8_t> > >::const_iterator dev_iter = JoyHatBinds.begin(); dev_iter != JoyHatBinds.end(); dev_iter ++ )
 			for( std::map<Uint8,std::map<Uint8,uint8_t> >::const_iterator hat = dev_iter->second.begin(); hat != dev_iter->second.end(); hat ++ )
 				for( std::map<Uint8,uint8_t>::const_iterator bind = hat->second.begin(); bind != hat->second.end(); bind ++ )
-					fprintf( output, "bind \"%s\" \"%s\"\n", Str::Escape( Raptor::Game->Input.JoyHatName(dev_iter->first,hat->first,bind->first), ORIGINAL, ESCAPED ).c_str(), Str::Escape( ControlName(bind->second), ORIGINAL, ESCAPED ).c_str() );
+					if( bind->second )
+						fprintf( output, "bind \"%s\" \"%s\"\n", Str::Escape( Raptor::Game->Input.JoyHatName(dev_iter->first,hat->first,bind->first), ORIGINAL, ESCAPED ).c_str(), Str::Escape( ControlName(bind->second), ORIGINAL, ESCAPED ).c_str() );
 		
 		fflush( output );
 		fclose( output );

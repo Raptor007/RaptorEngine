@@ -404,7 +404,7 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 					if( ! Materials[ mtl ] )
 						Materials[ mtl ] = new ModelMaterial();
 				}
-				else if( elements.at( 0 ) == "map_Kd" )
+				else if( (elements.at( 0 ) == "map_Kd") || (elements.at( 0 ) == "map_bump") )
 				{
 					if( get_textures && (elements.size() >= 2) )
 					{
@@ -425,7 +425,24 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 						
 						if( ! Materials[ mtl ] )
 							Materials[ mtl ] = new ModelMaterial();
-						Materials[ mtl ]->Texture.BecomeInstance( Raptor::Game->Res.GetAnimation( tex_filename ) );
+						
+						if( elements.at( 0 ) == "map_bump" )
+						{
+							Materials[ mtl ]->BumpMap.BecomeInstance( Raptor::Game->Res.GetAnimation( tex_filename ) );
+							if( ! Materials[ mtl ]->BumpScale )
+								Materials[ mtl ]->BumpScale = 1.f;
+						}
+						else
+							Materials[ mtl ]->Texture.BecomeInstance( Raptor::Game->Res.GetAnimation( tex_filename ) );
+					}
+				}
+				else if( elements.at( 0 ) == "bump_scale" )
+				{
+					if( elements.size() >= 2 )
+					{
+						if( ! Materials[ mtl ] )
+							Materials[ mtl ] = new ModelMaterial();
+						Materials[ mtl ]->BumpScale = atof( elements.at( 1 ).c_str() );
 					}
 				}
 				else if( elements.at( 0 ) == "Ka" )
@@ -540,9 +557,11 @@ void Model::MakeMaterialArrays( void )
 				std::map<std::string,ModelArrays*>::iterator array_iter = obj_iter->second->Arrays.find( mtl_iter->first );
 				if( (array_iter != obj_iter->second->Arrays.end()) && array_iter->second->VertexCount )
 				{
-					memcpy( ((char*)( mtl_iter->second->Arrays.VertexArray   )) + vertices_filled * 3 * sizeof(GLdouble), array_iter->second->VertexArray,   array_iter->second->VertexCount * 3 * sizeof(GLdouble) );
-					memcpy( ((char*)( mtl_iter->second->Arrays.TexCoordArray )) + vertices_filled * 2 * sizeof(GLfloat),  array_iter->second->TexCoordArray, array_iter->second->VertexCount * 2 * sizeof(GLfloat) );
-					memcpy( ((char*)( mtl_iter->second->Arrays.NormalArray   )) + vertices_filled * 3 * sizeof(GLfloat),  array_iter->second->NormalArray,   array_iter->second->VertexCount * 3 * sizeof(GLfloat) );
+					memcpy( ((char*)( mtl_iter->second->Arrays.VertexArray    )) + vertices_filled * 3 * sizeof(GLdouble), array_iter->second->VertexArray,    array_iter->second->VertexCount * 3 * sizeof(GLdouble) );
+					memcpy( ((char*)( mtl_iter->second->Arrays.TexCoordArray  )) + vertices_filled * 2 * sizeof(GLfloat),  array_iter->second->TexCoordArray,  array_iter->second->VertexCount * 2 * sizeof(GLfloat) );
+					memcpy( ((char*)( mtl_iter->second->Arrays.NormalArray    )) + vertices_filled * 3 * sizeof(GLfloat),  array_iter->second->NormalArray,    array_iter->second->VertexCount * 3 * sizeof(GLfloat) );
+					memcpy( ((char*)( mtl_iter->second->Arrays.TangentArray   )) + vertices_filled * 3 * sizeof(GLfloat),  array_iter->second->TangentArray,   array_iter->second->VertexCount * 3 * sizeof(GLfloat) );
+					memcpy( ((char*)( mtl_iter->second->Arrays.BitangentArray )) + vertices_filled * 3 * sizeof(GLfloat),  array_iter->second->BitangentArray, array_iter->second->VertexCount * 3 * sizeof(GLfloat) );
 					
 					vertices_filled += array_iter->second->VertexCount;
 				}
@@ -594,6 +613,13 @@ void Model::Optimize( double vertex_tolerance, double normal_tolerance, double d
 void Model::Draw( const Pos3D *pos, const std::set<std::string> *object_names, const Color *wireframe, double exploded, int explosion_seed, double fwd_scale, double up_scale, double right_scale )
 {
 	bool use_shaders = Raptor::Game->ShaderMgr.Active();
+	GLint tangent_loc = -1, bitangent_loc = -1;
+	if( use_shaders )
+	{
+		tangent_loc   = Raptor::Game->ShaderMgr.AttribLoc( "BumpTangent"   );
+		bitangent_loc = Raptor::Game->ShaderMgr.AttribLoc( "BumpBitangent" );
+	}
+	bool use_bumpmap = (tangent_loc >= 0) && (bitangent_loc >= 0) && (Raptor::Game->Gfx.LightQuality >= 3);
 	
 	Pos3D zero;
 	if( ! pos )
@@ -620,6 +646,7 @@ void Model::Draw( const Pos3D *pos, const std::set<std::string> *object_names, c
 			Raptor::Game->ShaderMgr.Set3f( "SpecularColor", 0., 0., 0. );
 			Raptor::Game->ShaderMgr.Set1f( "Alpha", wireframe->Alpha );
 			Raptor::Game->ShaderMgr.Set1f( "Shininess", 0. );
+			Raptor::Game->ShaderMgr.Set1f( "BumpScale", 0. );
 		}
 	}
 	
@@ -646,6 +673,14 @@ void Model::Draw( const Pos3D *pos, const std::set<std::string> *object_names, c
 			{
 				if( use_shaders )
 				{
+					// FIXME: Pull this out of the loop, or enable different shader per material?
+					if( tangent_loc >= 0 )
+						glEnableVertexAttribArray( tangent_loc );
+					if( bitangent_loc >= 0 )
+						glEnableVertexAttribArray( bitangent_loc );
+					
+					glVertexPointer( 3, GL_DOUBLE, 0, mtl_iter->second->Arrays.VertexArray );
+					
 					if( ! wireframe )
 					{
 						Raptor::Game->ShaderMgr.Set3f( "AmbientColor",  mtl_iter->second->Ambient.Red,  mtl_iter->second->Ambient.Green,  mtl_iter->second->Ambient.Blue );
@@ -654,11 +689,30 @@ void Model::Draw( const Pos3D *pos, const std::set<std::string> *object_names, c
 						Raptor::Game->ShaderMgr.Set1f( "Alpha", mtl_iter->second->Ambient.Alpha );
 						Raptor::Game->ShaderMgr.Set1f( "Shininess", mtl_iter->second->Shininess );
 						
-						glActiveTexture( GL_TEXTURE0 + 0 );
 						Raptor::Game->ShaderMgr.Set1i( "Texture", 0 );
+						Raptor::Game->ShaderMgr.Set1i( "BumpMap", 1 );
+						
+						glActiveTexture( GL_TEXTURE0 + 1 ); // BumpMap
+						
+						if( use_bumpmap && mtl_iter->second->BumpMap.Frames.size() )
+						{
+							glBindTexture( GL_TEXTURE_2D, mtl_iter->second->BumpMap.CurrentFrame() );
+							glVertexAttribPointer( tangent_loc,   3, GL_FLOAT, GL_TRUE, 0, mtl_iter->second->Arrays.TangentArray );
+							glVertexAttribPointer( bitangent_loc, 3, GL_FLOAT, GL_TRUE, 0, mtl_iter->second->Arrays.BitangentArray );
+							Raptor::Game->ShaderMgr.Set1f( "BumpScale", mtl_iter->second->BumpScale );
+						}
+						else
+						{
+							glBindTexture( GL_TEXTURE_2D, 0 );
+							if( tangent_loc >= 0 )
+								glVertexAttribPointer( tangent_loc,   3, GL_FLOAT, GL_TRUE, 0, mtl_iter->second->Arrays.NormalArray );
+							if( bitangent_loc >= 0 )
+								glVertexAttribPointer( bitangent_loc, 3, GL_FLOAT, GL_TRUE, 0, mtl_iter->second->Arrays.NormalArray );
+							Raptor::Game->ShaderMgr.Set1f( "BumpScale", 0. );
+						}
+						
+						glActiveTexture( GL_TEXTURE0 + 0 ); // Texture
 					}
-					
-					glVertexPointer( 3, GL_DOUBLE, 0, mtl_iter->second->Arrays.VertexArray );
 				}
 				else
 				{
@@ -677,6 +731,12 @@ void Model::Draw( const Pos3D *pos, const std::set<std::string> *object_names, c
 				}
 				
 				glDrawArrays( GL_TRIANGLES, 0, mtl_iter->second->Arrays.VertexCount );
+				
+				// FIXME: Pull this out of the loop, or enable different shader per material?
+				if( tangent_loc >= 0 )
+					glDisableVertexAttribArray( tangent_loc );
+				if( bitangent_loc >= 0 )
+					glDisableVertexAttribArray( bitangent_loc );
 			}
 		}
 	}
@@ -731,18 +791,47 @@ void Model::Draw( const Pos3D *pos, const std::set<std::string> *object_names, c
 				{
 					if( use_shaders )
 					{
+						// FIXME: Pull this out of the loop, or enable different shader per material?
+						if( tangent_loc >= 0 )
+							glEnableVertexAttribArray( tangent_loc );
+						if( bitangent_loc >= 0 )
+							glEnableVertexAttribArray( bitangent_loc );
+						
 						if( ! wireframe )
 						{
 							if( ! Materials[ array_iter->first ] )
 								Materials[ array_iter->first ] = new ModelMaterial();
-							Raptor::Game->ShaderMgr.Set3f( "AmbientColor",  Materials[ array_iter->first ]->Ambient.Red,  Materials[ array_iter->first ]->Ambient.Green,  Materials[ array_iter->first ]->Ambient.Blue );
-							Raptor::Game->ShaderMgr.Set3f( "DiffuseColor",  Materials[ array_iter->first ]->Diffuse.Red,  Materials[ array_iter->first ]->Diffuse.Green,  Materials[ array_iter->first ]->Diffuse.Blue );
-							Raptor::Game->ShaderMgr.Set3f( "SpecularColor", Materials[ array_iter->first ]->Specular.Red, Materials[ array_iter->first ]->Specular.Green, Materials[ array_iter->first ]->Specular.Blue );
-							Raptor::Game->ShaderMgr.Set1f( "Alpha", Materials[ array_iter->first ]->Ambient.Alpha );
-							Raptor::Game->ShaderMgr.Set1f( "Shininess", Materials[ array_iter->first ]->Shininess );
+							ModelMaterial *mtl = Materials[ array_iter->first ];
 							
-							glActiveTexture( GL_TEXTURE0 + 0 );
+							Raptor::Game->ShaderMgr.Set3f( "AmbientColor",  mtl->Ambient.Red,  mtl->Ambient.Green,  mtl->Ambient.Blue );
+							Raptor::Game->ShaderMgr.Set3f( "DiffuseColor",  mtl->Diffuse.Red,  mtl->Diffuse.Green,  mtl->Diffuse.Blue );
+							Raptor::Game->ShaderMgr.Set3f( "SpecularColor", mtl->Specular.Red, mtl->Specular.Green, mtl->Specular.Blue );
+							Raptor::Game->ShaderMgr.Set1f( "Alpha", mtl->Ambient.Alpha );
+							Raptor::Game->ShaderMgr.Set1f( "Shininess", mtl->Shininess );
+							
 							Raptor::Game->ShaderMgr.Set1i( "Texture", 0 );
+							Raptor::Game->ShaderMgr.Set1i( "BumpMap", 1 );
+							
+							glActiveTexture( GL_TEXTURE0 + 1 ); // BumpMap
+							
+							if( use_bumpmap && mtl->BumpMap.Frames.size() )
+							{
+								glBindTexture( GL_TEXTURE_2D, mtl->BumpMap.CurrentFrame() );
+								glVertexAttribPointer( tangent_loc,   3, GL_FLOAT, GL_TRUE, 0, array_iter->second->TangentArray );
+								glVertexAttribPointer( bitangent_loc, 3, GL_FLOAT, GL_TRUE, 0, array_iter->second->BitangentArray );
+								Raptor::Game->ShaderMgr.Set1f( "BumpScale", mtl->BumpScale );
+							}
+							else
+							{
+								glBindTexture( GL_TEXTURE_2D, 0 );
+								if( tangent_loc >= 0 )
+									glVertexAttribPointer( tangent_loc,   3, GL_FLOAT, GL_TRUE, 0, array_iter->second->NormalArray );
+								if( bitangent_loc >= 0 )
+									glVertexAttribPointer( bitangent_loc, 3, GL_FLOAT, GL_TRUE, 0, array_iter->second->NormalArray );
+								Raptor::Game->ShaderMgr.Set1f( "BumpScale", 0. );
+							}
+							
+							glActiveTexture( GL_TEXTURE0 + 0 ); // Texture
 						}
 						
 						glVertexPointer( 3, GL_DOUBLE, 0, array_iter->second->VertexArray );
@@ -766,6 +855,12 @@ void Model::Draw( const Pos3D *pos, const std::set<std::string> *object_names, c
 					}
 					
 					glDrawArrays( GL_TRIANGLES, 0, array_iter->second->VertexCount );
+					
+					// FIXME: Pull this out of the loop, or enable different shader per material?
+					if( tangent_loc >= 0 )
+						glDisableVertexAttribArray( tangent_loc );
+					if( bitangent_loc >= 0 )
+						glDisableVertexAttribArray( bitangent_loc );
 				}
 			}
 		}
@@ -793,6 +888,7 @@ void Model::Draw( const Pos3D *pos, const std::set<std::string> *object_names, c
 		Raptor::Game->ShaderMgr.Set3f( "SpecularColor", 0., 0., 0. );
 		Raptor::Game->ShaderMgr.Set1f( "Alpha", 1. );
 		Raptor::Game->ShaderMgr.Set1f( "Shininess", 0. );
+		Raptor::Game->ShaderMgr.Set1f( "BumpScale", 0. );
 	}
 }
 
@@ -1522,6 +1618,8 @@ ModelArrays::ModelArrays( void )
 	VertexArray = NULL;
 	TexCoordArray = NULL;
 	NormalArray = NULL;
+	TangentArray = NULL;
+	BitangentArray = NULL;
 	WorldSpaceVertexArray = NULL;
 	Allocated = false;
 	AllocatedWorldSpace = false;
@@ -1534,6 +1632,8 @@ ModelArrays::ModelArrays( const ModelArrays &other )
 	VertexArray = NULL;
 	TexCoordArray = NULL;
 	NormalArray = NULL;
+	TangentArray = NULL;
+	BitangentArray = NULL;
 	WorldSpaceVertexArray = NULL;
 	Allocated = false;
 	AllocatedWorldSpace = false;
@@ -1548,6 +1648,8 @@ ModelArrays::ModelArrays( const ModelArrays *other )
 	VertexArray = NULL;
 	TexCoordArray = NULL;
 	NormalArray = NULL;
+	TangentArray = NULL;
+	BitangentArray = NULL;
 	WorldSpaceVertexArray = NULL;
 	Allocated = false;
 	AllocatedWorldSpace = false;
@@ -1574,12 +1676,18 @@ void ModelArrays::Clear( void )
 			free( TexCoordArray );
 		if( NormalArray )
 			free( NormalArray );
+		if( TangentArray )
+			free( TangentArray );
+		if( BitangentArray )
+			free( BitangentArray );
 		Allocated = false;
 	}
 	
 	VertexArray = NULL;
 	TexCoordArray = NULL;
 	NormalArray = NULL;
+	TangentArray = NULL;
+	BitangentArray = NULL;
 	
 	// Each instance is always responsible for its own WorldSpaceVertexArray.
 	if( AllocatedWorldSpace && WorldSpaceVertexArray )
@@ -1605,6 +1713,8 @@ void ModelArrays::BecomeCopy( const ModelArrays *other )
 	const GLdouble *vertex_array    = other->VertexArray;
 	const GLfloat  *tex_coord_array = other->TexCoordArray;
 	const GLfloat  *normal_array    = other->NormalArray;
+	const GLfloat  *tangent_array   = other->TangentArray;
+	const GLfloat  *bitangent_array = other->BitangentArray;
 	
 	Clear();
 	
@@ -1642,6 +1752,28 @@ void ModelArrays::BecomeCopy( const ModelArrays *other )
 			Allocated = true;
 		}
 	}
+	
+	if( tangent_array )
+	{
+		size_t tangent_array_mem = sizeof(GLfloat) * 3 * VertexCount;
+		TangentArray = (GLfloat*) malloc( tangent_array_mem );
+		if( TangentArray )
+		{
+			memcpy( TangentArray, tangent_array, tangent_array_mem );
+			Allocated = true;
+		}
+	}
+	
+	if( bitangent_array )
+	{
+		size_t bitangent_array_mem = sizeof(GLfloat) * 3 * VertexCount;
+		BitangentArray = (GLfloat*) malloc( bitangent_array_mem );
+		if( BitangentArray )
+		{
+			memcpy( BitangentArray, bitangent_array, bitangent_array_mem );
+			Allocated = true;
+		}
+	}
 }
 
 
@@ -1650,12 +1782,12 @@ void ModelArrays::BecomeInstance( const ModelArrays *other )
 	if( this != other )
 	{
 		Clear();
-		
-		VertexCount = other->VertexCount;
-		
-		VertexArray = other->VertexArray;
-		TexCoordArray = other->TexCoordArray;
-		NormalArray = other->NormalArray;
+		VertexCount    = other->VertexCount;
+		VertexArray    = other->VertexArray;
+		TexCoordArray  = other->TexCoordArray;
+		NormalArray    = other->NormalArray;
+		TangentArray   = other->TangentArray;
+		BitangentArray = other->BitangentArray;
 	}
 }
 
@@ -1675,9 +1807,11 @@ void ModelArrays::Resize( size_t vertex_count )
 		size_t tex_coord_array_mem = sizeof(GLfloat)  * 2 * VertexCount;
 		size_t normal_array_mem    = sizeof(GLfloat)  * 3 * VertexCount;
 		
-		VertexArray   = (GLdouble*)( VertexArray   ? realloc( VertexArray,   vertex_array_mem )    : malloc( vertex_array_mem )    );
-		TexCoordArray = (GLfloat*)(  TexCoordArray ? realloc( TexCoordArray, tex_coord_array_mem ) : malloc( tex_coord_array_mem ) );
-		NormalArray   = (GLfloat*)(  NormalArray   ? realloc( NormalArray,   normal_array_mem )    : malloc( normal_array_mem )    );
+		VertexArray    = (GLdouble*)( VertexArray    ? realloc( VertexArray,      vertex_array_mem )    : malloc( vertex_array_mem )    );
+		TexCoordArray  = (GLfloat*)(  TexCoordArray  ? realloc( TexCoordArray,    tex_coord_array_mem ) : malloc( tex_coord_array_mem ) );
+		NormalArray    = (GLfloat*)(  NormalArray    ? realloc( NormalArray,      normal_array_mem )    : malloc( normal_array_mem )    );
+		TangentArray   = (GLfloat*)(  TangentArray   ? realloc( TangentArray,     normal_array_mem )    : malloc( normal_array_mem )    );
+		BitangentArray = (GLfloat*)(  BitangentArray ? realloc( BitangentArray,   normal_array_mem )    : malloc( normal_array_mem )    );
 		
 		Allocated = true;
 	}
@@ -1698,7 +1832,7 @@ void ModelArrays::AddFaces( std::vector<ModelFace> &faces )
 		size_t count = 0;
 		for( std::vector<Vec3D>::iterator vertex_iter = face_iter->Vertices.begin(); vertex_iter != face_iter->Vertices.end(); vertex_iter ++ )
 		{
-			// If it's a quad or other large shape, add copies first.
+			// If it's a quad or other large shape, add copies of reused vertices first.
 			if( count >= 3 )
 			{
 				Vec3D recent_vertex = vertices.back();
@@ -1713,7 +1847,7 @@ void ModelArrays::AddFaces( std::vector<ModelFace> &faces )
 		count = 0;
 		for( std::vector<Vec2D>::iterator tex_coord_iter = face_iter->TexCoords.begin(); tex_coord_iter != face_iter->TexCoords.end(); tex_coord_iter ++ )
 		{
-			// If it's a quad or other large shape, add copies first.
+			// If it's a quad or other large shape, add copies for reused vertices first.
 			if( count >= 3 )
 			{
 				Vec2D recent_tex_coord = tex_coords.back();
@@ -1728,7 +1862,7 @@ void ModelArrays::AddFaces( std::vector<ModelFace> &faces )
 		count = 0;
 		for( std::vector<Vec3D>::iterator normal_iter = face_iter->Normals.begin(); normal_iter != face_iter->Normals.end(); normal_iter ++ )
 		{
-			// If it's a quad or other large shape, add copies first.
+			// If it's a quad or other large shape, add copies for reused vertices first.
 			if( count >= 3 )
 			{
 				Vec3D recent_normal = normals.back();
@@ -1812,6 +1946,8 @@ void ModelArrays::AddFaces( std::vector<ModelFace> &faces )
 				NormalArray[ old_vertex_count*3 + i*3 + 2 ] = normal.Z;
 			}
 		}
+		
+		CalculateTangents( old_vertex_count );
 	}
 }
 
@@ -1864,17 +2000,37 @@ void ModelArrays::RemoveFace( size_t face_index )
 		}
 	}
 	
+	if( TangentArray )
+	{
+		for( size_t i = first_vertex; (i + 3) < VertexCount; i ++ )
+		{
+			TangentArray[ i*3     ] = TangentArray[ (i+3)*3     ];
+			TangentArray[ i*3 + 1 ] = TangentArray[ (i+3)*3 + 1 ];
+			TangentArray[ i*3 + 2 ] = TangentArray[ (i+3)*3 + 2 ];
+		}
+	}
+	
+	if( BitangentArray )
+	{
+		for( size_t i = first_vertex; (i + 3) < VertexCount; i ++ )
+		{
+			BitangentArray[ i*3     ] = BitangentArray[ (i+3)*3     ];
+			BitangentArray[ i*3 + 1 ] = BitangentArray[ (i+3)*3 + 1 ];
+			BitangentArray[ i*3 + 2 ] = BitangentArray[ (i+3)*3 + 2 ];
+		}
+	}
+	
 	Resize( VertexCount - 3 );
 }
 
 
-void ModelArrays::CalculateNormals( void )
+void ModelArrays::CalculateNormals( size_t start_vertex )
 {
 	if( ! Allocated )
 		BecomeCopy( this );
 	
 	Vec3D a, b, c;
-	for( size_t i = 0; i < VertexCount; i += 3 )
+	for( size_t i = start_vertex; i < VertexCount; i += 3 )
 	{
 		a.X = VertexArray[ i*3 + 3 ] - VertexArray[ i*3     ];
 		a.Y = VertexArray[ i*3 + 4 ] - VertexArray[ i*3 + 1 ];
@@ -1894,34 +2050,38 @@ void ModelArrays::CalculateNormals( void )
 		NormalArray[ i*3 + 7 ] = c.Y;
 		NormalArray[ i*3 + 8 ] = c.Z;
 	}
+	
+	CalculateTangents( start_vertex );
 }
 
 
-void ModelArrays::ReverseNormals( void )
+void ModelArrays::ReverseNormals( size_t start_vertex )
 {
 	if( ! Allocated )
 		BecomeCopy( this );
 	
 	Vec3D a, b, c;
-	for( size_t i = 0; i < VertexCount; i ++ )
+	for( size_t i = start_vertex; i < VertexCount; i ++ )
 	{
 		NormalArray[ i*3     ] *= -1.;
 		NormalArray[ i*3 + 1 ] *= -1.;
 		NormalArray[ i*3 + 2 ] *= -1.;
 	}
+	
+	CalculateTangents( start_vertex );
 }
 
 
-void ModelArrays::SmoothNormals( void )
+void ModelArrays::SmoothNormals( size_t start_vertex )
 {
 	if( ! Allocated )
 		BecomeCopy( this );
 	
-	for( size_t i = 0; i < VertexCount; i ++ )
+	for( size_t i = start_vertex; i < VertexCount; i ++ )
 	{
 		Vec3D normal(0,0,0);
 		std::set<Vec3D> unique;
-		for( size_t j = 0; j < VertexCount; j ++ )
+		for( size_t j = start_vertex; j < VertexCount; j ++ )
 		{
 			if( (VertexArray[ i*3     ] == VertexArray[ j*3     ])
 			&&  (VertexArray[ i*3 + 1 ] == VertexArray[ j*3 + 1 ])
@@ -1940,6 +2100,59 @@ void ModelArrays::SmoothNormals( void )
 		NormalArray[ i*3     ] = normal.X;
 		NormalArray[ i*3 + 1 ] = normal.Y;
 		NormalArray[ i*3 + 2 ] = normal.Z;
+	}
+	
+	CalculateTangents( start_vertex );
+}
+
+
+void ModelArrays::CalculateTangents( size_t start_vertex )
+{
+	// Remain perpendicular to the normal along curved surfaces.
+	Pos3D tbn;
+	
+	for( size_t i = start_vertex; i < VertexCount; i += 3 )
+	{
+		Vec3D edge1( VertexArray[ (i+1)*3 ] - VertexArray[ i*3 ], VertexArray[ (i+1)*3 + 1 ] - VertexArray[ i*3 + 1 ], VertexArray[ (i+1)*3 + 2 ] - VertexArray[ i*3 + 2 ] );
+		Vec3D edge2( VertexArray[ (i+2)*3 ] - VertexArray[ i*3 ], VertexArray[ (i+2)*3 + 1 ] - VertexArray[ i*3 + 1 ], VertexArray[ (i+2)*3 + 2 ] - VertexArray[ i*3 + 2 ] );
+		Vec2D deltaUV1( TexCoordArray[ (i+1)*2 ] - TexCoordArray[ i*2 ], TexCoordArray[ (i+1)*2 + 1 ] - TexCoordArray[ i*2 + 1 ] );
+		Vec2D deltaUV2( TexCoordArray[ (i+2)*2 ] - TexCoordArray[ i*2 ], TexCoordArray[ (i+2)*2 + 1 ] - TexCoordArray[ i*2 + 1 ] );
+		
+		if( deltaUV1.X * deltaUV2.Y - deltaUV2.X * deltaUV1.Y )
+		{
+			for( size_t j = 0; j < 3; j ++ )
+			{
+				size_t v = i + j;
+				tbn.Fwd.Set( NormalArray[ v*3 ], NormalArray[ v*3 + 1 ], NormalArray[ v*3 + 2 ] );
+				
+				// Tangent
+				tbn.Up.Set( deltaUV2.Y * edge1.X - deltaUV1.Y * edge2.X, deltaUV2.Y * edge1.Y - deltaUV1.Y * edge2.Y, deltaUV2.Y * edge1.Z - deltaUV1.Y * edge2.Z );
+				tbn.FixVectors();
+				TangentArray[ v*3     ] = tbn.Up.X;
+				TangentArray[ v*3 + 1 ] = tbn.Up.Y;
+				TangentArray[ v*3 + 2 ] = tbn.Up.Z;
+				
+				// Bitangent
+				tbn.Up.Set( deltaUV2.X * edge1.X - deltaUV1.X * edge2.X, deltaUV2.X * edge1.Y - deltaUV1.X * edge2.Y, deltaUV2.X * edge1.Z - deltaUV1.X * edge2.Z );
+				tbn.FixVectors();
+				BitangentArray[ v*3     ] = tbn.Up.X;
+				BitangentArray[ v*3 + 1 ] = tbn.Up.Y;
+				BitangentArray[ v*3 + 2 ] = tbn.Up.Z;
+			}
+		}
+		else
+		{
+			// Can't bump-map without valid texture coordinates.
+			TangentArray[  i   *3     ] = BitangentArray[  i   *3     ] = NormalArray[  i   *3     ];
+			TangentArray[  i   *3 + 1 ] = BitangentArray[  i   *3 + 1 ] = NormalArray[  i   *3 + 1 ];
+			TangentArray[  i   *3 + 2 ] = BitangentArray[  i   *3 + 2 ] = NormalArray[  i   *3 + 2 ];
+			TangentArray[ (i+1)*3     ] = BitangentArray[ (i+1)*3     ] = NormalArray[ (i+1)*3     ];
+			TangentArray[ (i+1)*3 + 1 ] = BitangentArray[ (i+1)*3 + 1 ] = NormalArray[ (i+1)*3 + 1 ];
+			TangentArray[ (i+1)*3 + 2 ] = BitangentArray[ (i+1)*3 + 2 ] = NormalArray[ (i+1)*3 + 2 ];
+			TangentArray[ (i+2)*3     ] = BitangentArray[ (i+2)*3     ] = NormalArray[ (i+2)*3     ];
+			TangentArray[ (i+2)*3 + 1 ] = BitangentArray[ (i+2)*3 + 1 ] = NormalArray[ (i+2)*3 + 1 ];
+			TangentArray[ (i+2)*3 + 2 ] = BitangentArray[ (i+2)*3 + 2 ] = NormalArray[ (i+2)*3 + 2 ];
+		}
 	}
 }
 
@@ -2812,6 +3025,7 @@ ModelMaterial::ModelMaterial( void )
 	Diffuse.Set( 0.8f, 0.8f, 0.8f, 1.f );
 	Specular.Set( 0.2f, 0.2f, 0.2f, 1.f );
 	Shininess = 1.f;
+	BumpScale = 0.f;
 }
 
 
@@ -2835,10 +3049,12 @@ ModelMaterial::~ModelMaterial()
 void ModelMaterial::BecomeInstance( const ModelMaterial *other )
 {
 	Texture.BecomeInstance( &(other->Texture) );
+	BumpMap.BecomeInstance( &(other->BumpMap) );
 	Ambient = other->Ambient;
 	Diffuse = other->Diffuse;
 	Specular = other->Specular;
 	Shininess = other->Shininess;
+	BumpScale = other->BumpScale;
 	Arrays.BecomeInstance( &(other->Arrays) );
 }
 

@@ -147,11 +147,12 @@ void GameData::CheckCollisions( double dt )
 	std::map< uint32_t, std::list<GameObject*> > stationary_can_hit_other_types;
 	std::list<GameObject*> complex;
 	std::list<CollisionDataSet> threads;
+	int thread_count = ThreadCount;
 	
 	// Pre-sort by object type and collidability.
 	for( std::map<uint32_t,GameObject*>::iterator obj_iter = GameObjects.begin(); obj_iter != GameObjects.end(); obj_iter ++ )
 	{
-		if( (ThreadCount > 0) && obj_iter->second->ComplexCollisionDetection() )
+		if( (thread_count > 0) && obj_iter->second->ComplexCollisionDetection() )
 			complex.push_back( obj_iter->second );
 		else if( obj_iter->second->IsMoving() )
 		{
@@ -169,14 +170,14 @@ void GameData::CheckCollisions( double dt )
 		}
 	}
 	
-	if( ThreadCount > 0 )
+	if( thread_count > 0 )
 	{
 		// Get threads going for complex collision detection.
 		for( std::list<GameObject*>::iterator obj_iter = complex.begin(); obj_iter != complex.end(); obj_iter ++ )
 		{
 			std::vector<CollisionDataSet*> data_sets;
 			
-			for( int i = 0; i < ThreadCount; i ++ )
+			for( int i = 0; i < thread_count; i ++ )
 			{
 				threads.push_back( CollisionDataSet(dt) );
 				data_sets.push_back( &(threads.back()) );
@@ -189,7 +190,7 @@ void GameData::CheckCollisions( double dt )
 			
 			for( std::list<GameObject*>::iterator obj2_iter = moving_can_hit_own_type[ type ].begin(); obj2_iter != moving_can_hit_own_type[ type ].end(); obj2_iter ++ )
 			{
-				data_sets[ index % ThreadCount ]->Objects2.push_back( *obj2_iter );
+				data_sets[ index % thread_count ]->Objects2.push_back( *obj2_iter );
 				index ++;
 			}
 			for( std::map< uint32_t, std::list<GameObject*> >::iterator list_iter = moving_can_hit_other_types.begin(); list_iter != moving_can_hit_other_types.end(); list_iter ++ )
@@ -199,7 +200,7 @@ void GameData::CheckCollisions( double dt )
 				
 				for( std::list<GameObject*>::iterator obj2_iter = list_iter->second.begin(); obj2_iter != list_iter->second.end(); obj2_iter ++ )
 				{
-					data_sets[ index % ThreadCount ]->Objects2.push_back( *obj2_iter );
+					data_sets[ index % thread_count ]->Objects2.push_back( *obj2_iter );
 					index ++;
 				}
 			}
@@ -208,7 +209,7 @@ void GameData::CheckCollisions( double dt )
 			{
 				for( std::list<GameObject*>::iterator obj2_iter = stationary_can_hit_own_type[ type ].begin(); obj2_iter != stationary_can_hit_own_type[ type ].end(); obj2_iter ++ )
 				{
-					data_sets[ index % ThreadCount ]->Objects2.push_back( *obj2_iter );
+					data_sets[ index % thread_count ]->Objects2.push_back( *obj2_iter );
 					index ++;
 				}
 				for( std::map< uint32_t, std::list<GameObject*> >::iterator list_iter = stationary_can_hit_other_types.begin(); list_iter != stationary_can_hit_other_types.end(); list_iter ++ )
@@ -218,7 +219,7 @@ void GameData::CheckCollisions( double dt )
 					
 					for( std::list<GameObject*>::iterator obj2_iter = list_iter->second.begin(); obj2_iter != list_iter->second.end(); obj2_iter ++ )
 					{
-						data_sets[ index % ThreadCount ]->Objects2.push_back( *obj2_iter );
+						data_sets[ index % thread_count ]->Objects2.push_back( *obj2_iter );
 						index ++;
 					}
 				}
@@ -228,11 +229,11 @@ void GameData::CheckCollisions( double dt )
 			obj2_iter ++;
 			for( ; obj2_iter != complex.end(); obj2_iter ++ )
 			{
-				data_sets[ index % ThreadCount ]->Objects2.push_back( *obj2_iter );
+				data_sets[ index % thread_count ]->Objects2.push_back( *obj2_iter );
 				index ++;
 			}
 			
-			for( int i = 0; i < ThreadCount; i ++ )
+			for( int i = 0; i < thread_count; i ++ )
 				#if SDL_VERSION_ATLEAST(2,0,0)
 					data_sets[ i ]->Thread = SDL_CreateThread( &FindCollisionsThread, "GameDataFindCollisions", data_sets[ i ] );
 				#else
@@ -628,6 +629,10 @@ void CollisionDataSet::DetectCollisions( void )
 
 int FindCollisionsThread( void *data_set_ptr )
 {
+	#ifdef WIN32
+		SetThreadPriority( GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL );
+	#endif
+	
 	CollisionDataSet *data_set = (CollisionDataSet*) data_set_ptr;
 	data_set->DetectCollisions();
 	

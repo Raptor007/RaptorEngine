@@ -33,6 +33,7 @@ public:
 	float SelectedTextRed, SelectedTextGreen, SelectedTextBlue, SelectedTextAlpha;
 	std::string CursorAppearance;
 	bool CenterCursor;
+	char IgnoreNext;
 	
 	TextBox( SDL_Rect *rect, Font *font, uint8_t align );
 	TextBox( SDL_Rect *rect, Font *font, uint8_t align, std::string text );

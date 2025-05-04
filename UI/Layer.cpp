@@ -115,9 +115,7 @@ void Layer::UpdateCalcRects( int offset_x, int offset_y )
 	}
 	
 	for( std::list<Layer*>::iterator layer_iter = Elements.begin(); layer_iter != Elements.end(); layer_iter ++ )
-	{
-		(*layer_iter)->UpdateCalcRects();
-	}
+		(*layer_iter)->UpdateCalcRects();  // NOTE: Do not pass the offsets here; they will be inherited from this CalcRect.
 }
 
 
@@ -247,7 +245,7 @@ bool Layer::HandleEvent( SDL_Event *event )
 		mouse_button = event->button.button;
 	}
 #if SDL_VERSION_ATLEAST(2,0,0)
-	else if( (event->type == SDL_MOUSEWHEEL) && event->wheel.y && WithinCalcRect( event->wheel.mouseX, event->wheel.mouseY ) )
+	else if( (event->type == SDL_MOUSEWHEEL) && event->wheel.y && WithinCalcRect( Raptor::Game->Mouse.X, Raptor::Game->Mouse.Y ) )
 	{
 		// Convert scroll events to MouseDown and MouseUp, and consider it handled if either returned true.
 		mouse_button = (event->wheel.y > 0) ? SDL_BUTTON_WHEELUP : SDL_BUTTON_WHEELDOWN;
@@ -443,6 +441,17 @@ Layer *Layer::FindElement( const std::string &name, bool recursive )
 	}
 	
 	return NULL;
+}
+
+
+Layer *Layer::FindParent( const std::string &name ) const
+{
+	if( ! Container )
+		return NULL;
+	if( Container->Name == name )
+		return Container;
+	
+	return Container->FindParent( name );
 }
 
 

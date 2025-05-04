@@ -33,6 +33,7 @@ namespace Num
 	int NextPowerOfTwo( int input );
 	double SignedPow( double num, double exponent );
 	double Clamp( double num, double min, double max );
+	int16_t ScaleInt16( int16_t num, double scale );
 	bool Valid( double num );
 	
 	double Avg( const std::list<double> &nums );

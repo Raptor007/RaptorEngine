@@ -29,4 +29,7 @@ public:
 	int PropertyAsInt( std::string name, int ifndef = 0, int ifempty = 0 ) const;
 	bool PropertyAsBool( std::string name, bool ifndef = false, bool ifempty = false ) const;
 	std::vector<int> PropertyAsInts( std::string name ) const;
+	
+	bool PlayingVoice( void ) const;
+	uint8_t VoiceChannel( void ) const;
 };

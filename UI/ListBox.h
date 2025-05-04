@@ -37,6 +37,8 @@ public:
 	float SelectedRed, SelectedGreen, SelectedBlue, SelectedAlpha;
 	int ScrollBarSize;
 	float ScrollBarRed, ScrollBarGreen, ScrollBarBlue, ScrollBarAlpha;
+	int VRHeight;
+	
 	int Scroll;
 	bool ClickedScrollBar;
 	
