@@ -129,6 +129,13 @@ void MessageOverlay::Draw( void )
 				b = 0.f;
 				break;
 			}
+			case( TextConsole::MSG_TEAM ):
+			{
+				r = 0.25f;
+				g = 1.f;
+				b = 0.f;
+				break;
+			}
 		}
 		
 		y -= MessageFont->TextHeight( (*message_iter)->Text );

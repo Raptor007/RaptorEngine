@@ -304,7 +304,7 @@ bool ConnectedClient::ProcessPacket( Packet *packet )
 			if( Raptor::Server->CompatibleVersion( Version ) )
 				Login( name, password );
 			else
-				DisconnectNice( "Version mismatch.  Make sure all players have the latest build." );
+				DisconnectNice( (std::string("Version ") + Version + std::string(" is not compatible with server version ") + Raptor::Server->Version + std::string(".")).c_str() );
 		}
 		else
 			DisconnectNice( "Wrong game or application." );

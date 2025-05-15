@@ -277,18 +277,40 @@ bool RaptorServer::ProcessPacket( Packet *packet, ConnectedClient *from_client )
 	
 	else if( type == Raptor::Packet::MESSAGE )
 	{
-		// Lazy solution: Just resend this packet back to everyone.
-		Net.SendAll( packet );
+		std::string msg = packet->NextString();
+		uint32_t msg_type = 0;
+		if( packet->Remaining() )
+			msg_type = packet->NextUInt();
+		
+		if( msg_type == TextConsole::MSG_TEAM )
+		{
+			const Player *from_player = from_client ? Data.GetPlayer( from_client->PlayerID ) : NULL;
+			std::string match_team = from_player ? from_player->PropertyAsString("team") : "";
+			if( match_team.empty() )
+			{
+				// Convert to regular chat when not on a team.
+				Packet message( Raptor::Packet::MESSAGE );
+				message.AddString( msg );
+				message.AddUInt( TextConsole::MSG_CHAT );
+				Net.SendAll( &message );
+			}
+			else
+			{
+				// Send only to players on the same team.
+				for( std::map<uint16_t,Player*>::const_iterator player_iter = Data.Players.begin(); player_iter != Data.Players.end(); player_iter ++ )
+				{
+					if( player_iter->second->PropertyAsString("team") == match_team )
+						Net.SendToPlayer( packet, player_iter->first );
+				}
+			}
+		}
+		else
+			// Lazy solution: Just resend this packet back to everyone.
+			Net.SendAll( packet );
 		
 		// Dedicated servers print chat to console.
 		if( Console != &(Raptor::Game->Console) )
-		{
-			std::string message = packet->NextString();
-			uint32_t msg_type = 0;
-			if( packet->Remaining() )
-				msg_type = packet->NextUInt();
-			Console->Print( message, msg_type );
-		}
+			ConsolePrint( msg, msg_type );
 	}
 	
 	return false;
@@ -398,8 +420,21 @@ void RaptorServer::AcceptedClient( ConnectedClient *client )
 	{
 		// Tell other players to display a message about the new player.
 		Packet message( Raptor::Packet::MESSAGE );
-		message.AddString( (player->Name + " has joined the game.").c_str() );
-		Net.SendAllExcept( &message, client );
+		std::string join_message = player->Name + std::string(" has joined the game (v") + client->Version + std::string(").");
+		message.AddString( join_message.c_str() );
+		if( (Raptor::Game->State >= Raptor::State::CONNECTING) && (((client->IP & 0xFF000000) >> 24) == 127) )
+		{
+			// Self-hosted game prints localhost join messages to console, but not to messages.
+			ConsolePrint( join_message );
+			Net.SendAllExcept( &message, client );
+		}
+		else
+		{
+			// Show join messages on dedicated server console (player hosted servers will see the message packet).
+			if( Console != &(Raptor::Game->Console) )
+				ConsolePrint( join_message );
+			Net.SendAll( &message );
+		}
 	}
 	
 	Raptor::Server->Data.Lock.Unlock();
@@ -431,9 +466,14 @@ void RaptorServer::DroppedClient( ConnectedClient *client )
 	
 	if( player )
 	{
+		// Show leave messages on dedicated server console (player hosted servers will see the message packet).
+		std::string leave_message = player->Name + std::string(" has left the game.");
+		if( Console != &(Raptor::Game->Console) )
+			ConsolePrint( leave_message );
+		
 		// Tell other players to display a message about the removed player.
 		Packet message( Raptor::Packet::MESSAGE );
-		message.AddString( (player->Name + " has left the game.").c_str() );
+		message.AddString( leave_message.c_str() );
 		Net.SendAllExcept( &message, client );
 	}
 	

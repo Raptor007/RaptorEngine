@@ -136,6 +136,13 @@ void ClientConsole::Draw( void )
 					b = 0.f;
 					break;
 				}
+				case( MSG_TEAM ):
+				{
+					r = 0.f;
+					g = 1.f;
+					b = 0.f;
+					break;
+				}
 			}
 			
 			y -= MessageFont->TextHeight( (*message_iter)->Text );

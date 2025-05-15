@@ -51,6 +51,7 @@ public:
 	std::string Game;
 	std::string Version;
 	int DefaultPort;
+	std::string ChatSeparator;
 	
 	Graphics Gfx;
 	ShaderManager ShaderMgr;

@@ -34,7 +34,8 @@ public:
 		MSG_NORMAL = 0,
 		MSG_INPUT = 'Inpt',
 		MSG_ERROR = 'Err ',
-		MSG_CHAT = 'Chat'
+		MSG_CHAT = 'Chat',
+		MSG_TEAM = 'Team'
 	};
 };
 

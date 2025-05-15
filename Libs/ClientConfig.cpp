@@ -158,6 +158,7 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "sv_netrate" ] = "30";
 	Settings[ "sv_maxfps" ] = "60";
 	Settings[ "sv_threads" ] = "0";
+	Settings[ "sv_announce" ] = "true";
 	
 	Settings[ "password" ] = "";
 }
@@ -612,7 +613,7 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 						Raptor::Game->Console.Print( "Not connected.", TextConsole::MSG_ERROR );
 				}
 				
-				else if( cmd == "say" )
+				else if( (cmd == "say") || (cmd == "say_team") )
 				{
 					if( !(Raptor::Game->Net.Connected && Raptor::Game->PlayerID) )
 						Raptor::Game->Console.Print( "Must be connected to chat.", TextConsole::MSG_ERROR );
@@ -620,12 +621,12 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 					{
 						Player *player = Raptor::Game->Data.GetPlayer( Raptor::Game->PlayerID );
 						Packet message = Packet( Raptor::Packet::MESSAGE );
-						message.AddString( ((player ? player->Name : std::string("Anonymous")) + std::string(": ") + Str::Join( elements, " " )).c_str() );
-						message.AddUInt( TextConsole::MSG_CHAT );
+						message.AddString( ((player ? player->Name : std::string("Anonymous")) + Raptor::Game->ChatSeparator + Str::Join( elements, " " )).c_str() );
+						message.AddUInt( (cmd == "say_team") ? TextConsole::MSG_TEAM : TextConsole::MSG_CHAT );
 						Raptor::Game->Net.Send( &message );
 					}
 					else
-						Raptor::Game->Console.Print( "Usage: say <message>", TextConsole::MSG_ERROR );
+						Raptor::Game->Console.Print( std::string("Usage: ") + cmd + std::string(" <message>"), TextConsole::MSG_ERROR );
 				}
 				
 				else if( cmd == "rcon" )
@@ -827,11 +828,22 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 							else
 								Raptor::Game->Console.Print( std::string("Complex collision threads: ") + Num::ToString(Raptor::Server->Data.ThreadCount) );
 						}
+						else if( sv_cmd == "announce" )
+						{
+							if( elements.size() >= 1 )
+							{
+								Settings["sv_announce"] = elements.at(0);
+								Raptor::Server->Announce = SettingAsBool( "sv_announce", true );
+							}
+							else
+								Raptor::Game->Console.Print( std::string("Server LAN announce: ") + (Raptor::Server->Announce ? "true" : "false") );
+						}
 						else if( sv_cmd == "restart" )
 						{
 							Raptor::Server->Port = SettingAsInt( "sv_port", Raptor::Game->DefaultPort );
 							Raptor::Server->NetRate = SettingAsDouble( "sv_netrate", 30. );
 							Raptor::Server->MaxFPS = SettingAsDouble( "sv_maxfps", 60. );
+							Raptor::Server->Announce = SettingAsBool( "sv_announce", true );
 							
 							Raptor::Server->Start( SettingAsString("name") );
 						}
@@ -871,7 +883,7 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 							if( elements.size() >= 1 )
 							{
 								Packet message = Packet( Raptor::Packet::MESSAGE );
-								message.AddString( (std::string("Server: ") + Str::Join( elements, " " )).c_str() );
+								message.AddString( (std::string("Server") + Raptor::Game->ChatSeparator + Str::Join( elements, " " )).c_str() );
 								message.AddUInt( TextConsole::MSG_CHAT );
 								Raptor::Server->ProcessPacket( &message, NULL );
 							}

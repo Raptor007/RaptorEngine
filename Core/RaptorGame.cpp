@@ -137,6 +137,7 @@ RaptorGame::RaptorGame( std::string game, std::string version, RaptorServer *ser
 	Game = game;
 	Version = version;
 	DefaultPort = 7000;
+	ChatSeparator = ": ";
 	
 	SetServer( server );
 	
@@ -268,6 +269,7 @@ void RaptorGame::Initialize( int argc, char **argv )
 			Cfg.Settings[ "s_volume" ] = "0";
 			Cfg.Settings[ "s_mic_enable" ] = "false";
 			Cfg.Settings[ "vr_enable" ] = "false";
+			Cfg.Settings[ "sv_announce" ] = Cfg.SettingAsString( "screensaver_announce", "false" );
 		}
 	}
 	
@@ -277,8 +279,9 @@ void RaptorGame::Initialize( int argc, char **argv )
 		int sv_port = Cfg.SettingAsInt( "sv_port", DefaultPort, DefaultPort );
 		if( sv_port > 0 )
 			Server->Port = sv_port;
-		Server->NetRate = Cfg.SettingAsInt( "sv_netrate", 30 );
-		Server->MaxFPS  = Cfg.SettingAsInt( "sv_maxfps",  60 );
+		Server->MaxFPS  = Cfg.SettingAsDouble( "sv_maxfps",  60. );
+		Server->NetRate = Cfg.SettingAsDouble( "sv_netrate", 30. );
+		Server->Announce = Cfg.SettingAsBool( "sv_announce", true );
 		Server->Data.ThreadCount = Cfg.SettingAsInt("sv_threads");
 	}
 	
@@ -339,13 +342,11 @@ void RaptorGame::Initialize( int argc, char **argv )
 	
 	if( connect )
 		Net.Connect( connect, Cfg.Settings[ "name" ].c_str(), Cfg.Settings[ "password" ].c_str() );
-	if( host )
-		Host();
-	if( screensaver )
+	else if( host || screensaver )
 	{
-		if( Server )
-			Server->Announce = false;
 		Host();
+		if( screensaver && Server )
+			Server->Data.SetProperty( "name", Server->Data.PropertyAsString("name") + std::string(" Screensaver") );
 	}
 }
 
@@ -1146,9 +1147,12 @@ void RaptorGame::Host( void )
 	if( Server )
 	{
 		Server->Port = Cfg.SettingAsInt( "sv_port", Raptor::Game->DefaultPort );
-		Server->MaxFPS = Cfg.SettingAsDouble( "sv_maxfps", 60. );
+		Server->MaxFPS  = Cfg.SettingAsDouble( "sv_maxfps",  60. );
 		Server->NetRate = Cfg.SettingAsDouble( "sv_netrate", 30. );
-		Server->Start( Cfg.SettingAsString( "name" , Raptor::Server->Game.c_str() ) );
+		Server->Announce = Cfg.SettingAsBool( "sv_announce", true );
+		Server->Data.ThreadCount = Cfg.SettingAsInt("sv_threads");
+		
+		Server->Start( Cfg.SettingAsString( "name", Raptor::Server->Game.c_str() ) );
 		
 		Net.Connect( "localhost", Server->Port, Cfg.SettingAsString("name").c_str(), Cfg.SettingAsString("password").c_str() );
 	}
