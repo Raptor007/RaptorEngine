@@ -28,46 +28,48 @@ NetUDP::NetUDP( void )
 NetUDP::~NetUDP()
 {
 	StopListening();
-
+	
 	if( SDLPacket )
 		SDLNet_FreePacket( SDLPacket );
 	SDLPacket = NULL;
 }
 
 
-int NetUDP::Initialize( void )
+bool NetUDP::Initialize( void )
 {
 	// NOTE: SDL_net must be initialized prior to this!
-
+	
 	// Initialize a packet buffer that will be utilized for both incoming and outgoing packets.
 	SDLPacket = SDLNet_AllocPacket( PACKET_BUFFER_SIZE );
 	if( ! SDLPacket )
 	{
 		fprintf( stderr, "NetUDP::Initialize: SDLNet_AllocPacket: %s\n", SDLNet_GetError() );
-		return -1;
+		return false;
 	}
 	
-	return 0;
+	return true;
 }
 
 
-int NetUDP::StartListening( int port )
+bool NetUDP::StartListening( int port )
 {
 	if( Listening )
 		StopListening();
-
+	else if( ! ( SDLPacket || Initialize() ) )  // Try to initialize if not already done.
+		return false;
+	
 	Port = port;
-
+	
 	// Open the listening port.
 	Socket = SDLNet_UDP_Open( Port );
 	if( ! Socket )
 	{
 		fprintf( stderr, "NetUDP::Initialize: SDLNet_UDP_Open: %s\n", SDLNet_GetError() );
-		return -1;
+		return false;
 	}
-
+	
 	Listening = true;
-	return 0;
+	return true;
 }
 
 

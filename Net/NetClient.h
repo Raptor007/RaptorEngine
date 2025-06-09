@@ -60,8 +60,10 @@ public:
 	virtual ~NetClient();
 	
 	bool Initialize( double net_rate = 30., int8_t precision = 0 );
+	bool Connect( const char *host );
 	bool Connect( const char *host, const char *name, const char *password );
 	bool Connect( const char *hostname, int port, const char *name, const char *password );
+	void ConnectWhenSafe( const std::string &host, const std::string &message );
 	bool Reconnect( void );
 	bool Reconnect( const char *name, const char *password );
 	void DisconnectNice( const char *message = NULL );

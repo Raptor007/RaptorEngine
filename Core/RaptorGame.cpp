@@ -269,7 +269,7 @@ void RaptorGame::Initialize( int argc, char **argv )
 			Cfg.Settings[ "s_volume" ] = "0";
 			Cfg.Settings[ "s_mic_enable" ] = "false";
 			Cfg.Settings[ "vr_enable" ] = "false";
-			Cfg.Settings[ "sv_announce" ] = Cfg.SettingAsString( "screensaver_announce", "false" );
+			Cfg.Settings[ "sv_announce" ] = Cfg.SettingAsString( "screensaver_announce", Cfg.SettingAsString( "screensaver_connect", "false" ).c_str() );
 		}
 	}
 	
@@ -283,6 +283,7 @@ void RaptorGame::Initialize( int argc, char **argv )
 		Server->NetRate = Cfg.SettingAsDouble( "sv_netrate", 30. );
 		Server->Announce = Cfg.SettingAsBool( "sv_announce", true );
 		Server->Data.ThreadCount = Cfg.SettingAsInt("sv_threads");
+		Server->Data.SetProperty( "screensaver_connect", Cfg.SettingAsString( "screensaver_connect", "false" ) );
 	}
 	
 	// Dedicated servers bail out here.
@@ -1078,7 +1079,11 @@ void RaptorGame::ChangeState( int state )
 	else if( state == Raptor::State::CONNECTING )
 		Connecting();
 	else if( state == Raptor::State::CONNECTED )
+	{
+		if( State < Raptor::State::CONNECTED )
+			Data.GameTime.Reset();
 		Connected();
+	}
 	
 	if( state < Raptor::State::CONNECTED )
 	{

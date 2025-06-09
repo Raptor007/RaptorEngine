@@ -141,9 +141,13 @@ void ClientConfig::SetDefaults( void )
 		name = "Name";
 	Settings[ "name" ] = name;
 	
+	Settings[ "password" ] = "";
+	
 	Settings[ "netrate" ] = "30";
 	Settings[ "maxfps" ] = Num::ToString(refresh_rate);
 	Settings[ "showfps" ] = "false";
+	
+	Settings[ "screensaver_connect" ] = "false";
 	
 	#ifdef APPLE_POWERPC
 		Settings[ "g_fsaa" ] = "2";
@@ -159,8 +163,6 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "sv_maxfps" ] = "60";
 	Settings[ "sv_threads" ] = "0";
 	Settings[ "sv_announce" ] = "true";
-	
-	Settings[ "password" ] = "";
 }
 
 
@@ -475,7 +477,7 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 				else if( cmd == "connect" )
 				{
 					if( elements.size() >= 1 )
-						Raptor::Game->Net.Connect( elements.at(0).c_str(), SettingAsString("name").c_str(), SettingAsString("password").c_str() );
+						Raptor::Game->Net.Connect( elements.at(0).c_str() );
 					else
 						Raptor::Game->Console.Print( "Usage: connect <ip>", TextConsole::MSG_ERROR );
 				}
@@ -493,7 +495,7 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 					if( Raptor::Server->IsRunning() )
 						Raptor::Game->Console.Print( "You are the server.", TextConsole::MSG_ERROR );
 					else if( HasSetting("host_address") )
-						Raptor::Game->Net.Connect( SettingAsString("host_address").c_str(), SettingAsString("name").c_str(), SettingAsString("password").c_str() );
+						Raptor::Game->Net.Connect( SettingAsString("host_address").c_str() );
 					else
 						Raptor::Game->Console.Print( "No recent server to connect to.", TextConsole::MSG_ERROR );
 				}

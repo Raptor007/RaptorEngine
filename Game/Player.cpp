@@ -33,6 +33,8 @@ bool Player::HasProperty( std::string name ) const
 
 std::string Player::PropertyAsString( std::string name, const char *ifndef, const char *ifempty ) const
 {
+	if( name == "name" )
+		return Name;
 	std::map<std::string, std::string>::const_iterator found = Properties.find( name );
 	if( found != Properties.end() )
 	{

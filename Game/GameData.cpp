@@ -120,9 +120,9 @@ void GameData::ClearObjects( void )
 
 void GameData::Clear( void )
 {
-	ClearObjects();
-	
 	Lock.Lock();
+	
+	ClearObjects();
 	
 	for( std::map<uint16_t,Player*>::iterator player_iter = Players.begin(); player_iter != Players.end(); player_iter ++ )
 		delete player_iter->second;
@@ -131,9 +131,10 @@ void GameData::Clear( void )
 	PlayerIDs.Clear();
 	Properties.clear();
 	
-	Lock.Unlock();
-	
+	GameTime.Reset();
 	TimeScale = 1.;
+	
+	Lock.Unlock();
 }
 
 

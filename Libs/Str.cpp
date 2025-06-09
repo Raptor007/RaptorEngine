@@ -226,6 +226,8 @@ void CStr::ReplaceChars( char *str, const char *find, const char *replace )
 std::vector<std::string> CStr::SplitToVector( const char *str, const char *delimiters )
 {
 	std::vector<std::string> return_vec;
+	if( ! str )
+		return return_vec;
 	
 	char *copy = CStr::Copy(str);
 	char *pch = NULL;
@@ -245,6 +247,8 @@ std::vector<std::string> CStr::SplitToVector( const char *str, const char *delim
 std::list<std::string> CStr::SplitToList( const char *str, const char *delimiters )
 {
 	std::list<std::string> return_list;
+	if( ! str )
+		return return_list;
 	
 	char *copy = CStr::Copy(str);
 	char *pch = NULL;

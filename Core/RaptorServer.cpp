@@ -101,6 +101,8 @@ bool RaptorServer::Start( std::string name )
 	while( (State == Raptor::State::CONNECTING) && (start_time.ElapsedSeconds() < 3.) )
 		SDL_Delay( 100 );
 	
+	Data.GameTime.Reset();
+	
 	return true;
 }
 
@@ -114,6 +116,7 @@ void RaptorServer::StopAndWait( double max_wait_seconds )
 	{
 		if( (max_wait_seconds > 0) && (wait_for_stop.ElapsedSeconds() > max_wait_seconds) )
 			break;
+		SDL_Delay( 1 );
 	}
 	
 	Data.Clear();
@@ -647,15 +650,17 @@ int RaptorServer::RaptorServerThread( void *game_server )
 					server->Data.Lock.Lock();
 					
 					// Properties.
-					info.AddUShort( 3 + server->Data.Properties.size() );
+					info.AddUShort( 5 + server->Data.Properties.size() );
 					info.AddString( "game" );
 					info.AddString( server->Game );
 					info.AddString( "version" );
 					info.AddString( server->Version );
 					info.AddString( "port" );
-					char port_str[ 32 ] = "";
-					snprintf( port_str, 32, "%i", server->Port );
-					info.AddString( port_str );
+					info.AddString( Num::ToString( server->Port ) );
+					info.AddString( "state" );
+					info.AddString( Num::ToString( server->State ) );
+					info.AddString( "uptime" );
+					info.AddString( Num::ToString( server->Data.GameTime.ElapsedSeconds(), 1 ) );
 					for( std::map<std::string,std::string>::iterator property_iter = server->Data.Properties.begin(); property_iter != server->Data.Properties.end(); property_iter ++ )
 					{
 						info.AddString( property_iter->first.c_str() );

@@ -86,6 +86,12 @@ bool NetClient::Initialize( double net_rate, int8_t precision )
 }
 
 
+bool NetClient::Connect( const char *host )
+{
+	return Connect( host, Raptor::Game->Cfg.SettingAsString("name").c_str(), Raptor::Game->Cfg.SettingAsString("password").c_str() );
+}
+
+
 bool NetClient::Connect( const char *host, const char *name, const char *password )
 {
 	bool return_value = false;
@@ -197,6 +203,19 @@ bool NetClient::Connect( const char *hostname, int port, const char *name, const
 }
 
 
+void NetClient::ConnectWhenSafe( const std::string &host, const std::string &message )
+{
+	std::vector<std::string> host_parts = Str::SplitToVector( host, ":" );
+	Raptor::Game->Net.Host = host_parts[ 0 ];
+	Raptor::Game->Net.Port = (host_parts.size() >= 2) ? Str::AsInt( host_parts[ 1 ] ) : Raptor::Game->DefaultPort;
+	
+	Packet reconnect( Raptor::Packet::RECONNECT );
+	reconnect.AddUChar( 1 );
+	reconnect.AddString( message.empty() ? "Changing servers..." : message );
+	ProcessPacket( &reconnect );
+}
+
+
 bool NetClient::Reconnect( void )
 {
 	if( ! ReconnectAttempts )
@@ -235,7 +254,7 @@ void NetClient::DisconnectNice( const char *message )
 	if( Connected )
 	{
 		// Tell the server we're leaving.
-
+		
 		Packet packet( Raptor::Packet::DISCONNECT );
 		
 		if( message )
@@ -247,7 +266,7 @@ void NetClient::DisconnectNice( const char *message )
 	}
 	
 	// Disconnect from the server.
-	DisconnectMessage.clear();
+	DisconnectMessage = message ? message : "";
 	Disconnect();
 }
 
@@ -423,7 +442,10 @@ bool NetClient::ProcessPacket( Packet *packet )
 	{
 		uint8_t time = packet->NextUChar();
 		
-		DisconnectMessage.clear();
+		if( packet->Remaining() )
+			DisconnectMessage = packet->NextString();
+		else
+			DisconnectMessage = std::string("Reconnecting in ") + Num::ToString(time) + std::string((time == 1)?" second...":" seconds...");
 		Disconnect();
 		
 		ReconnectTime = time;

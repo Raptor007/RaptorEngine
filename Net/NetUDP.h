@@ -27,14 +27,14 @@ class NetUDP
 {
 public:
 	bool Listening;
-
+	
 	NetUDP( void );
 	virtual ~NetUDP();
 	
-	int Initialize( void );
-	int StartListening( int port );
+	bool Initialize( void );
+	bool StartListening( int port );
 	void StopListening( void );
-
+	
 	NetUDPPacket *GetPacket( void );
 	void Broadcast( Packet *packet, int port );
 	void Send( Packet *packet, const char *hostname, int port );
@@ -52,7 +52,7 @@ class NetUDPPacket : public Packet
 public:
 	uint32_t IP;
 	uint16_t Port;
-
+	
 	NetUDPPacket( UDPpacket *sdl_packet );
 	virtual ~NetUDPPacket();
 };
