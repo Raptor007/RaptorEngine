@@ -38,6 +38,8 @@ namespace Math3D
 	double LineSegDistFromFace( const Pos3D *end1, const Pos3D *end2, const double *vertex_array, int vertex_count, Pos3D *intersection = NULL );
 	bool LineIntersectsFace( const Pos3D *end1, const Pos3D *end2, const double *vertex_array, int vertex_count = 3, Pos3D *at = NULL );
 	
+	Pos3D NearestPointOnSphere( const Pos3D *pt, const Pos3D *center, double radius );
+	
 	uint64_t BlockMapIndex( double x, double y, double z, double block_size );
 	uint64_t BlockMapIndex( double x, double y, double z, double block_size, int64_t *bx, int64_t *by, int64_t *bz );
 	uint64_t BlockFromParts( int64_t bx, int64_t by, int64_t bz );

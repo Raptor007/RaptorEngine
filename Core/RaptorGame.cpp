@@ -144,6 +144,7 @@ RaptorGame::RaptorGame( std::string game, std::string version, RaptorServer *ser
 	// This arbitrary large value allows us to use Data.AddObject for client-side non-networked objects, if we want to.
 	Data.GameObjectIDs.Clear( 0x10000000 );
 	
+	UIScale = 1.f;
 	MaxFPS = 0.;
 	FrameTime = 0.;
 	State = Raptor::State::DISCONNECTED;
@@ -449,6 +450,9 @@ void RaptorGame::Run( void )
 				int y = (Head.EyeR->H - Raptor::Game->Gfx.RealH) / 2;
 				Mouse.SetOffset( std::max<int>(0,x), std::max<int>(0,y) );
 				
+				// Apply VR UI Scale.
+				UIScale = Cfg.SettingAsDouble( "vr_ui_scale", 1., 1. );
+				
 				// Draw all layers to each eye.
 				Head.Draw();
 				
@@ -489,6 +493,9 @@ void RaptorGame::Run( void )
 				
 				// Mouse is aligned with the screen.
 				Mouse.SetOffset(0,0);
+				
+				// Apply non-VR UI Scale.
+				UIScale = Cfg.SettingAsDouble( "ui_scale", 1., 1. );
 				
 				// Draw all layers.
 				Draw();
@@ -536,7 +543,7 @@ void RaptorGame::Draw( void )
 	Gfx.Clear();
 	Layers.Draw();
 	
-	// Draw text overlay.
+	// Draw text overlay (such as "Connecting to...").
 	if( WaitText.length() )
 	{
 		if( ! WaitFont )
@@ -544,10 +551,12 @@ void RaptorGame::Draw( void )
 		
 		SDL_Rect rect = {0,0,0,0};
 		WaitFont->TextSize( WaitText, &rect );
+		rect.w *= UIScale;
+		rect.h *= UIScale;
 		
 		Gfx.Setup2D();
 		Gfx.DrawRect2D( Gfx.W/2 - rect.w/2 - 30, Gfx.H/2 - rect.h/2 - 20, Gfx.W/2 + rect.w/2 + 30, Gfx.H/2 + rect.h/2 + 20, 0, 0.f,0.f,0.f,0.75f );
-		WaitFont->DrawText( WaitText, Gfx.W/2, Gfx.H/2, Font::ALIGN_MIDDLE_CENTER );
+		WaitFont->DrawText( WaitText, Gfx.W/2, Gfx.H/2, Font::ALIGN_MIDDLE_CENTER, UIScale );
 	}
 	
 	// Draw framerate(s).
@@ -560,8 +569,8 @@ void RaptorGame::Draw( void )
 			snprintf( fps_str, sizeof(fps_str), "%.0f", 1. / FrameTime );
 		
 		Gfx.Setup2D();
-		Console.MessageFont->DrawText( fps_str, Gfx.W - 1, Gfx.H,     Font::ALIGN_BOTTOM_RIGHT, 0.f,0.f,0.f,0.8f );
-		Console.MessageFont->DrawText( fps_str, Gfx.W - 2, Gfx.H - 1, Font::ALIGN_BOTTOM_RIGHT, 1.f,1.f,1.f,1.f );
+		Console.MessageFont->DrawText( fps_str, Gfx.W - 1, Gfx.H,     Font::ALIGN_BOTTOM_RIGHT, 0.f,0.f,0.f,0.8f, UIScale );
+		Console.MessageFont->DrawText( fps_str, Gfx.W - 2, Gfx.H - 1, Font::ALIGN_BOTTOM_RIGHT, 1.f,1.f,1.f,1.f,  UIScale );
 	}
 	
 	// Draw console and mouse cursor last.

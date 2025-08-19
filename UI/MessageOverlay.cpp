@@ -8,7 +8,8 @@
 #include "RaptorGame.h"
 
 
-MessageOverlay::MessageOverlay( Font *message_font ) : Layer()
+MessageOverlay::MessageOverlay( Font *message_font )
+: Layer()
 {
 	Red = 0.f;
 	Green = 0.f;
@@ -21,6 +22,10 @@ MessageOverlay::MessageOverlay( Font *message_font ) : Layer()
 	MaxMessages = 10;
 	ScrollTime = 0.;
 	
+	PadX = 5;
+	PadY = 5;
+	
+	UIScaleMode = Raptor::ScaleMode::IN_PLACE;
 	UpdateRects();
 }
 
@@ -82,8 +87,9 @@ void MessageOverlay::Draw( void )
 	DrawSetup();
 	
 	bool vr = Raptor::Game->Head.VR && Raptor::Game->Gfx.DrawTo;
-	int x = vr ? (Rect.w / 2) : 5;
-	int y = Rect.h - 5;
+	float ui_scale = UIScaleMode ? Raptor::Game->UIScale : 1.f;
+	int x = vr ? (CalcRect.w / 2) : PadX;
+	int y = CalcRect.h - PadY;
 	
 	if( Raptor::Game->Msg.Lock )
 	{
@@ -138,12 +144,12 @@ void MessageOverlay::Draw( void )
 			}
 		}
 		
-		y -= MessageFont->TextHeight( (*message_iter)->Text );
+		y -= MessageFont->TextHeight( (*message_iter)->Text ) * ui_scale;
 		count ++;
 		
 		uint8_t align = vr ? Font::ALIGN_TOP_CENTER : Font::ALIGN_TOP_LEFT;
-		MessageFont->DrawText( (*message_iter)->Text, x+1, y+1, align, 0.f, 0.f, 0.f, a * 0.8f );
-		MessageFont->DrawText( (*message_iter)->Text, x, y, align, r, g, b, a );
+		MessageFont->DrawText( (*message_iter)->Text, x+1, y+1, align, 0.f, 0.f, 0.f, a * 0.8f, ui_scale );
+		MessageFont->DrawText( (*message_iter)->Text, x,   y,   align, r,   g,   b,   a,        ui_scale );
 		
 		if( y < 0 )
 			break;

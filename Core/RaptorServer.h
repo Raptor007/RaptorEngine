@@ -35,6 +35,8 @@ public:
 	int Port;
 	double MaxFPS;
 	double NetRate;
+	Clock GameClock;
+	Clock AnnounceClock;
 	bool Announce;
 	int AnnouncePort;
 	double AnnounceInterval;

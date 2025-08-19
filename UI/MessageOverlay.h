@@ -19,6 +19,7 @@ public:
 	int MaxMessages;
 	double ScrollTime;
 	std::set<uint32_t> DoNotDraw;
+	int PadX, PadY;
 	
 	MessageOverlay( Font *message_font );
 	virtual ~MessageOverlay();

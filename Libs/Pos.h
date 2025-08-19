@@ -45,6 +45,7 @@ public:
 	void Roll( double degrees );
 	void RotateAround( const Vec3D *axis, double degrees );
 	void Move( double dx, double dy, double dz );
+	void MoveRelative( double fwd, double up = 0., double right = 0. );
 	void MoveAlong( const Vec3D *vec, double dist );
 	void MoveAlong( double w, double u, double v, double dist );
 	

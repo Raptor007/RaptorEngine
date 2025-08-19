@@ -102,6 +102,7 @@ bool RaptorServer::Start( std::string name )
 		SDL_Delay( 100 );
 	
 	Data.GameTime.Reset();
+	GameClock.Reset();
 	
 	return true;
 }
@@ -117,6 +118,30 @@ void RaptorServer::StopAndWait( double max_wait_seconds )
 		if( (max_wait_seconds > 0) && (wait_for_stop.ElapsedSeconds() > max_wait_seconds) )
 			break;
 		SDL_Delay( 1 );
+	}
+	
+	if( Announce )
+	{
+		// Broadcast to let others know this server is going down.
+		
+		Packet info( Raptor::Packet::INFO );
+		info.AddUShort( 5 );
+		info.AddString( "game" );
+		info.AddString( Game );
+		info.AddString( "version" );
+		info.AddString( Version );
+		info.AddString( "port" );
+		info.AddString( Num::ToString( Port ) );
+		info.AddString( "state" );
+		info.AddString( Num::ToString( Raptor::State::DISCONNECTED ) );
+		info.AddString( "name" );
+		std::string name = Data.PropertyAsString("name");
+		info.AddString( name.empty() ? "SERVER OFFLINE" : name + std::string(" - OFFLINE") );
+		info.AddUShort( 0 );  // Number of players.
+		
+		NetUDP announcer;
+		announcer.Initialize();
+		announcer.Broadcast( &info, AnnouncePort );
 	}
 	
 	Data.Clear();
@@ -611,8 +636,8 @@ int RaptorServer::RaptorServerThread( void *game_server )
 		NetUDP ServerAnnouncer;
 		ServerAnnouncer.Initialize();
 		
-		Clock GameClock;
-		Clock AnnounceClock;
+		server->GameClock.Reset();
+		server->AnnounceClock.Reset();
 		bool sleep_longer = false;
 		
 		while( server->Net.Listening )
@@ -621,14 +646,14 @@ int RaptorServer::RaptorServerThread( void *game_server )
 			server->Net.ProcessIn();
 			
 			// Calculate the time elapsed for the "frame".
-			double elapsed = GameClock.ElapsedSeconds();
+			double elapsed = server->GameClock.ElapsedSeconds();
 			if( server->MaxFPS && (elapsed > 0.) && (elapsed < 1. / server->MaxFPS) )
 				elapsed = 1. / server->MaxFPS;
 			
 			if( elapsed > 0. )
 			{
 				server->FrameTime = elapsed;
-				GameClock.Advance( elapsed );
+				server->GameClock.Advance( elapsed );
 				
 				// Update location.
 				server->Update( server->FrameTime );
@@ -641,9 +666,9 @@ int RaptorServer::RaptorServerThread( void *game_server )
 				
 				// Send periodic server announcements over UDP broadcast.
 				if( server->Announce && server->AnnouncePort
-				&& (AnnounceClock.ElapsedSeconds() > server->AnnounceInterval) )
+				&& (server->AnnounceClock.ElapsedSeconds() > server->AnnounceInterval) )
 				{
-					AnnounceClock.Reset();
+					server->AnnounceClock.Reset();
 					
 					Packet info( Raptor::Packet::INFO );
 					

@@ -10,6 +10,7 @@
 
 
 TextFileViewer::TextFileViewer( SDL_Rect *window_rect, const char *filename, Font *font, const char *title )
+: Window()
 {
 	if( window_rect )
 	{
@@ -22,7 +23,7 @@ TextFileViewer::TextFileViewer( SDL_Rect *window_rect, const char *filename, Fon
 	else
 	{
 		Rect.w = 640;
-		Rect.h = Raptor::Game->Gfx.H - 20;
+		Rect.h = Raptor::Game->Gfx.H / Raptor::Game->UIScale - 20;
 		Rect.x = (Raptor::Game->Gfx.W - Rect.w) / 2;
 		Rect.y = (Raptor::Game->Gfx.H - Rect.h) / 2;
 		AutoPosition = true;
@@ -124,7 +125,8 @@ void TextFileViewer::UpdateRects( void )
 {
 	if( AutoPosition )
 	{
-		Rect.h = (Raptor::Game->Head.VR && Raptor::Game->Gfx.DrawTo) ? 576 : (Raptor::Game->Gfx.H - 20);
+		float ui_scale = UIScaleMode ? Raptor::Game->UIScale : 1.f;
+		Rect.h = (Raptor::Game->Head.VR && Raptor::Game->Gfx.DrawTo) ? 576 : (Raptor::Game->Gfx.H / ui_scale - 20);
 		Rect.x = Raptor::Game->Gfx.W / 2 - Rect.w / 2;
 		Rect.y = Raptor::Game->Gfx.H / 2 - Rect.h / 2;
 		
@@ -140,8 +142,9 @@ void TextFileViewer::Draw( void )
 {
 	UpdateRects();
 	Window::Draw();
-	TitleFont->DrawText( Title, Rect.w/2 + 2, 12, Font::ALIGN_TOP_CENTER, 0,0,0,0.8f );
-	TitleFont->DrawText( Title, Rect.w/2, 10, Font::ALIGN_TOP_CENTER );
+	float ui_scale = UIScaleMode ? Raptor::Game->UIScale : 1.f;
+	TitleFont->DrawText( Title, CalcRect.w/2 + 2, 12, Font::ALIGN_TOP_CENTER, 0,0,0,0.8f, ui_scale );
+	TitleFont->DrawText( Title, CalcRect.w/2,     10, Font::ALIGN_TOP_CENTER,             ui_scale );
 }
 
 

@@ -70,13 +70,16 @@ void ClientConsole::UpdateRects( void )
 	}
 	
 	// Set up the input text box size.
+	float ui_scale = Raptor::Game->UIScale;
 	Input->Rect.w = Rect.w - 4;
-	Input->Rect.h = Input->TextFont->GetHeight();
+	Input->Rect.h = Input->TextFont->GetHeight() * ui_scale + 0.5f;
 	Input->Rect.x = 2;
 	Input->Rect.y = Rect.h - Input->Rect.h - 2;
 	
 	// Let the Layer code clean things up.
+	Raptor::Game->UIScale = 1.f;
 	UpdateCalcRects();
+	Raptor::Game->UIScale = ui_scale;
 }
 
 
@@ -89,8 +92,9 @@ void ClientConsole::Draw( void )
 		UpdateRects();
 		DrawSetup();
 		
-		Raptor::Game->Gfx.DrawRect2D( 0, 0, Rect.w, Rect.h, 0, Red, Green, Blue, Alpha );
+		Raptor::Game->Gfx.DrawRect2D( 0, 0, CalcRect.w, CalcRect.h, 0, Red, Green, Blue, Alpha );
 		
+		float ui_scale = Raptor::Game->UIScale;
 		int x = Input->Rect.x;
 		int y = Input->Rect.y;
 		
@@ -145,9 +149,9 @@ void ClientConsole::Draw( void )
 				}
 			}
 			
-			y -= MessageFont->TextHeight( (*message_iter)->Text );
+			y -= MessageFont->TextHeight( (*message_iter)->Text ) * ui_scale;
 			
-			MessageFont->DrawText( (*message_iter)->Text, x, y, Font::ALIGN_TOP_LEFT, r, g, b, 1.f );
+			MessageFont->DrawText( (*message_iter)->Text, x, y, Font::ALIGN_TOP_LEFT, r, g, b, 1.f, ui_scale );
 			
 			if( y < 0 )
 				break;

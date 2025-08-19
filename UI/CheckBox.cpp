@@ -4,6 +4,7 @@
 
 #include "CheckBox.h"
 
+#include "RaptorGame.h"
 #include "Str.h"
 
 
@@ -44,15 +45,15 @@ void CheckBox::Draw( void )
 		
 		// Bottom-left
 		glTexCoord2i( 0, 1 );
-		glVertex2i( 0, Rect.h );
+		glVertex2i( 0, CalcRect.h );
 		
 		// Bottom-right
 		glTexCoord2i( 1, 1 );
-		glVertex2i( Rect.h, Rect.h );
+		glVertex2i( CalcRect.h, CalcRect.h );
 		
 		// Top-right
 		glTexCoord2i( 1, 0 );
-		glVertex2i( Rect.h, 0 );
+		glVertex2i( CalcRect.h, 0 );
 		
 	glEnd();
 	
@@ -62,6 +63,7 @@ void CheckBox::Draw( void )
 	if( LabelFont )
 	{
 		int x = 0, y = 0;
+		float ui_scale = UIScaleMode ? Raptor::Game->UIScale : 1.f;
 		
 		switch( LabelAlign )
 		{
@@ -73,17 +75,17 @@ void CheckBox::Draw( void )
 			case Font::ALIGN_MIDDLE_LEFT:
 			case Font::ALIGN_MIDDLE_CENTER:
 			case Font::ALIGN_MIDDLE_RIGHT:
-				y = Rect.h / 2;
+				y = CalcRect.h / 2;
 				break;
 			case Font::ALIGN_BASELINE_LEFT:
 			case Font::ALIGN_BASELINE_CENTER:
 			case Font::ALIGN_BASELINE_RIGHT:
-				y = LabelFont->GetAscent();
+				y = LabelFont->GetAscent() * ui_scale + 0.5f;
 				break;
 			case Font::ALIGN_BOTTOM_LEFT:
 			case Font::ALIGN_BOTTOM_CENTER:
 			case Font::ALIGN_BOTTOM_RIGHT:
-				y = Rect.h;
+				y = CalcRect.h;
 				break;
 		}
 		
@@ -93,31 +95,31 @@ void CheckBox::Draw( void )
 			case Font::ALIGN_MIDDLE_LEFT:
 			case Font::ALIGN_BASELINE_LEFT:
 			case Font::ALIGN_BOTTOM_LEFT:
-				x = Rect.h;
+				x = CalcRect.h;
 				break;
 			case Font::ALIGN_TOP_CENTER:
 			case Font::ALIGN_MIDDLE_CENTER:
 			case Font::ALIGN_BASELINE_CENTER:
 			case Font::ALIGN_BOTTOM_CENTER:
-				x = (Rect.h + Rect.w) / 2;
+				x = (CalcRect.h + CalcRect.w) / 2;
 				break;
 			case Font::ALIGN_TOP_RIGHT:
 			case Font::ALIGN_MIDDLE_RIGHT:
 			case Font::ALIGN_BASELINE_RIGHT:
 			case Font::ALIGN_BOTTOM_RIGHT:
-				x = Rect.w;
+				x = CalcRect.w;
 				break;
 		}
 		
 		if( MouseIsWithin && Enabled )
 		{
 			if( MouseIsDown )
-				LabelFont->DrawText( LabelText, x, y, LabelAlign, RedDown, GreenDown, BlueDown, AlphaDown );
+				LabelFont->DrawText( LabelText, x, y, LabelAlign, RedDown, GreenDown, BlueDown, AlphaDown, ui_scale );
 			else 
-				LabelFont->DrawText( LabelText, x, y, LabelAlign, RedOver, GreenOver, BlueOver, AlphaOver );
+				LabelFont->DrawText( LabelText, x, y, LabelAlign, RedOver, GreenOver, BlueOver, AlphaOver, ui_scale );
 		}
 		else
-			LabelFont->DrawText( LabelText, x, y, LabelAlign, RedNormal, GreenNormal, BlueNormal, Enabled ? AlphaNormal : AlphaDisabled );
+			LabelFont->DrawText( LabelText, x, y, LabelAlign, RedNormal, GreenNormal, BlueNormal, Enabled ? AlphaNormal : AlphaDisabled, ui_scale );
 	}
 }
 

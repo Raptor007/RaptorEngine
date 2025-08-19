@@ -17,6 +17,7 @@ Layer::Layer( SDL_Rect *rect )
 	Enabled = true;
 	Visible = true;
 	Draggable = false;
+	UIScaleMode = Raptor::ScaleMode::DEFAULT;
 	
 	MouseIsWithin = false;
 	MouseIsDown = false;
@@ -100,18 +101,35 @@ void Layer::Cleanup( void )
 
 void Layer::UpdateCalcRects( int offset_x, int offset_y )
 {
-	CalcRect.w = Rect.w;
-	CalcRect.h = Rect.h;
+	float ui_scale = (UIScaleMode && (UIScaleMode != Raptor::ScaleMode::IN_PLACE)) ? Raptor::Game->UIScale : 1.f;
 	
 	if( Container )
 	{
-		CalcRect.x = Rect.x + Container->CalcRect.x + offset_x;
-		CalcRect.y = Rect.y + Container->CalcRect.y + offset_y;
+		CalcRect.x = Rect.x * ui_scale + Container->CalcRect.x + offset_x + 0.5f;
+		CalcRect.y = Rect.y * ui_scale + Container->CalcRect.y + offset_y + 0.5f;
 	}
 	else
 	{
 		CalcRect.x = Rect.x + offset_x;
 		CalcRect.y = Rect.y + offset_y;
+	}
+	
+	CalcRect.w = Rect.w * ui_scale + 0.5f;
+	CalcRect.h = Rect.h * ui_scale + 0.5f;
+	
+	if( UIScaleMode == Raptor::ScaleMode::CENTER )
+	{
+		// Center without extending beyond left and top edges.
+		CalcRect.x -= std::min<int>( std::max<int>( 0, CalcRect.x ), (CalcRect.w - Rect.w) / 2 );
+		CalcRect.y -= std::min<int>( std::max<int>( 0, CalcRect.y ), (CalcRect.h - Rect.h) / 2 );
+		
+		// Avoid extending beyond right and bottom edges (if original position did not).
+		int container_w = Container ? Container->CalcRect.w : Raptor::Game->Gfx.W;
+		int container_h = Container ? Container->CalcRect.h : Raptor::Game->Gfx.H;
+		if( (CalcRect.w <= container_w) && (CalcRect.x + CalcRect.w > container_w) && (Rect.x + Rect.w <= container_w) )
+			CalcRect.x = container_w - CalcRect.w;
+		if( (CalcRect.h <= container_h) && (CalcRect.y + CalcRect.h > container_h) && (Rect.y + Rect.h <= container_h) )
+			CalcRect.y = container_h - CalcRect.h;
 	}
 	
 	for( std::list<Layer*>::iterator layer_iter = Elements.begin(); layer_iter != Elements.end(); layer_iter ++ )
@@ -506,5 +524,15 @@ void Layer::Center( void )
 	{
 		Rect.x = Raptor::Game->Gfx.W/2 - Rect.w/2;
 		Rect.y = Raptor::Game->Gfx.H/2 - Rect.h/2;
+	}
+}
+
+
+void Layer::SetElementScaling( uint8_t scale_mode )
+{
+	for( std::list<Layer*>::iterator layer_iter = Elements.begin(); layer_iter != Elements.end(); layer_iter ++ )
+	{
+		(*layer_iter)->UIScaleMode = scale_mode;
+		(*layer_iter)->SetElementScaling( scale_mode );
 	}
 }

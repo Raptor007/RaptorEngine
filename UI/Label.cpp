@@ -4,6 +4,8 @@
 
 #include "Label.h"
 
+#include "RaptorGame.h"
+
 
 Label::Label( SDL_Rect *rect, std::string text, Font *font, uint8_t align ) : Layer( rect )
 {
@@ -26,7 +28,7 @@ Label::~Label()
 void Label::Draw( void )
 {
 	if( LabelFont )
-		LabelFont->DrawText( LabelText, 0, 0, Rect.w, Rect.h, LabelAlign, Red, Green, Blue, Alpha );
+		LabelFont->DrawText( LabelText, 0, 0, CalcRect.w, CalcRect.h, LabelAlign, Red, Green, Blue, Alpha, UIScaleMode ? Raptor::Game->UIScale : 1.f );
 }
 
 

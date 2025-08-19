@@ -120,7 +120,8 @@ void MouseState::Draw( void )
 		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
 		
 		// Draw the cursor.
-		Raptor::Game->Gfx.DrawRect2D( X - PointX, Y - PointY, X + Size - PointX, Y + Size - PointY, texture, 1.f, 1.f, 1.f, 1.f );
+		float ui_scale = std::max<float>( 1.f, Raptor::Game->UIScale );
+		Raptor::Game->Gfx.DrawRect2D( X - PointX * ui_scale, Y - PointY * ui_scale, X + (Size - PointX) * ui_scale, Y + (Size - PointY) * ui_scale, texture, 1.f, 1.f, 1.f, 1.f );
 		
 		glPopMatrix();
 	}

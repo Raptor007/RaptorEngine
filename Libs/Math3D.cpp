@@ -449,6 +449,20 @@ bool Math3D::LineIntersectsFace( const Pos3D *end1, const Pos3D *end2, const dou
 // ----------------------------------------------------------------------------
 
 
+Pos3D Math3D::NearestPointOnSphere( const Pos3D *pt, const Pos3D *center, double radius )
+{
+	Vec3D dir = *pt - *center;
+	dir.ScaleTo( radius );
+	
+	Pos3D result( pt );
+	result.SetPos( center->X + dir.X, center->Y + dir.Y, center->Z + dir.Z );
+	return result;
+}
+
+
+// ----------------------------------------------------------------------------
+
+
 uint64_t Math3D::BlockMapIndex( double x, double y, double z, double block_size )
 {
 	int64_t bx = x / block_size + ((x >= 0.) ? 0.5 : -0.5);

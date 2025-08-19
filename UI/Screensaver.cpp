@@ -70,6 +70,12 @@ void Screensaver::Draw( void )
 			Raptor::Game->Console.Print( std::string("Screensaver Connect could not open UDP port ") + Num::ToString(Raptor::Server->AnnouncePort) + std::string("!"), TextConsole::MSG_ERROR );
 	}
 	
+	bool server_running = Raptor::Server->IsRunning();
+	
+	// Make sure our server mentions Screensaver Connect in its announcements.
+	if( server_running && ! Raptor::Server->Data.PropertyAsBool("screensaver_connect") )
+		Raptor::Server->SetProperty( "screensaver_connect", "true" );
+	
 	// Look for server announcements.
 	if( ServerFinder.Listening )
 	{
@@ -104,7 +110,7 @@ void Screensaver::Draw( void )
 				if( (properties["game"] == Raptor::Game->Game)                                                                     // Make sure they are announcing the same game.
 				&&  Raptor::Server->CompatibleVersion( properties["version"] )                                                     // Make sure the version seems compatible.
 				&&  (std::string(host_str) != (Raptor::Game->Net.Host + std::string(":") + Num::ToString(Raptor::Game->Net.Port))) // Make sure we're not already connected to this server.
-				&&  ((properties["name"] != Raptor::Server->Data.PropertyAsString("name")) || ! Raptor::Server->IsRunning())       // Make sure it isn't our own server.
+				&&  ((! server_running) || (properties["name"] != Raptor::Server->Data.PropertyAsString("name")))                  // Make sure it isn't our own server.
 				&&  ((Str::AsInt(properties["state"]) >= Raptor::Game->State) || properties["state"].empty())                      // Make sure the state is gameplay (not lobby).
 				&&  (properties["campaign"].empty() || (Raptor::Game->Cfg.SettingAsInt("screensaver_connect") >= 2)) )             // Typically do not spectate singleplayer campaigns.
 				{
@@ -129,14 +135,15 @@ void Screensaver::Draw( void )
 	}
 	
 	// Decide if we should connect to a different server.
-	if( FoundServers.size()
-	&& (MouseMoved.ElapsedSeconds() > (Raptor::Server->AnnounceInterval * 1.5))         // Wait until we've had time to see what's out there.
-	&& ((Raptor::Server->Data.Players.size() <= 1) || ! Raptor::Server->IsRunning()) )  // Don't join another server if we are hosting anyone else.
+	if( FoundServers.size() && (MouseMoved.ElapsedSeconds() > (Raptor::Server->AnnounceInterval * 2.))                                     // Wait until we've had time to see what's out there.
+	&& ( (! server_running) || ((Raptor::Server->Data.Players.size() <= 1) && (Raptor::Server->AnnounceClock.ElapsedSeconds() > 0.25)) ) ) // Don't join if we are hosting clients or just announced.
 	{
 		std::string best_server;
 		float best_uptime = Raptor::Game->Data.GameTime.ElapsedSeconds();
-		bool best_ssconnect = true;
+		bool best_ssconnect = server_running || Raptor::Game->Data.PropertyAsBool("screensaver_connect");
 		int best_players = 0, best_screensavers = 0;
+		
+		Raptor::Game->Data.Lock.Lock();
 		for( std::map<uint16_t,Player*>::const_iterator player_iter = Raptor::Game->Data.Players.begin(); player_iter != Raptor::Game->Data.Players.end(); player_iter ++ )
 		{
 			if( Str::ContainsInsensitive( player_iter->second->Name, "Screensaver" ) )
@@ -144,14 +151,15 @@ void Screensaver::Draw( void )
 			else
 				best_players ++;
 		}
+		Raptor::Game->Data.Lock.Unlock();
 		
-		// Prioritize the server with the most real players, then most screensavers, then not using screensaver_connect (more likely to stay up), and finally highest uptime.
+		// Prioritize the server with the most real players, then not using screensaver_connect (they won't try to join us), then most screensavers connected, and finally highest uptime.
 		for( std::map<std::string,ScreensaverFoundServer>::const_iterator server_iter = FoundServers.begin(); server_iter != FoundServers.end(); server_iter ++ )
 		{
 			if( (server_iter->second.Players > best_players)
-			|| ((server_iter->second.Players == best_players) && (server_iter->second.Screensavers > best_screensavers))
-			|| ((server_iter->second.Players == best_players) && (server_iter->second.Screensavers == best_screensavers) && best_ssconnect && ! server_iter->second.SSConnect)
-			|| ((server_iter->second.Players == best_players) && (server_iter->second.Screensavers == best_screensavers) && (best_ssconnect == server_iter->second.SSConnect) && (server_iter->second.Uptime > best_uptime)) )
+			|| ((server_iter->second.Players == best_players) && best_ssconnect && ! server_iter->second.SSConnect)
+			|| ((server_iter->second.Players == best_players) && (best_ssconnect == server_iter->second.SSConnect) && (server_iter->second.Screensavers > best_screensavers))
+			|| ((server_iter->second.Players == best_players) && (best_ssconnect == server_iter->second.SSConnect) && (server_iter->second.Screensavers == best_screensavers) && (server_iter->second.Uptime > best_uptime)) )
 			{
 				best_server       = server_iter->first;
 				best_players      = server_iter->second.Players;

@@ -391,6 +391,24 @@ Player *GameData::GetPlayer( uint16_t id )
 }
 
 
+int GameData::RealPlayers( void )
+{
+	int count = 0;
+	
+	Lock.Lock();
+	
+	for( std::map<uint16_t,Player*>::const_iterator player_iter = Players.begin(); player_iter != Players.end(); player_iter ++ )
+	{
+		if( ! Str::ContainsInsensitive( player_iter->second->Name, "Screensaver" ) )
+			count ++;
+	}
+	
+	Lock.Unlock();
+	
+	return count;
+}
+
+
 // -----------------------------------------------------------------------------
 
 

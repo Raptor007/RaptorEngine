@@ -300,13 +300,17 @@ void DropDown::Changed( void )
 DropDownListBox::DropDownListBox( DropDown *dropdown )
 : ListBox( &(dropdown->CalcRect), dropdown->LabelFont, dropdown->ScrollBarSize, dropdown->Items )
 {
+	Rect.w = dropdown->Rect.w;
 	AllowDeselect = false;
 	CalledBy = dropdown;
+	UIScaleMode = dropdown->UIScaleMode;
 	Alpha = 1.f;
 	VRHeight = 2;
+	PadX = dropdown->PadX;
 	
 	AutoSize();
-	ScrollTo( CalledBy->Value, CalledBy->Rect.y - Rect.y );
+	UpdateCalcRects();
+	ScrollTo( CalledBy->Value, (CalledBy->CalcRect.y - CalcRect.y) / (UIScaleMode ? Raptor::Game->UIScale : 1.f) );
 }
 
 
@@ -319,14 +323,21 @@ void DropDownListBox::AutoSize( void )
 {
 	Rect.y = CalledBy->CalcRect.y;
 	
+	float ui_scale = UIScaleMode ? Raptor::Game->UIScale : 1.f;
 	int min_y = 0;
-	int max_h = Raptor::Game->Gfx.H;
+	int max_h = Raptor::Game->Gfx.H / ui_scale + 0.5f;
 	
 	int selected_index = FindItem( CalledBy->Value );
 	if( selected_index >= 0 )
-		Rect.y -= selected_index * LineScroll();
+		Rect.y -= selected_index * LineScroll() * ui_scale;
 	
 	Rect.h = Items.size() * LineScroll();
+	
+	if( UIScaleMode == Raptor::ScaleMode::IN_PLACE )
+	{
+		Rect.h *= ui_scale;
+		max_h = Raptor::Game->Gfx.H;
+	}
 	
 	// FIXME: This check is needed because DropDown::Clicked happens when the dimensions are not the VR eye.
 	if( !( Raptor::Game->Head.VR && Raptor::Game->Cfg.SettingAsBool("vr_enable") ) )
@@ -334,7 +345,7 @@ void DropDownListBox::AutoSize( void )
 		if( Rect.h > max_h )
 			Rect.h = max_h;
 		
-		int offscreen = Rect.y + Rect.h - Raptor::Game->Gfx.H;
+		int offscreen = Rect.y + Rect.h * ui_scale - Raptor::Game->Gfx.H + 0.5f;
 		if( offscreen > 0 )
 			Rect.y -= offscreen;
 		if( Rect.y < min_y )

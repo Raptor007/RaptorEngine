@@ -121,7 +121,8 @@ void ScrollArea::UpdateCalcRects( int offset_x, int offset_y )
 			button_rects[ *element_iter ] = (*element_iter)->CalcRect;
 	}
 	
-	Layer::UpdateCalcRects( offset_x - ScrollX, offset_y - ScrollY );
+	float ui_scale = UIScaleMode ? Raptor::Game->UIScale : 1.f;
+	Layer::UpdateCalcRects( offset_x - ScrollX * ui_scale, offset_y - ScrollY * ui_scale );
 	
 	for( std::map<Layer*,SDL_Rect>::iterator button_iter = button_rects.begin(); button_iter != button_rects.end(); button_iter ++ )
 		button_iter->first->CalcRect = button_iter->second;
@@ -144,18 +145,19 @@ void ScrollArea::Draw( void )
 void ScrollArea::DrawElements( void )
 {
 	glPushAttrib( GL_VIEWPORT_BIT );
-	Raptor::Game->Gfx.SetViewport( CalcRect.x, CalcRect.y, Rect.w, Rect.h );
+	Raptor::Game->Gfx.SetViewport( CalcRect.x, CalcRect.y, CalcRect.w, CalcRect.h );
 	// FIXME: While this does work because only the main client thread should use Gfx.W/Gfx.H, there must be a cleaner way!
 	int gfx_w = Raptor::Game->Gfx.W, gfx_h = Raptor::Game->Gfx.H;
-	Raptor::Game->Gfx.W = Rect.w;
-	Raptor::Game->Gfx.H = Rect.h;
+	Raptor::Game->Gfx.W = CalcRect.w;
+	Raptor::Game->Gfx.H = CalcRect.h;
 	
 	UpdateRects();
 	CalcRect.x = 0;
 	CalcRect.y = 0;
+	float ui_scale = UIScaleMode ? Raptor::Game->UIScale : 1.f;
 	for( std::list<Layer*>::iterator element_iter = Elements.begin(); element_iter != Elements.end(); element_iter ++ )
 	{
-		int y = ((*element_iter)->Name == "ScrollAreaButton") ? 0 : -ScrollY;
+		int y = ((*element_iter)->Name == "ScrollAreaButton") ? 0 : (int)( -ScrollY * ui_scale - 0.5f );
 		(*element_iter)->UpdateCalcRects( 0, y );
 	}
 	
@@ -173,8 +175,9 @@ void ScrollArea::DrawElements( void )
 	{
 		double percent_displayed = Rect.h / (double) MaxY();
 		double scroll_start = (ScrollY / (double) max_scroll) * (1. - percent_displayed);
-		int h = Rect.h - ScrollBarSize * 2;
-		Raptor::Game->Gfx.DrawRect2D( Rect.w - ScrollBarSize, (int)( ScrollBarSize + h * scroll_start + 0.5 ), Rect.w, (int)( ScrollBarSize + h * (scroll_start + percent_displayed) + 0.5 ), 0, ScrollBarRed, ScrollBarGreen, ScrollBarBlue, ScrollBarAlpha );
+		int scaled_scroll_bar = ScrollBarSize * ui_scale + 0.5f;
+		int h = CalcRect.h - scaled_scroll_bar * 2;
+		Raptor::Game->Gfx.DrawRect2D( CalcRect.w - scaled_scroll_bar, (int)( scaled_scroll_bar + h * scroll_start + 0.5 ), CalcRect.w, (int)( scaled_scroll_bar + h * (scroll_start + percent_displayed) + 0.5 ), 0, ScrollBarRed, ScrollBarGreen, ScrollBarBlue, ScrollBarAlpha );
 	}
 }
 
@@ -187,47 +190,17 @@ void ScrollArea::TrackEvent( SDL_Event *event )
 	{
 		// Update scroll state as we drag the scroll bar.
 		
-		int y = Raptor::Game->Mouse.Y - CalcRect.y - ScrollBarSize;
-		int h = Rect.h - ScrollBarSize * 2;
+		float ui_scale = UIScaleMode ? Raptor::Game->UIScale : 1.f;
+		int scaled_scroll_bar = ScrollBarSize * ui_scale + 0.5f;
+		int y = Raptor::Game->Mouse.Y - CalcRect.y - scaled_scroll_bar;
+		int h = CalcRect.h - scaled_scroll_bar * 2;
 		
-		int scroll = h ? (y / (float) h) * MaxY() - Rect.h * 0.5f : 0;
+		int scroll = h ? (y / (float) h) * MaxY() * ui_scale - CalcRect.h * 0.5f : 0;
 		if( scroll < 0 )
 			scroll = 0;
 		
-		ScrollTo( scroll );
+		ScrollTo( scroll / ui_scale );
 	}
-	/*
-	// FIXME: This was meant to correctly handle dragging off the edge, but somehow made it worse instead.
-	else if( (event->type == SDL_MOUSEMOTION) && ! WithinCalcRect( event->motion.x, event->motion.y ) )
-	{
-		for( std::list<Layer*>::iterator element_iter = Elements.begin(); element_iter != Elements.end(); element_iter ++ )
-		{
-			if( (*element_iter)->Draggable && (*element_iter)->MouseIsWithin && (*element_iter)->MouseIsDown )
-				continue;
-			
-			if( (*element_iter)->MouseIsWithin )
-			{
-				(*element_iter)->MouseIsWithin = false;
-				MouseLeave();
-			}
-		}
-	}
-	else if( (event->type == SDL_MOUSEBUTTONUP) && ! WithinCalcRect( event->button.x, event->button.y ) && (event->button.button != SDL_BUTTON_WHEELDOWN) && (event->button.button != SDL_BUTTON_WHEELUP) )
-	{
-		for( std::list<Layer*>::iterator element_iter = Elements.begin(); element_iter != Elements.end(); element_iter ++ )
-		{
-			if( (*element_iter)->Draggable && (*element_iter)->MouseIsWithin && (*element_iter)->MouseIsDown )
-				continue;
-			
-			if( (*element_iter)->MouseIsWithin || (*element_iter)->MouseIsDown )
-			{
-				(*element_iter)->MouseIsWithin = false;
-				(*element_iter)->MouseIsDown = false;
-				MouseLeave();
-			}
-		}
-	}
-	*/
 }
 
 
@@ -268,17 +241,19 @@ bool ScrollArea::MouseDown( Uint8 button )
 		return true;
 	else if( button == SDL_BUTTON_LEFT )
 	{
-		ClickedScrollBar = Raptor::Game->Mouse.X > CalcRect.x + CalcRect.w - ScrollBarSize;
+		float ui_scale = UIScaleMode ? Raptor::Game->UIScale : 1.f;
+		int scaled_scroll_bar = ScrollBarSize * ui_scale + 0.5f;
+		ClickedScrollBar = Raptor::Game->Mouse.X > CalcRect.x + CalcRect.w - scaled_scroll_bar;
 		if( ClickedScrollBar )
 		{
-			int y = Raptor::Game->Mouse.Y - CalcRect.y - ScrollBarSize;
-			int h = Rect.h - ScrollBarSize * 2;
+			int y = Raptor::Game->Mouse.Y - CalcRect.y - scaled_scroll_bar;
+			int h = CalcRect.h - scaled_scroll_bar * 2;
 			
-			int scroll = h ? (y / (float) h) * MaxY() - Rect.h * 0.5f : 0;
+			int scroll = h ? (y / (float) h) * MaxY() * ui_scale - CalcRect.h * 0.5f : 0;
 			if( scroll < 0 )
 				scroll = 0;
 			
-			ScrollTo( scroll );
+			ScrollTo( scroll / ui_scale );
 			
 			return true;
 		}
@@ -298,14 +273,16 @@ bool ScrollArea::MouseUp( Uint8 button )
 	{
 		ClickedScrollBar = false;
 		
-		int y = Raptor::Game->Mouse.Y - CalcRect.y - ScrollBarSize;
-		int h = Rect.h - ScrollBarSize * 2;
+		float ui_scale = UIScaleMode ? Raptor::Game->UIScale : 1.f;
+		int scaled_scroll_bar = ScrollBarSize * ui_scale + 0.5f;
+		int y = Raptor::Game->Mouse.Y - CalcRect.y - scaled_scroll_bar;
+		int h = CalcRect.h - scaled_scroll_bar * 2;
 		
-		int scroll = h ? (y / (float) h) * MaxY() - Rect.h * 0.5f : 0;
+		int scroll = h ? (y / (float) h) * MaxY() * ui_scale - CalcRect.h * 0.5f : 0;
 		if( scroll < 0 )
 			scroll = 0;
 		
-		ScrollTo( scroll );
+		ScrollTo( scroll / ui_scale );
 		
 		Selected = NULL;
 	}

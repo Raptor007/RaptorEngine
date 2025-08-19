@@ -19,6 +19,8 @@ Window::Window( void )
 	Green = 0.0f;
 	Blue = 0.0f;
 	Alpha = 0.75f;
+	
+	UIScaleMode = Raptor::ScaleMode::CENTER;
 }
 
 
@@ -32,7 +34,9 @@ Window::Window( SDL_Rect *param_rect )
 	Red = 0.0f;
 	Green = 0.0f;
 	Blue = 0.0f;
-	Alpha = 0.5f;
+	Alpha = 0.75f;
+	
+	UIScaleMode = Raptor::ScaleMode::CENTER;
 }
 
 
@@ -47,6 +51,8 @@ Window::Window( SDL_Rect *param_rect, float red, float green, float blue, float 
 	Green = green;
 	Blue = blue;
 	Alpha = alpha;
+	
+	UIScaleMode = Raptor::ScaleMode::CENTER;
 }
 
 
@@ -65,6 +71,8 @@ Window::Window( SDL_Rect *param_rect, SDL_Color *param_color )
 	#else
 		Alpha = ((float)( param_color->unused )) / 255.0f;
 	#endif
+	
+	UIScaleMode = Raptor::ScaleMode::CENTER;
 }
 
 
@@ -75,5 +83,5 @@ Window::~Window()
 
 void Window::Draw( void )
 {
-	Raptor::Game->Gfx.DrawRect2D( 0, 0, Rect.w, Rect.h, 0, Red, Green, Blue, Alpha );
+	Raptor::Game->Gfx.DrawRect2D( 0, 0, CalcRect.w, CalcRect.h, 0, Red, Green, Blue, Alpha );
 }

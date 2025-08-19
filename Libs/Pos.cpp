@@ -173,6 +173,17 @@ void Pos3D::Move( double dx, double dy, double dz )
 }
 
 
+void Pos3D::MoveRelative( double fwd, double up, double right )
+{
+	if( fwd )
+		MoveAlong( &Fwd, fwd );
+	if( up )
+		MoveAlong( &Up, up );
+	if( right )
+		MoveAlong( &Right, right );
+}
+
+
 void Pos3D::MoveAlong( const Vec3D *vec, double dist )
 {
 	if( vec )

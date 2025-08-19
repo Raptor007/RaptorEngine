@@ -47,12 +47,12 @@ public:
 	void TextSize( std::string text, SDL_Rect *r );
 	int TextHeight( std::string text );
 	int LineWidth( std::string text );
-	void DrawText( std::string text, int x, int y, uint8_t align );
-	void DrawText( std::string text, int x, int y, uint8_t align, float r, float g, float b, float a );
-	void DrawText( std::string text, int x1, int y1, int w, int h, uint8_t align );
-	void DrawText( std::string text, int x1, int y1, int w, int h, uint8_t align, float r, float g, float b, float a );
-	void DrawText( std::string text, const SDL_Rect *rect, uint8_t align );
-	void DrawText( std::string text, const SDL_Rect *rect, uint8_t align, float r, float g, float b, float a );
+	void DrawText( std::string text, int x, int y, uint8_t align, float scale = 1. );
+	void DrawText( std::string text, int x, int y, uint8_t align, float r, float g, float b, float a, float scale = 1. );
+	void DrawText( std::string text, int x1, int y1, int w, int h, uint8_t align, float scale = 1. );
+	void DrawText( std::string text, int x1, int y1, int w, int h, uint8_t align, float r, float g, float b, float a, float scale = 1. );
+	void DrawText( std::string text, const SDL_Rect *rect, uint8_t align, float scale = 1. );
+	void DrawText( std::string text, const SDL_Rect *rect, uint8_t align, float r, float g, float b, float a, float scale = 1. );
 	void DrawText3D( std::string text, const Pos3D *pos, uint8_t align, double scale = 1. );
 	void DrawText3D( std::string text, const Pos3D *pos, uint8_t align, float r, float g, float b, float a, double scale = 1. );
 	

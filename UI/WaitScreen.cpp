@@ -8,6 +8,7 @@
 
 
 WaitScreen::WaitScreen( std::string text, Font *font, SDL_Rect *rect, Color *color )
+: Window()
 {
 	Text = text;
 	
@@ -39,6 +40,8 @@ WaitScreen::WaitScreen( std::string text, Font *font, SDL_Rect *rect, Color *col
 		Blue = color->Blue;
 		Alpha = color->Alpha;
 	}
+	
+	UpdateRects();
 }
 
 
@@ -61,5 +64,5 @@ void WaitScreen::Draw( void )
 {
 	UpdateRects();
 	Window::Draw();
-	TextFont->DrawText( Text, Rect.w / 2, Rect.h / 2, Font::ALIGN_MIDDLE_CENTER );
+	TextFont->DrawText( Text, CalcRect.w / 2, CalcRect.h / 2, Font::ALIGN_MIDDLE_CENTER );
 }

@@ -36,7 +36,7 @@ void Notification::Draw( void )
 	
 	UpdateRects();
 	Window::Draw();
-	TextFont->DrawText( Text, Rect.w / 2, Rect.h / 2, Font::ALIGN_MIDDLE_CENTER, 1.f, 1.f, 1.f, text_alpha );
+	TextFont->DrawText( Text, CalcRect.w / 2, CalcRect.h / 2, Font::ALIGN_MIDDLE_CENTER, 1.f, 1.f, 1.f, text_alpha, Raptor::Game->UIScale );
 }
 
 

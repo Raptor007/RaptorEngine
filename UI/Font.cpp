@@ -202,13 +202,13 @@ int Font::LineWidth( std::string text )
 }
 
 
-void Font::DrawText( std::string text, int x, int y, uint8_t align )
+void Font::DrawText( std::string text, int x, int y, uint8_t align, float scale )
 {
-	DrawText( text, x, y, align, 1.f, 1.f, 1.f, 1.f );
+	DrawText( text, x, y, align, 1.f, 1.f, 1.f, 1.f, scale );
 }
 
 
-void Font::DrawText( std::string text, int x, int y, uint8_t align, float r, float g, float b, float a )
+void Font::DrawText( std::string text, int x, int y, uint8_t align, float r, float g, float b, float a, float scale )
 {
 	if( ! Initialized )
 		return;
@@ -217,7 +217,7 @@ void Font::DrawText( std::string text, int x, int y, uint8_t align, float r, flo
 		InitFont();
 	
 	// Adjust for text vertical alignment.
-	int text_height = TextHeight( text );
+	int text_height = TextHeight( text ) * scale;
 	switch( align )
 	{
 		case ALIGN_MIDDLE_LEFT:
@@ -228,7 +228,7 @@ void Font::DrawText( std::string text, int x, int y, uint8_t align, float r, flo
 		case ALIGN_BASELINE_LEFT:
 		case ALIGN_BASELINE_CENTER:
 		case ALIGN_BASELINE_RIGHT:
-			y -= Ascent;
+			y -= Ascent * scale;
 			break;
 		case ALIGN_BOTTOM_LEFT:
 		case ALIGN_BOTTOM_CENTER:
@@ -253,7 +253,7 @@ void Font::DrawText( std::string text, int x, int y, uint8_t align, float r, flo
 	glColor4f( r, g, b, a );
 	
 	// Adjust for text horizontal alignment.
-	int line_width = LineWidth( text );
+	int line_width = LineWidth( text ) * scale;
 	switch( align )
 	{
 		case ALIGN_TOP_CENTER:
@@ -270,16 +270,17 @@ void Font::DrawText( std::string text, int x, int y, uint8_t align, float r, flo
 			break;
 	}
 	
+	GLfloat xf = x;
 	const char *text_ptr = text.c_str();
 	while( *text_ptr != '\0' )
 	{
 		if( *text_ptr == '\n' )
 		{
 			x = base_left;
-			y += LineSkip;
+			y += LineSkip * scale;
 			
 			// Adjust for text horizontal alignment.
-			line_width = LineWidth( text_ptr + 1 );
+			line_width = LineWidth( text_ptr + 1 ) * scale;
 			switch( align )
 			{
 				case ALIGN_TOP_CENTER:
@@ -295,6 +296,8 @@ void Font::DrawText( std::string text, int x, int y, uint8_t align, float r, flo
 					x -= line_width;
 					break;
 			}
+			
+			xf = x;
 		}
 		else
 		{
@@ -307,10 +310,10 @@ void Font::DrawText( std::string text, int x, int y, uint8_t align, float r, flo
 			
 			min_x = Glyphs[ (unsigned char) *text_ptr ].MinX;
 			
-			left = x + min_x;
-			right = x + Glyphs[ (unsigned char) *text_ptr ].Pic->w + min_x;
+			left = xf + min_x * scale;
+			right = xf + (Glyphs[ (unsigned char) *text_ptr ].Pic->w + min_x) * scale;
 			top = y;
-			bottom = y + Glyphs[ (unsigned char) *text_ptr ].Pic->h;
+			bottom = y + Glyphs[ (unsigned char) *text_ptr ].Pic->h * scale;
 			
 			glBindTexture( GL_TEXTURE_2D, Glyphs[ (unsigned char) *text_ptr ].Tex );
 			
@@ -321,7 +324,8 @@ void Font::DrawText( std::string text, int x, int y, uint8_t align, float r, flo
 				glTexCoord2f( tex_min_x, tex_max_y ); glVertex2f( left, bottom );
 			glEnd();
 			
-			x += Glyphs[ (unsigned char) *text_ptr ].Advance;
+			xf += Glyphs[ (unsigned char) *text_ptr ].Advance * scale;
+			x = xf;
 		}
 		
 		text_ptr ++;
@@ -331,13 +335,13 @@ void Font::DrawText( std::string text, int x, int y, uint8_t align, float r, flo
 }
 
 
-void Font::DrawText( std::string text, int x1, int y1, int w, int h, uint8_t align )
+void Font::DrawText( std::string text, int x1, int y1, int w, int h, uint8_t align, float scale )
 {
-	DrawText( text, x1, y1, w, h, align, 1.f, 1.f, 1.f, 1.f );
+	DrawText( text, x1, y1, w, h, align, 1.f, 1.f, 1.f, 1.f, scale );
 }
 
 
-void Font::DrawText( std::string text, int x1, int y1, int w, int h, uint8_t align, float r, float g, float b, float a )
+void Font::DrawText( std::string text, int x1, int y1, int w, int h, uint8_t align, float r, float g, float b, float a, float scale )
 {
 	int x = 0, y = 0;
 	
@@ -387,19 +391,19 @@ void Font::DrawText( std::string text, int x1, int y1, int w, int h, uint8_t ali
 			break;
 	}
 	
-	DrawText( text, x, y, align, r, g, b, a );
+	DrawText( text, x, y, align, r, g, b, a, scale );
 }
 
 
-void Font::DrawText( std::string text, const SDL_Rect *rect, uint8_t align )
+void Font::DrawText( std::string text, const SDL_Rect *rect, uint8_t align, float scale )
 {
-	DrawText( text, rect->x, rect->y, rect->w, rect->h, align, 1.f, 1.f, 1.f, 1.f );
+	DrawText( text, rect->x, rect->y, rect->w, rect->h, align, 1.f, 1.f, 1.f, 1.f, scale );
 }
 
 
-void Font::DrawText( std::string text, const SDL_Rect *rect, uint8_t align, float r, float g, float b, float a )
+void Font::DrawText( std::string text, const SDL_Rect *rect, uint8_t align, float r, float g, float b, float a, float scale )
 {
-	DrawText( text, rect->x, rect->y, rect->w, rect->h, align, r, g, b, a );
+	DrawText( text, rect->x, rect->y, rect->w, rect->h, align, r, g, b, a, scale );
 }
 
 

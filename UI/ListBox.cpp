@@ -37,11 +37,12 @@ ListBox::ListBox( SDL_Rect *rect, Font *font, int scroll_bar_size ) : Layer( rec
 	ScrollBarAlpha = 1.0f;
 	
 	VRHeight = 0;
+	PadX = 0;
 	
 	Scroll = 0;
 	ClickedScrollBar = false;
 	
-	AddElement( new ListBoxButton( ListBox::SCROLL_UP, Raptor::Game->Res.GetAnimation("arrow_up.ani"), Raptor::Game->Res.GetAnimation("arrow_up_mdown.ani") ) );
+	AddElement( new ListBoxButton( ListBox::SCROLL_UP,   Raptor::Game->Res.GetAnimation("arrow_up.ani"),   Raptor::Game->Res.GetAnimation("arrow_up_mdown.ani")   ) );
 	AddElement( new ListBoxButton( ListBox::SCROLL_DOWN, Raptor::Game->Res.GetAnimation("arrow_down.ani"), Raptor::Game->Res.GetAnimation("arrow_down_mdown.ani") ) );
 	UpdateRects();
 }
@@ -75,10 +76,13 @@ ListBox::ListBox( SDL_Rect *rect, Font *font, int scroll_bar_size, std::vector<L
 	ScrollBarBlue = 1.0f;
 	ScrollBarAlpha = 1.0f;
 	
+	VRHeight = 0;
+	PadX = 0;
+	
 	Scroll = 0;
 	ClickedScrollBar = false;
 	
-	AddElement( new ListBoxButton( ListBox::SCROLL_UP, Raptor::Game->Res.GetAnimation("arrow_up.ani"), Raptor::Game->Res.GetAnimation("arrow_up_mdown.ani") ) );
+	AddElement( new ListBoxButton( ListBox::SCROLL_UP,   Raptor::Game->Res.GetAnimation("arrow_up.ani"),   Raptor::Game->Res.GetAnimation("arrow_up_mdown.ani")   ) );
 	AddElement( new ListBoxButton( ListBox::SCROLL_DOWN, Raptor::Game->Res.GetAnimation("arrow_down.ani"), Raptor::Game->Res.GetAnimation("arrow_down_mdown.ani") ) );
 	UpdateRects();
 	
@@ -162,12 +166,11 @@ int ListBox::LineScroll( void )
 
 int ListBox::MaxScroll( void )
 {
-	int max_scroll = 0;
-	max_scroll = Items.size() * LineScroll() - Rect.h;
+	int h = Rect.h;
+	if( UIScaleMode == Raptor::ScaleMode::IN_PLACE )
+		h /= Raptor::Game->UIScale;
 	
-	if( max_scroll >= 0 )
-		return max_scroll;
-	return 0;
+	return std::max<int>( 0, Items.size() * LineScroll() - h );
 }
 
 
@@ -250,41 +253,45 @@ void ListBox::Draw( void )
 	glColor4f( Red, Green, Blue, Alpha );
 	glBegin( GL_QUADS );
 		glVertex2i( x_offset, 0 );
-		glVertex2i( Rect.w + x_offset, 0 );
-		glVertex2i( Rect.w + x_offset, Rect.h );
-		glVertex2i( x_offset, Rect.h );
+		glVertex2i( CalcRect.w + x_offset, 0 );
+		glVertex2i( CalcRect.w + x_offset, CalcRect.h );
+		glVertex2i( x_offset, CalcRect.h );
 	glEnd();
+	
+	float ui_scale = UIScaleMode ? Raptor::Game->UIScale : 1.f;
+	int scaled_scroll_bar = ScrollBarSize * ui_scale + 0.5f;
 	
 	int max_scroll = MaxScroll();
 	if( max_scroll > 0 )
 	{
-		double percent_displayed = Rect.h / (double)( LineScroll() * Items.size() );
+		int rect_h = (UIScaleMode == Raptor::ScaleMode::IN_PLACE) ? (Rect.h / Raptor::Game->UIScale) : Rect.h;
+		double percent_displayed = rect_h / (double)( LineScroll() * Items.size() );
 		double scroll_start = (Scroll / (double) max_scroll) * (1. - percent_displayed);
-		int h = Rect.h - ScrollBarSize * 2;
-		Raptor::Game->Gfx.DrawRect2D( Rect.w + x_offset - ScrollBarSize, (int)( ScrollBarSize + h * scroll_start ), Rect.w + x_offset, (int)( ScrollBarSize + h * (scroll_start + percent_displayed) ), 0, ScrollBarRed, ScrollBarGreen, ScrollBarBlue, ScrollBarAlpha );
+		int h = CalcRect.h - scaled_scroll_bar * 2;
+		Raptor::Game->Gfx.DrawRect2D( CalcRect.w + x_offset - scaled_scroll_bar, (int)( scaled_scroll_bar + h * scroll_start ), CalcRect.w + x_offset, (int)( scaled_scroll_bar + h * (scroll_start + percent_displayed) ), 0, ScrollBarRed, ScrollBarGreen, ScrollBarBlue, ScrollBarAlpha );
 	}
 	
 	glPushMatrix();
 	glPushAttrib( GL_VIEWPORT_BIT );
 	if( Raptor::Game->Gfx.DrawTo )  // FIXME: Dirty hack to fix VR text positioning.  Find the real bug elsewhere, then remove this!
 		x_offset += ( ((CalcRect.x + CalcRect.w / 2.) / (double) Raptor::Game->Gfx.DrawTo->W) - 0.5 ) * 100.;  // Arbitrary adjustment that looks about right.
-	Raptor::Game->Gfx.SetViewport( CalcRect.x + x_offset, CalcRect.y, Rect.w - ScrollBarSize, Rect.h );
-	Raptor::Game->Gfx.Setup2D( 0, 0, Rect.w - ScrollBarSize, Rect.h );
+	Raptor::Game->Gfx.SetViewport( CalcRect.x + x_offset, CalcRect.y, CalcRect.w - scaled_scroll_bar, CalcRect.h );
+	Raptor::Game->Gfx.Setup2D( 0, 0, CalcRect.w - scaled_scroll_bar, CalcRect.h );
 	
 	if( TextFont )
 	{
 		SDL_Rect text_rect;
-		text_rect.x = 0;
-		text_rect.y = -Scroll;
-		text_rect.w = Rect.w - ScrollBarSize;
-		text_rect.h = TextFont->GetHeight();
+		text_rect.x = PadX * ui_scale;
+		text_rect.y = -Scroll * ui_scale;
+		text_rect.w = CalcRect.w - scaled_scroll_bar;
+		text_rect.h = TextFont->GetHeight() * ui_scale;
 		
 		for( std::vector<ListBoxItem>::iterator iter = Items.begin(); iter != Items.end(); iter ++ )
 		{
-			if( (text_rect.y < Rect.h) && ((text_rect.y + LineScroll()) >= 0) )
+			if( (text_rect.y < CalcRect.h) && ((text_rect.y + LineScroll() * ui_scale) >= 0) )
 				DrawItem( &(*iter), &text_rect );
 			
-			text_rect.y += LineScroll();
+			text_rect.y += LineScroll() * ui_scale;
 		}
 	}
 	
@@ -297,11 +304,11 @@ void ListBox::Draw( void )
 void ListBox::DrawItem( const ListBoxItem *item, const SDL_Rect *rect )
 {
 	if( Selected == item )
-		TextFont->DrawText( item->Text, rect, TextAlign, SelectedRed, SelectedGreen, SelectedBlue, SelectedAlpha );
+		TextFont->DrawText( item->Text, rect, TextAlign, SelectedRed, SelectedGreen, SelectedBlue, SelectedAlpha, UIScaleMode ? Raptor::Game->UIScale : 1.f );
 	else if( item->HasCustomColor )
-		TextFont->DrawText( item->Text, rect, TextAlign, item->CustomColor.Red, item->CustomColor.Green, item->CustomColor.Blue, item->CustomColor.Alpha );
+		TextFont->DrawText( item->Text, rect, TextAlign, item->CustomColor.Red, item->CustomColor.Green, item->CustomColor.Blue, item->CustomColor.Alpha, UIScaleMode ? Raptor::Game->UIScale : 1.f );
 	else
-		TextFont->DrawText( item->Text, rect, TextAlign, TextRed, TextGreen, TextBlue, TextAlpha );
+		TextFont->DrawText( item->Text, rect, TextAlign, TextRed, TextGreen, TextBlue, TextAlpha, UIScaleMode ? Raptor::Game->UIScale : 1.f );
 }
 
 
@@ -313,10 +320,12 @@ void ListBox::TrackEvent( SDL_Event *event )
 	{
 		// Update scroll state as we drag the scroll bar.
 		
-		int y = Raptor::Game->Mouse.Y - CalcRect.y - ScrollBarSize;
-		int h = Rect.h - ScrollBarSize * 2;
+		float ui_scale = UIScaleMode ? Raptor::Game->UIScale : 1.f;
+		int scaled_scroll_bar = ScrollBarSize * ui_scale + 0.5f;
+		int y = Raptor::Game->Mouse.Y - CalcRect.y - scaled_scroll_bar;
+		int h = CalcRect.h - scaled_scroll_bar * 2;
 		
-		int line = h ? (y / (float) h) * Items.size() - Rect.h * 0.5f / LineScroll() : 0;
+		int line = h ? (y / (float) h) * Items.size() - CalcRect.h * 0.5f / LineScroll() : 0;
 		if( line < 0 )
 			line = 0;
 		
@@ -361,13 +370,15 @@ bool ListBox::MouseDown( Uint8 button )
 {
 	if( button == SDL_BUTTON_LEFT )
 	{
-		ClickedScrollBar = Raptor::Game->Mouse.X > CalcRect.x + CalcRect.w - ScrollBarSize;
+		float ui_scale = UIScaleMode ? Raptor::Game->UIScale : 1.f;
+		int scaled_scroll_bar = ScrollBarSize * ui_scale + 0.5f;
+		ClickedScrollBar = Raptor::Game->Mouse.X > CalcRect.x + CalcRect.w - scaled_scroll_bar;
 		if( ClickedScrollBar )
 		{
-			int y = Raptor::Game->Mouse.Y - CalcRect.y - ScrollBarSize;
-			int h = Rect.h - ScrollBarSize * 2;
+			int y = Raptor::Game->Mouse.Y - CalcRect.y - scaled_scroll_bar;
+			int h = CalcRect.h - scaled_scroll_bar * 2;
 			
-			int line = h ? (y / (float) h) * Items.size() - Rect.h * 0.5f / LineScroll() : 0;
+			int line = h ? (y / (float) h) * Items.size() - CalcRect.h * 0.5f / LineScroll() : 0;
 			if( line < 0 )
 				line = 0;
 			
@@ -390,10 +401,12 @@ bool ListBox::MouseUp( Uint8 button )
 	{
 		ClickedScrollBar = false;
 		
-		int y = Raptor::Game->Mouse.Y - CalcRect.y - ScrollBarSize;
-		int h = Rect.h - ScrollBarSize * 2;
+		float ui_scale = UIScaleMode ? Raptor::Game->UIScale : 1.f;
+		int scaled_scroll_bar = ScrollBarSize * ui_scale + 0.5f;
+		int y = Raptor::Game->Mouse.Y - CalcRect.y - scaled_scroll_bar;
+		int h = CalcRect.h - scaled_scroll_bar * 2;
 		
-		int line = h ? (y / (float) h) * Items.size() - Rect.h * 0.5f / LineScroll() : 0;
+		int line = h ? (y / (float) h) * Items.size() - CalcRect.h * 0.5f / LineScroll() : 0;
 		if( line < 0 )
 			line = 0;
 		
@@ -402,7 +415,7 @@ bool ListBox::MouseUp( Uint8 button )
 	}
 	else
 	{
-		int y = Raptor::Game->Mouse.Y - CalcRect.y;
+		int y = (Raptor::Game->Mouse.Y - CalcRect.y) / (UIScaleMode ? Raptor::Game->UIScale : 1.f) + 0.5f;
 		int index = (y + Scroll) / LineScroll();
 		
 		if( (size_t) index < Items.size() )
@@ -512,22 +525,29 @@ void ListBoxButton::UpdateRect( void )
 	
 	ListBox *list_box = (ListBox*) Container;
 	
+	int scroll_button_w = list_box->ScrollBarSize;
 	int scroll_button_h = list_box->ScrollBarSize;
 	if( scroll_button_h * 2 > list_box->Rect.h )
 		scroll_button_h = list_box->Rect.h / 2;
 	
+	if( list_box->UIScaleMode == Raptor::ScaleMode::IN_PLACE )
+	{
+		scroll_button_w *= Raptor::Game->UIScale;
+		scroll_button_h *= Raptor::Game->UIScale;
+	}
+	
 	if( Action == ListBox::SCROLL_UP )
 	{
-		Rect.x = list_box->Rect.w - list_box->ScrollBarSize;
+		Rect.x = list_box->Rect.w - scroll_button_w;
 		Rect.y = 0;
-		Rect.w = list_box->ScrollBarSize;
+		Rect.w = scroll_button_w;
 		Rect.h = scroll_button_h;
 	}
 	else if( Action == ListBox::SCROLL_DOWN )
 	{
-		Rect.x = list_box->Rect.w - list_box->ScrollBarSize;
-		Rect.y = list_box->Rect.h - list_box->ScrollBarSize;
-		Rect.w = list_box->ScrollBarSize;
+		Rect.x = list_box->Rect.w - scroll_button_w;
+		Rect.y = list_box->Rect.h - scroll_button_h;
+		Rect.w = scroll_button_w;
 		Rect.h = scroll_button_h;
 	}
 }

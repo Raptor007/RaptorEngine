@@ -66,4 +66,15 @@ namespace Raptor
 			GAME_SPECIFIC
 		};
 	}
+	
+	namespace ScaleMode
+	{
+		enum
+		{
+			NONE = 0,
+			DEFAULT,
+			CENTER,
+			IN_PLACE
+		};
+	}
 }

@@ -64,6 +64,7 @@ public:
 	ResourceManager Res;
 	NetClient Net;
 	ClientConfig Cfg;
+	float UIScale;
 	double MaxFPS;
 	
 	double FrameTime;

@@ -61,7 +61,7 @@ Button::~Button()
 
 void Button::Draw( void )
 {
-	Raptor::Game->Gfx.DrawRect2D( 0, 0, Rect.w, Rect.h, Image.CurrentFrame(), Red, Green, Blue, Alpha );
+	Raptor::Game->Gfx.DrawRect2D( 0, 0, CalcRect.w, CalcRect.h, Image.CurrentFrame(), Red, Green, Blue, Alpha );
 }
 
 

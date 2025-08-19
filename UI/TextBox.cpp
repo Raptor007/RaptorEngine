@@ -50,6 +50,9 @@ TextBox::TextBox( SDL_Rect *rect, Font *font, uint8_t align ) : Layer( rect )
 	SelectedTextBlue = 0.f;
 	SelectedTextAlpha = 1.f;
 	
+	PadX = 0;
+	PadY = 0;
+	
 	if( TextFont )
 		Rect.h = TextFont->GetHeight();
 }
@@ -95,6 +98,9 @@ TextBox::TextBox( SDL_Rect *rect, Font *font, uint8_t align, std::string text ) 
 	SelectedTextBlue = 0.f;
 	SelectedTextAlpha = 1.f;
 	
+	PadX = 0;
+	PadY = 0;
+	
 	if( TextFont )
 		Rect.h = TextFont->GetHeight();
 }
@@ -115,22 +121,25 @@ void TextBox::Draw( void )
 	glBegin( GL_QUADS );
 		
 		glVertex2i( 0, 0 );
-		glVertex2i( Rect.w, 0 );
-		glVertex2i( Rect.w, Rect.h );
-		glVertex2i( 0, Rect.h );
+		glVertex2i( CalcRect.w, 0 );
+		glVertex2i( CalcRect.w, CalcRect.h );
+		glVertex2i( 0, CalcRect.h );
 		
 	glEnd();
 	
 	if( TextFont )
 	{
-		SDL_Rect rect = Rect;
-		rect.x = 0;
-		rect.y = 0;
+		SDL_Rect rect = CalcRect;
+		float ui_scale = UIScaleMode ? Raptor::Game->UIScale : 1.f;
+		rect.x = PadX * ui_scale;
+		rect.y = PadY * ui_scale;
+		rect.w -= rect.x * 2;
+		rect.y -= rect.y * 2;
 		
 		if( IsSelected() )
-			TextFont->DrawText( Text, &rect, Align, SelectedTextRed, SelectedTextGreen, SelectedTextBlue, SelectedTextAlpha );
+			TextFont->DrawText( Text, &rect, Align, SelectedTextRed, SelectedTextGreen, SelectedTextBlue, SelectedTextAlpha, ui_scale );
 		else
-			TextFont->DrawText( Text, &rect, Align, TextRed, TextGreen, TextBlue, TextAlpha );
+			TextFont->DrawText( Text, &rect, Align, TextRed, TextGreen, TextBlue, TextAlpha, ui_scale );
 		
 		if( IsSelected() )
 		{
@@ -141,29 +150,31 @@ void TextBox::Draw( void )
 				
 				SDL_Rect size = {0,0,0,0};
 				TextFont->TextSize( Text.substr( 0, Cursor ), &size );
-				int x = size.w, y = 0;
+				size.w *= ui_scale;
+				int pad_x = rect.x, pad_y = rect.y;
+				int x = size.w + pad_x, y = pad_y;
 				
 				switch( Align )
 				{
 					case Font::ALIGN_TOP_LEFT:
 					case Font::ALIGN_TOP_CENTER:
 					case Font::ALIGN_TOP_RIGHT:
-						y = 0;
+						y = rect.y;
 						break;
 					case Font::ALIGN_MIDDLE_LEFT:
 					case Font::ALIGN_MIDDLE_CENTER:
 					case Font::ALIGN_MIDDLE_RIGHT:
-						y = Rect.h / 2;
+						y = rect.h / 2;
 						break;
 					case Font::ALIGN_BASELINE_LEFT:
 					case Font::ALIGN_BASELINE_CENTER:
 					case Font::ALIGN_BASELINE_RIGHT:
-						y = TextFont->GetAscent();
+						y = TextFont->GetAscent() * ui_scale + pad_y;
 						break;
 					case Font::ALIGN_BOTTOM_LEFT:
 					case Font::ALIGN_BOTTOM_CENTER:
 					case Font::ALIGN_BOTTOM_RIGHT:
-						y = Rect.h;
+						y = rect.h - pad_y;
 						break;
 				}
 				
@@ -173,26 +184,26 @@ void TextBox::Draw( void )
 					case Font::ALIGN_MIDDLE_LEFT:
 					case Font::ALIGN_BASELINE_LEFT:
 					case Font::ALIGN_BOTTOM_LEFT:
-						x = size.w;
+						x = size.w + pad_x;
 						break;
 					case Font::ALIGN_TOP_CENTER:
 					case Font::ALIGN_MIDDLE_CENTER:
 					case Font::ALIGN_BASELINE_CENTER:
 					case Font::ALIGN_BOTTOM_CENTER:
-						x = (size.w + Rect.w) / 2;
+						x = (rect.w + size.w) / 2 + 3 * ui_scale;
 						break;
 					case Font::ALIGN_TOP_RIGHT:
 					case Font::ALIGN_MIDDLE_RIGHT:
 					case Font::ALIGN_BASELINE_RIGHT:
 					case Font::ALIGN_BOTTOM_RIGHT:
-						x = Rect.w;
+						x = rect.w - pad_x;
 						break;
 				}
 				
 				if( CenterCursor )
-					x -= TextFont->LineWidth( CursorAppearance ) / 2;
+					x -= TextFont->LineWidth( CursorAppearance ) * ui_scale / 2.f;
 				
-				TextFont->DrawText( CursorAppearance, x, y, Align, SelectedTextRed, SelectedTextGreen, SelectedTextBlue, SelectedTextAlpha );
+				TextFont->DrawText( CursorAppearance, x, y, Align, SelectedTextRed, SelectedTextGreen, SelectedTextBlue, SelectedTextAlpha, ui_scale );
 			}
 		}
 	}

@@ -29,6 +29,7 @@ public:
 	bool Enabled;
 	bool Visible;
 	bool Draggable;
+	uint8_t UIScaleMode;
 	std::string Name;
 	
 	bool MouseIsDown;
@@ -79,4 +80,5 @@ public:
 	void SizeToContainer( int buffer = 0 );
 	void SizeToElements( int max_buffer = 10 );
 	void Center( void );
+	void SetElementScaling( uint8_t scale_mode );
 };

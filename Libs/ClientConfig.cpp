@@ -108,11 +108,14 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "s_voice_positional" ] = "true";
 	Settings[ "s_voice_delay" ] = "0.2";
 	
+	Settings[ "ui_scale" ] = "1";
+	
 	Settings[ "vr_enable" ] = "false";
 	Settings[ "vr_mirror" ] = "true";
 	Settings[ "vr_fov" ] = "-111";
 	Settings[ "vr_separation" ] = "0.0625";
 	Settings[ "vr_offset" ] = "87";
+	Settings[ "vr_ui_scale" ] = "1";
 	
 	Settings[ "joy_deadzone" ] = "0.04";
 	Settings[ "joy_deadzone_thumbsticks" ] = "0.1";
@@ -140,7 +143,6 @@ void ClientConfig::SetDefaults( void )
 	if( !(name && name[0]) )
 		name = "Name";
 	Settings[ "name" ] = name;
-	
 	Settings[ "password" ] = "";
 	
 	Settings[ "netrate" ] = "30";

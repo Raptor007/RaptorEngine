@@ -4,6 +4,8 @@
 
 #include "LabelledButton.h"
 
+#include "RaptorGame.h"
+
 
 LabelledButton::LabelledButton( SDL_Rect *rect, Font *label_font, std::string text, uint8_t align, Animation *normal, Animation *mouse_down, Animation *mouse_over ) : Button( rect, normal, mouse_down, mouse_over )
 {
@@ -27,6 +29,9 @@ LabelledButton::LabelledButton( SDL_Rect *rect, Font *label_font, std::string te
 	GreenOver = 1.0;
 	BlueOver = 1.0;
 	AlphaOver = 1.0;
+	
+	PadX = 0;
+	PadY = 0;
 }
 
 
@@ -42,15 +47,19 @@ void LabelledButton::Draw( void )
 	
 	if( LabelFont )
 	{
+		float ui_scale = UIScaleMode ? Raptor::Game->UIScale : 1.f;
+		int pad_x = PadX * ui_scale;
+		int pad_y = PadY * ui_scale;
+		
 		if( MouseIsWithin && Enabled )
 		{
 			if( MouseIsDown )
-				LabelFont->DrawText( LabelText, 0, 0, Rect.w, Rect.h, LabelAlign, RedDown, GreenDown, BlueDown, AlphaDown );
+				LabelFont->DrawText( LabelText, pad_x, pad_y, CalcRect.w - pad_x * 2, CalcRect.h - pad_y * 2, LabelAlign, RedDown, GreenDown, BlueDown, AlphaDown, ui_scale );
 			else 
-				LabelFont->DrawText( LabelText, 0, 0, Rect.w, Rect.h, LabelAlign, RedOver, GreenOver, BlueOver, AlphaOver );
+				LabelFont->DrawText( LabelText, pad_x, pad_y, CalcRect.w - pad_x * 2, CalcRect.h - pad_y * 2, LabelAlign, RedOver, GreenOver, BlueOver, AlphaOver, ui_scale );
 		}
 		else
-			LabelFont->DrawText( LabelText, 0, 0, Rect.w, Rect.h, LabelAlign, RedNormal, GreenNormal, BlueNormal, Enabled ? AlphaNormal : AlphaDisabled );
+			LabelFont->DrawText( LabelText, pad_x, pad_y, CalcRect.w - pad_x * 2, CalcRect.h - pad_y * 2, LabelAlign, RedNormal, GreenNormal, BlueNormal, Enabled ? AlphaNormal : AlphaDisabled, ui_scale );
 	}
 }
 

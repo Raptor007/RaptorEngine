@@ -38,6 +38,7 @@ public:
 	int ScrollBarSize;
 	float ScrollBarRed, ScrollBarGreen, ScrollBarBlue, ScrollBarAlpha;
 	int VRHeight;
+	int PadX;
 	
 	int Scroll;
 	bool ClickedScrollBar;

@@ -55,6 +55,7 @@ public:
 	void Clear( void );
 	GameObject *GetObject( uint32_t id );
 	Player *GetPlayer( uint16_t id );
+	int RealPlayers( void );
 	
 	void SetProperty( std::string name, std::string value );
 	bool HasProperty( std::string name );
