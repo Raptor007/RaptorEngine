@@ -90,7 +90,11 @@ void ClientConfig::SetDefaults( void )
 	
 	Settings[ "s_channels" ] = "2";
 	Settings[ "s_rate" ] = "44100";
+#if SDL_VERSION_ATLEAST(2,0,0)
+	Settings[ "s_depth" ] = "32";
+#else
 	Settings[ "s_depth" ] = "16";
+#endif
 	Settings[ "s_buffer" ] = "4096";
 	Settings[ "s_mix_channels" ] = "64";
 	Settings[ "s_mic_init" ] = "false";  // NOTE: Disabled because SDL_OpenAudioDevice causes a long delay on Windows if no mic detected.
@@ -99,7 +103,7 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "s_mic_volume" ] = "auto";
 	Settings[ "s_volume" ] = "0.3";
 	Settings[ "s_effect_volume" ] = "0.5";
-	Settings[ "s_music_volume" ] = "0.8";
+	Settings[ "s_music_volume" ] = "0.7";
 	Settings[ "s_voice_volume" ] = "1";
 	Settings[ "s_voice_autogain_always" ] = "false";
 	Settings[ "s_voice_autogain_volume" ] = "16";

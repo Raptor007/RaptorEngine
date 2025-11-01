@@ -48,6 +48,7 @@ public:
 	void BecomeCopy( const Model *other );
 	bool LoadOBJ( std::string filename, bool get_textures = true );
 	bool IncludeOBJ( std::string filename, bool get_textures = true );
+	void ApplySmoothGroups( void );
 	void MakeMaterialArrays( void );
 	void CalculateNormals( void );
 	void ReverseNormals( void );
@@ -107,6 +108,7 @@ public:
 	GLfloat *TexCoordArray;
 	GLfloat *NormalArray;
 	GLfloat *TangentArray, *BitangentArray;
+	int *SmoothGroups;
 	bool Allocated, AllocatedWorldSpace;
 	
 	ModelArrays( void );

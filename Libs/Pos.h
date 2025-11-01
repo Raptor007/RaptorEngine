@@ -76,6 +76,8 @@ public:
 	
 	virtual const Pos3D operator + ( const Vec3D &other ) const;
 	virtual const Pos3D operator - ( const Vec3D &other ) const;
-	
+	virtual const Pos3D operator + ( const Pos3D &other ) const;
 	virtual const Vec3D operator - ( const Pos3D &other ) const;
+	virtual const Pos3D operator * ( double scale ) const;
+	virtual const Pos3D operator / ( double scale ) const;
 };

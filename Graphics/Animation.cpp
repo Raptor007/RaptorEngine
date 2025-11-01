@@ -226,6 +226,31 @@ GLuint Animation::CurrentFrame( void )
 }
 
 
+GLuint Animation::FrameAt( double secs )
+{
+	// NOTE: This is the only reason this function isn't const.
+	if( LoadedTime.ElapsedSeconds() > Raptor::Game->Res.ResetTime.ElapsedSeconds() )
+		Reload();
+	
+	double loop_time = LoopTime();
+	if( loop_time )
+	{
+		// Figure out where this is in the cycle and return that frame.
+		double time_in_animation = fmod( secs, loop_time );
+		size_t count = FrameTimes.size();
+		for( size_t i = 0; i < count; i ++ )
+		{
+			time_in_animation -= FrameTimes.at( i ) / Speed;
+			if( time_in_animation < 0. )
+				return (Frames.size() > i) ? Frames.at( i ) : *(Frames.rbegin());
+		}
+	}
+	
+	// If something went wrong, return either last frame or 0 (if no frames).
+	return Frames.size() ? *(Frames.rbegin()) : 0;
+}
+
+
 double Animation::StoredTime( void ) const
 {
 	double total = 0.0;

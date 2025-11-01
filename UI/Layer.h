@@ -28,6 +28,7 @@ public:
 	bool Dirty;
 	bool Enabled;
 	bool Visible;
+	bool ReadControls;
 	bool Draggable;
 	uint8_t UIScaleMode;
 	std::string Name;
@@ -59,6 +60,8 @@ public:
 	virtual bool MouseUp( Uint8 button = SDL_BUTTON_LEFT );
 	virtual bool KeyDown( SDLKey key );
 	virtual bool KeyUp( SDLKey key );
+	virtual bool ControlDown( uint8_t control );
+	virtual bool ControlUp( uint8_t control );
 	
 	void Remove( void );
 	void SetDirty( void );

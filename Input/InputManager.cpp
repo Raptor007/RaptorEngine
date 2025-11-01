@@ -387,20 +387,25 @@ bool InputManager::ValidInput( std::string input ) const
 // ---------------------------------------------------------------------------
 
 
-uint8_t InputManager::AddControl( std::string name, std::string preferred_device, double low, double high )
+void InputManager::DefineControl( uint8_t control, std::string name, std::string preferred_device, double low, double high )
 {
-	uint8_t control = ControlID( name );
-	if( ! control )
-	{
-		control = ControlNames.size() + 1;
-		ControlNames[ control ] = name;
-	}
+	ControlNames[ control ] = name;
 	
 	if( preferred_device.length() )
 		PreferredDevices[ control ] = preferred_device;
 	
 	if( (low != -1.) || (high != 1.) )
 		ControlRanges[ control ] = std::pair<double,double>( low, high );
+}
+
+
+uint8_t InputManager::AddControl( std::string name, std::string preferred_device, double low, double high )
+{
+	uint8_t control = ControlID( name );
+	if( ! control )
+		control = ControlNames.rbegin()->first + 1;
+	
+	DefineControl( control, name, preferred_device, low, high );
 	
 	return control;
 }

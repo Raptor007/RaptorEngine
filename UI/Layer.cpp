@@ -47,6 +47,8 @@ Layer::Layer( SDL_Rect *rect )
 	Green = 1.f;
 	Blue = 1.f;
 	Alpha = 1.f;
+	
+	ReadControls = false;
 }
 
 
@@ -291,6 +293,20 @@ bool Layer::HandleEvent( SDL_Event *event )
 			handled = MouseUp( mouse_button );
 	}
 	
+	if( ReadControls && ! handled )
+	{
+		// FIXME: Calling BoundControl twice for down vs up is clunky and inefficient.
+		uint8_t control = Raptor::Game->Cfg.BoundControl( event, true );
+		if( control )
+			handled = ControlDown( control );
+		else
+		{
+			control = Raptor::Game->Cfg.BoundControl( event, false );
+			if( control )
+				handled = ControlUp( control );
+		}
+	}
+	
 	return handled;
 }
 
@@ -324,6 +340,18 @@ bool Layer::KeyDown( SDLKey key )
 
 
 bool Layer::KeyUp( SDLKey key )
+{
+	return false;
+}
+
+
+bool Layer::ControlDown( uint8_t control )
+{
+	return false;
+}
+
+
+bool Layer::ControlUp( uint8_t control )
 {
 	return false;
 }

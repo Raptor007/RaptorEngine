@@ -33,6 +33,7 @@ namespace Num
 	int NextPowerOfTwo( int input );
 	double SignedPow( double num, double exponent );
 	double Clamp( double num, double min, double max );
+	double NearlyEqual( double a, double b, double epsilon = 0.000001 );
 	int16_t ScaleInt16( int16_t num, double scale );
 	bool Valid( double num );
 	

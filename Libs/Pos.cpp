@@ -458,7 +458,33 @@ const Pos3D Pos3D::operator - ( const Vec3D &other ) const
 }
 
 
+const Pos3D Pos3D::operator + ( const Pos3D &other ) const
+{
+	return Pos3D(this) += other;
+}
+
+
 const Vec3D Pos3D::operator - ( const Pos3D &other ) const
 {
 	return Vec3D( X - other.X, Y - other.Y, Z - other.Z );
+}
+
+
+const Pos3D Pos3D::operator * ( double scale ) const
+{
+	Pos3D pos( this );
+	pos.X *= scale;
+	pos.Y *= scale;
+	pos.Z *= scale;
+	return pos;
+}
+
+
+const Pos3D Pos3D::operator / ( double scale ) const
+{
+	Pos3D pos( this );
+	pos.X /= scale;
+	pos.Y /= scale;
+	pos.Z /= scale;
+	return pos;
 }

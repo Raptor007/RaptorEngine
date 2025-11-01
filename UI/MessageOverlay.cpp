@@ -107,7 +107,7 @@ void MessageOverlay::Draw( void )
 		if( elapsed_seconds > MessageLifetime )
 			break;
 		if( ScrollTime && (elapsed_seconds < ScrollTime) && (message_iter == Raptor::Game->Msg.Messages.rbegin()) )
-			y += MessageFont->GetHeight() * (ScrollTime - elapsed_seconds) / ScrollTime;
+			y += MessageFont->GetHeight() * ui_scale * (ScrollTime - elapsed_seconds) / ScrollTime;
 		if( elapsed_seconds > (MessageLifetime - 1.) )
 			a = MessageLifetime - elapsed_seconds;
 		

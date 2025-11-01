@@ -47,6 +47,7 @@ public:
 	
 	bool ValidInput( std::string input ) const;
 	
+	void DefineControl( uint8_t control, std::string name, std::string preferred_device = "", double low = 0., double high = 1. );
 	uint8_t AddControl( std::string name, std::string preferred_device = "", double low = 0., double high = 1. );
 	std::string ControlName( uint8_t control ) const;
 	std::string GenericControlName( uint8_t control ) const;

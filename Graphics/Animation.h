@@ -37,6 +37,7 @@ public:
 	void Start( void );
 	
 	GLuint CurrentFrame( void );
+	GLuint FrameAt( double secs );
 	double StoredTime( void ) const;
 	double LoopTime( void ) const;
 	bool Finished( void ) const;

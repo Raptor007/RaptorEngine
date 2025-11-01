@@ -394,7 +394,7 @@ GLuint ResourceManager::LoadTexture( const std::string &name )
 	if( (surface = IMG_Load( filename.c_str() )) )
 	{
 		// Check that the image dimensions are powers of 2.
-		if( ((surface->w & (surface->w - 1)) != 0) || ((surface->h & (surface->h - 1)) != 0) )
+		if( (((surface->w & (surface->w - 1)) != 0) || ((surface->h & (surface->h - 1)) != 0)) && ! Raptor::Game->Cfg.SettingAsBool( "g_texture_anyres", true ) )
 			fprintf( stderr, "%s: dimensions are %ix%i but should both be powers of 2.\n", name.c_str(), surface->w, surface->h );
 		
 		// Create the OpenGL texture.

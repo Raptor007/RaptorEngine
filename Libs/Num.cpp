@@ -162,6 +162,12 @@ double Num::Clamp( double num, double min, double max )
 }
 
 
+double Num::NearlyEqual( double a, double b, double epsilon )
+{
+	return (a + epsilon > b) && (b + epsilon > a);
+}
+
+
 int16_t Num::ScaleInt16( int16_t num, double scale )
 {
 	double scaled = num * scale;

@@ -478,3 +478,55 @@ bool Vec3D::operator == ( const Vec3D &other ) const
 {
 	return (X == other.X) && (Y == other.Y) && (Z == other.Z);
 }
+
+
+// ---------------------------------------------------------------------------
+
+
+KeyVec3D::KeyVec3D( const Vec3D &other, double epsilon ) : Vec3D( other )
+{
+	Epsilon = epsilon;
+}
+
+
+KeyVec3D::KeyVec3D( const Vec3D *other, double epsilon ) : Vec3D( other )
+{
+	Epsilon = epsilon;
+}
+
+
+KeyVec3D::KeyVec3D( double x, double y, double z, double epsilon ) : Vec3D( x, y, z )
+{
+	Epsilon = epsilon;
+}
+
+
+KeyVec3D::~KeyVec3D()
+{
+}
+
+
+bool KeyVec3D::operator < ( const KeyVec3D &other ) const
+{
+	double epsilon = (Epsilon + other.Epsilon) / 2.;
+	if( ! Num::NearlyEqual( X, other.X, epsilon ) )
+		return (X < other.X);
+	if( ! Num::NearlyEqual( Y, other.Y, epsilon ) )
+		return (Y < other.Y);
+	if( ! Num::NearlyEqual( Z, other.Z, epsilon ) )
+		return (Z < other.Z);
+	return false;
+}
+
+
+bool KeyVec3D::operator == ( const KeyVec3D &other ) const
+{
+	double epsilon = (Epsilon + other.Epsilon) / 2.;
+	return Num::NearlyEqual( X, other.X, epsilon ) && Num::NearlyEqual( Y, other.Y, epsilon ) && Num::NearlyEqual( Z, other.Z, epsilon );
+}
+
+
+bool KeyVec3D::operator != ( const KeyVec3D &other ) const
+{
+	return ! (*this == other);
+}

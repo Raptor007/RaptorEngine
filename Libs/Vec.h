@@ -5,6 +5,7 @@
 #pragma once
 class Vec2D;
 class Vec3D;
+class KeyVec3D;
 
 #include "PlatformSpecific.h"
 
@@ -96,4 +97,20 @@ public:
 	const Vec3D operator / ( double scale ) const;
 	bool operator < ( const Vec3D &other ) const;
 	bool operator == ( const Vec3D &other ) const;
+};
+
+
+class KeyVec3D : public Vec3D
+{
+public:
+	double Epsilon;
+
+	KeyVec3D( const Vec3D &other, double epsilon = 0.001 );
+	KeyVec3D( const Vec3D *other, double epsilon = 0.001 );
+	KeyVec3D( double x = 0., double y = 0., double z = 0., double epsilon = 0.001 );
+	virtual ~KeyVec3D();
+	
+	bool operator < ( const KeyVec3D &other ) const;
+	bool operator == ( const KeyVec3D &other ) const;
+	bool operator != ( const KeyVec3D &other ) const;
 };

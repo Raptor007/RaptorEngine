@@ -22,6 +22,7 @@ namespace Math3D
 	
 	double Length( double x, double y, double z );
 	double PointToPointDist( const Pos3D *pt1, const Pos3D *pt2 );
+	double PointToPointDist( double x1, double y1, double z1, double x2, double y2, double z2 );
 	double PointToLineSegDist( const Pos3D *pt, const Pos3D *end1, const Pos3D *end2, Pos3D *pt_on_line = NULL );
 	double LineSegToLineSegDist( const Pos3D *line1end1, const Pos3D *line1end2, const Pos3D *line2end1, const Pos3D *line2end2 );
 	double MinimumDistance( const Pos3D *pt1, const Vec3D *motion1, const Pos3D *pt2, const Vec3D *motion2, double dt = 1. );

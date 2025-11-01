@@ -53,6 +53,13 @@ double Math3D::PointToPointDist( const Pos3D *pt1, const Pos3D *pt2 )
 }
 
 
+double Math3D::PointToPointDist( double x1, double y1, double z1, double x2, double y2, double z2 )
+{
+	Vec3D diff( x2 - x1, y2 - y1, z2 - z1 );
+	return diff.Length();
+}
+
+
 double Math3D::PointToLineSegDist( const Pos3D *pt, const Pos3D *end1, const Pos3D *end2, Pos3D *pt_on_line )
 {
 	Pos3D nearest_pt_on_line = NearestPointOnLine( pt, end1, end2 );

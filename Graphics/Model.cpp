@@ -105,6 +105,7 @@ bool Model::LoadOBJ( std::string filename, bool get_textures )
 	Clear();
 	
 	bool return_value = IncludeOBJ( filename, get_textures );
+	ApplySmoothGroups();
 	MakeMaterialArrays();
 	return return_value;
 }
@@ -310,6 +311,7 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 					if( (mtl != new_mtl) && ! faces.empty() )
 					{
 						// Build the previous object's arrays, since we're changing materials now.
+						// FIXME: Smoothing groups should persist across materials within the same object!
 						if( ! Objects[ obj ] )
 							Objects[ obj ] = new ModelObject( obj );
 						Objects[ obj ]->AddFaces( mtl, faces );
@@ -522,6 +524,102 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 }
 
 
+void Model::ApplySmoothGroups( void )
+{
+	std::map< int, std::map<KeyVec3D,Vec3D> > cached_normals;
+	
+	for( std::map<std::string,ModelObject*>::const_iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
+	{
+#ifndef MODEL_SMOOTH_ACROSS_OBJECTS
+		cached_normals.clear();
+#endif
+		for( std::map<std::string,ModelArrays*>::const_iterator mtl_iter = obj_iter->second->Arrays.begin(); mtl_iter != obj_iter->second->Arrays.end(); mtl_iter ++ )
+		{
+			size_t vertex_count = mtl_iter->second->VertexCount;
+			GLfloat *normals = mtl_iter->second->NormalArray;
+			if( !(vertex_count && normals) )
+				continue;
+			
+			for( size_t i = 0; i < vertex_count; i ++ )
+			{
+				int smooth_group = mtl_iter->second->SmoothGroups[ i ];
+				if( smooth_group )
+				{
+					GLdouble *vertices = mtl_iter->second->VertexArray;
+					double x = vertices[ i*3 ], y = vertices[ i*3 + 1 ], z = vertices[ i*3 + 2 ];
+					
+					std::map<KeyVec3D,Vec3D>::const_iterator cached = cached_normals[ smooth_group ].find( KeyVec3D(x,y,z) );
+					if( cached != cached_normals[ smooth_group ].end() )
+					{
+						normals[ i*3     ] = cached->second.X;
+						normals[ i*3 + 1 ] = cached->second.Y;
+						normals[ i*3 + 2 ] = cached->second.Z;
+						continue;
+					}
+					
+					std::map<KeyVec3D,double> unique;
+					
+#ifdef MODEL_SMOOTH_ACROSS_OBJECTS
+					for( std::map<std::string,ModelObject*>::const_iterator obj_iter2 = obj_iter; obj_iter2 != Objects.end(); obj_iter2 ++ )  // NOTE: Because of cache miss, we know nothing before obj_iter matches.
+					{
+						for( std::map<std::string,ModelArrays*>::const_iterator mtl_iter2 = obj_iter2->second->Arrays.begin(); mtl_iter2 != obj_iter2->second->Arrays.end(); mtl_iter2 ++ )
+#else
+					std::map<std::string,ModelObject*>::const_iterator obj_iter2 = obj_iter;
+					{
+						for( std::map<std::string,ModelArrays*>::const_iterator mtl_iter2 = mtl_iter; mtl_iter2 != obj_iter2->second->Arrays.end(); mtl_iter2 ++ )  // NOTE: Cache miss means we can start at mtl_iter.
+#endif
+						{
+							const ModelArrays *arrays2 = mtl_iter2->second;
+							size_t vertex_count2       = arrays2->VertexCount;
+							const GLdouble *vertices2  = arrays2->VertexArray;
+							const GLfloat *normals2    = arrays2->NormalArray;
+							for( size_t j = 0; j < vertex_count2; j ++ )
+							{
+								if( Num::NearlyEqual( x, vertices2[ j*3     ] )
+								&&  Num::NearlyEqual( y, vertices2[ j*3 + 1 ] )
+								&&  Num::NearlyEqual( z, vertices2[ j*3 + 2 ] )
+								&&  (smooth_group == arrays2->SmoothGroups[ j ]) )
+								{
+									// Make sure each exact same direction is only added once to the average.
+									KeyVec3D n( normals2[ j*3 ], normals2[ j*3 + 1 ], normals2[ j*3 + 2 ] );
+									std::map<KeyVec3D,double>::const_iterator n_iter = unique.find( n );
+									double scale = 1.;
+									
+									// Weigh each unique normal vector by the longest edge touching it.
+									size_t face_vertex = j % 3;
+									if( smooth_group < 0 )  // Negative smooth groups use the old averaging method.  (Not sure if I will ever actually use this.)
+										;
+									else if( face_vertex == 0 )
+										scale = std::max<double>( Math3D::PointToPointDist( vertices2[ j*3 ], vertices2[ j*3 + 1 ], vertices2[ j*3 + 2 ], vertices2[ (j+1)*3 ], vertices2[ (j+1)*3 + 1 ], vertices2[ (j+1)*3 + 2 ] ), Math3D::PointToPointDist( vertices2[ j*3 ], vertices2[ j*3 + 1 ], vertices2[ j*3 + 2 ], vertices2[ (j+2)*3 ], vertices2[ (j+2)*3 + 1 ], vertices2[ (j+2)*3 + 2 ] ) );
+									else if( face_vertex == 1 )
+										scale = std::max<double>( Math3D::PointToPointDist( vertices2[ j*3 ], vertices2[ j*3 + 1 ], vertices2[ j*3 + 2 ], vertices2[ (j-1)*3 ], vertices2[ (j-1)*3 + 1 ], vertices2[ (j-1)*3 + 2 ] ), Math3D::PointToPointDist( vertices2[ j*3 ], vertices2[ j*3 + 1 ], vertices2[ j*3 + 2 ], vertices2[ (j+1)*3 ], vertices2[ (j+1)*3 + 1 ], vertices2[ (j+1)*3 + 2 ] ) );
+									else
+										scale = std::max<double>( Math3D::PointToPointDist( vertices2[ j*3 ], vertices2[ j*3 + 1 ], vertices2[ j*3 + 2 ], vertices2[ (j-2)*3 ], vertices2[ (j-2)*3 + 1 ], vertices2[ (j-2)*3 + 2 ] ), Math3D::PointToPointDist( vertices2[ j*3 ], vertices2[ j*3 + 1 ], vertices2[ j*3 + 2 ], vertices2[ (j-1)*3 ], vertices2[ (j-1)*3 + 1 ], vertices2[ (j-1)*3 + 2 ] ) );
+									
+									if( (n_iter == unique.end()) || (n_iter->second < scale) )
+										unique[ n ] = scale;
+								}
+							}
+							
+							Vec3D normal(0,0,0);
+							for( std::map<KeyVec3D,double>::const_iterator n_iter = unique.begin(); n_iter != unique.end(); n_iter ++ )
+								normal += n_iter->first * n_iter->second;
+							normal.ScaleTo( 1. );
+							
+							normals[ i*3     ] = normal.X;
+							normals[ i*3 + 1 ] = normal.Y;
+							normals[ i*3 + 2 ] = normal.Z;
+							
+							cached_normals[ smooth_group ][ KeyVec3D(x,y,z) ] = normal;
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+
 void Model::MakeMaterialArrays( void )
 {
 	// Build material vertex arrays from object vertex arrays.
@@ -562,6 +660,7 @@ void Model::MakeMaterialArrays( void )
 					memcpy( ((char*)( mtl_iter->second->Arrays.NormalArray    )) + vertices_filled * 3 * sizeof(GLfloat),  array_iter->second->NormalArray,    array_iter->second->VertexCount * 3 * sizeof(GLfloat) );
 					memcpy( ((char*)( mtl_iter->second->Arrays.TangentArray   )) + vertices_filled * 3 * sizeof(GLfloat),  array_iter->second->TangentArray,   array_iter->second->VertexCount * 3 * sizeof(GLfloat) );
 					memcpy( ((char*)( mtl_iter->second->Arrays.BitangentArray )) + vertices_filled * 3 * sizeof(GLfloat),  array_iter->second->BitangentArray, array_iter->second->VertexCount * 3 * sizeof(GLfloat) );
+					memcpy( ((char*)( mtl_iter->second->Arrays.SmoothGroups   )) + vertices_filled     * sizeof(int),      array_iter->second->SmoothGroups,   array_iter->second->VertexCount     * sizeof(int) );
 					
 					vertices_filled += array_iter->second->VertexCount;
 				}
@@ -1387,7 +1486,7 @@ double Model::GetLength( void )
 			{
 				for( size_t i = 0; i < array_iter->second->VertexCount; i ++ )
 				{
-					double x = array_iter->second->VertexArray[ i*3     ];
+					double x = array_iter->second->VertexArray[ i*3 ];
 					
 					if( (x > front) || ! found_front )
 					{
@@ -1621,6 +1720,7 @@ ModelArrays::ModelArrays( void )
 	TangentArray = NULL;
 	BitangentArray = NULL;
 	WorldSpaceVertexArray = NULL;
+	SmoothGroups = NULL;
 	Allocated = false;
 	AllocatedWorldSpace = false;
 }
@@ -1635,6 +1735,7 @@ ModelArrays::ModelArrays( const ModelArrays &other )
 	TangentArray = NULL;
 	BitangentArray = NULL;
 	WorldSpaceVertexArray = NULL;
+	SmoothGroups = NULL;
 	Allocated = false;
 	AllocatedWorldSpace = false;
 	
@@ -1651,6 +1752,7 @@ ModelArrays::ModelArrays( const ModelArrays *other )
 	TangentArray = NULL;
 	BitangentArray = NULL;
 	WorldSpaceVertexArray = NULL;
+	SmoothGroups = NULL;
 	Allocated = false;
 	AllocatedWorldSpace = false;
 	
@@ -1680,6 +1782,8 @@ void ModelArrays::Clear( void )
 			free( TangentArray );
 		if( BitangentArray )
 			free( BitangentArray );
+		if( SmoothGroups )
+			free( SmoothGroups );
 		Allocated = false;
 	}
 	
@@ -1688,6 +1792,7 @@ void ModelArrays::Clear( void )
 	NormalArray = NULL;
 	TangentArray = NULL;
 	BitangentArray = NULL;
+	SmoothGroups = NULL;
 	
 	// Each instance is always responsible for its own WorldSpaceVertexArray.
 	if( AllocatedWorldSpace && WorldSpaceVertexArray )
@@ -1715,6 +1820,7 @@ void ModelArrays::BecomeCopy( const ModelArrays *other )
 	const GLfloat  *normal_array    = other->NormalArray;
 	const GLfloat  *tangent_array   = other->TangentArray;
 	const GLfloat  *bitangent_array = other->BitangentArray;
+	const int      *smooth_groups   = other->SmoothGroups;
 	
 	Clear();
 	
@@ -1774,6 +1880,17 @@ void ModelArrays::BecomeCopy( const ModelArrays *other )
 			Allocated = true;
 		}
 	}
+	
+	if( smooth_groups )
+	{
+		size_t smooth_groups_mem = sizeof(int) * VertexCount;
+		SmoothGroups = (int*) malloc( smooth_groups_mem );
+		if( SmoothGroups )
+		{
+			memcpy( SmoothGroups, smooth_groups, smooth_groups_mem );
+			Allocated = true;
+		}
+	}
 }
 
 
@@ -1788,6 +1905,7 @@ void ModelArrays::BecomeInstance( const ModelArrays *other )
 		NormalArray    = other->NormalArray;
 		TangentArray   = other->TangentArray;
 		BitangentArray = other->BitangentArray;
+		SmoothGroups   = other->SmoothGroups;
 	}
 }
 
@@ -1806,12 +1924,14 @@ void ModelArrays::Resize( size_t vertex_count )
 		size_t vertex_array_mem    = sizeof(GLdouble) * 3 * VertexCount;
 		size_t tex_coord_array_mem = sizeof(GLfloat)  * 2 * VertexCount;
 		size_t normal_array_mem    = sizeof(GLfloat)  * 3 * VertexCount;
+		size_t smooth_group_mem    = sizeof(int)          * VertexCount;
 		
 		VertexArray    = (GLdouble*)( VertexArray    ? realloc( VertexArray,      vertex_array_mem )    : malloc( vertex_array_mem )    );
 		TexCoordArray  = (GLfloat*)(  TexCoordArray  ? realloc( TexCoordArray,    tex_coord_array_mem ) : malloc( tex_coord_array_mem ) );
 		NormalArray    = (GLfloat*)(  NormalArray    ? realloc( NormalArray,      normal_array_mem )    : malloc( normal_array_mem )    );
 		TangentArray   = (GLfloat*)(  TangentArray   ? realloc( TangentArray,     normal_array_mem )    : malloc( normal_array_mem )    );
 		BitangentArray = (GLfloat*)(  BitangentArray ? realloc( BitangentArray,   normal_array_mem )    : malloc( normal_array_mem )    );
+		SmoothGroups   = (int*)(      SmoothGroups   ? realloc( SmoothGroups,     smooth_group_mem )    : malloc( smooth_group_mem )    );
 		
 		Allocated = true;
 	}
@@ -1900,51 +2020,24 @@ void ModelArrays::AddFaces( std::vector<ModelFace> &faces )
 		
 		for( size_t i = 0; i < vertices_size; i ++ )
 		{
-			VertexArray[ old_vertex_count*3 + i*3     ] = vertices[ i ].X;
-			VertexArray[ old_vertex_count*3 + i*3 + 1 ] = vertices[ i ].Y;
-			VertexArray[ old_vertex_count*3 + i*3 + 2 ] = vertices[ i ].Z;
+			VertexArray[ (old_vertex_count + i)*3     ] = vertices[ i ].X;
+			VertexArray[ (old_vertex_count + i)*3 + 1 ] = vertices[ i ].Y;
+			VertexArray[ (old_vertex_count + i)*3 + 2 ] = vertices[ i ].Z;
 		}
 		
 		for( size_t i = 0; i < tex_coords_size; i ++ )
 		{
-			TexCoordArray[ old_vertex_count*2 + i*2     ] = tex_coords[ i ].X;
-			TexCoordArray[ old_vertex_count*2 + i*2 + 1 ] = tex_coords[ i ].Y;
+			TexCoordArray[ (old_vertex_count + i)*2     ] = tex_coords[ i ].X;
+			TexCoordArray[ (old_vertex_count + i)*2 + 1 ] = tex_coords[ i ].Y;
 		}
 		
 		for( size_t i = 0; i < normals_size; i ++ )
 		{
-			int smooth_group = smooth_groups[ i ];
-			if( (! smooth_group) || (i >= vertices_size) )
-			{
-				NormalArray[ old_vertex_count*3 + i*3     ] = normals[ i ].X;
-				NormalArray[ old_vertex_count*3 + i*3 + 1 ] = normals[ i ].Y;
-				NormalArray[ old_vertex_count*3 + i*3 + 2 ] = normals[ i ].Z;
-			}
-			else
-			{
-				std::set<Vec3D> unique;
-				Vec3D normal(0,0,0);
-				for( size_t j = 0; j < vertices_size; j ++ )
-				{
-					if( (vertices[ i ].X == vertices[ j ].X)
-					&&  (vertices[ i ].Y == vertices[ j ].Y)
-					&&  (vertices[ i ].Z == vertices[ j ].Z)
-					&&  (j < normals_size) && (smooth_group == smooth_groups[ j ]) )
-					{
-						// Make sure each exact same direction is only added once to the average.
-						Vec3D n( normals[ j ].X, normals[ j ].Y, normals[ j ].Z );
-						if( unique.find( n ) == unique.end() )
-						{
-							unique.insert( n );
-							normal += n;
-						}
-					}
-				}
-				normal.ScaleTo( 1. );
-				NormalArray[ old_vertex_count*3 + i*3     ] = normal.X;
-				NormalArray[ old_vertex_count*3 + i*3 + 1 ] = normal.Y;
-				NormalArray[ old_vertex_count*3 + i*3 + 2 ] = normal.Z;
-			}
+			NormalArray[ (old_vertex_count + i)*3     ] = normals[ i ].X;
+			NormalArray[ (old_vertex_count + i)*3 + 1 ] = normals[ i ].Y;
+			NormalArray[ (old_vertex_count + i)*3 + 2 ] = normals[ i ].Z;
+			
+			SmoothGroups[ old_vertex_count + i ] = smooth_groups[ i ];
 		}
 		
 		CalculateTangents( old_vertex_count );
@@ -2020,6 +2113,12 @@ void ModelArrays::RemoveFace( size_t face_index )
 		}
 	}
 	
+	if( SmoothGroups )
+	{
+		for( size_t i = first_vertex; (i + 3) < VertexCount; i ++ )
+			SmoothGroups[ i ] = SmoothGroups[ i + 3 ];
+	}
+	
 	Resize( VertexCount - 3 );
 }
 
@@ -2079,24 +2178,37 @@ void ModelArrays::SmoothNormals( size_t start_vertex )
 	
 	for( size_t i = start_vertex; i < VertexCount; i ++ )
 	{
-		Vec3D normal(0,0,0);
-		std::set<Vec3D> unique;
+		std::map<KeyVec3D,double> unique;
 		for( size_t j = start_vertex; j < VertexCount; j ++ )
 		{
-			if( (VertexArray[ i*3     ] == VertexArray[ j*3     ])
-			&&  (VertexArray[ i*3 + 1 ] == VertexArray[ j*3 + 1 ])
-			&&  (VertexArray[ i*3 + 2 ] == VertexArray[ j*3 + 2 ]) )
+			if( Num::NearlyEqual( VertexArray[ i*3     ], VertexArray[ j*3     ] )
+			&&  Num::NearlyEqual( VertexArray[ i*3 + 1 ], VertexArray[ j*3 + 1 ] )
+			&&  Num::NearlyEqual( VertexArray[ i*3 + 2 ], VertexArray[ j*3 + 2 ] ) )
 			{
 				// Make sure each exact same direction is only added once to the average.
 				Vec3D n( NormalArray[ j*3 ], NormalArray[ j*3 + 1 ], NormalArray[ j*3 + 2 ] );
-				if( unique.find( n ) == unique.end() )
-				{
-					unique.insert( n );
-					normal += n;
-				}
+				std::map<KeyVec3D,double>::const_iterator n_iter = unique.find( n );
+				double scale = 1.;
+				
+				// Weigh each unique normal vector by the longest edge touching it.
+				size_t face_vertex = j % 3;
+				if( face_vertex == 0 )
+					scale = std::max<double>( Math3D::PointToPointDist( VertexArray[ j*3 ], VertexArray[ j*3 + 1 ], VertexArray[ j*3 + 2 ], VertexArray[ (j+1)*3 ], VertexArray[ (j+1)*3 + 1 ], VertexArray[ (j+1)*3 + 2 ] ), Math3D::PointToPointDist( VertexArray[ j*3 ], VertexArray[ j*3 + 1 ], VertexArray[ j*3 + 2 ], VertexArray[ (j+2)*3 ], VertexArray[ (j+2)*3 + 1 ], VertexArray[ (j+2)*3 + 2 ] ) );
+				else if( face_vertex == 1 )
+					scale = std::max<double>( Math3D::PointToPointDist( VertexArray[ j*3 ], VertexArray[ j*3 + 1 ], VertexArray[ j*3 + 2 ], VertexArray[ (j-1)*3 ], VertexArray[ (j-1)*3 + 1 ], VertexArray[ (j-1)*3 + 2 ] ), Math3D::PointToPointDist( VertexArray[ j*3 ], VertexArray[ j*3 + 1 ], VertexArray[ j*3 + 2 ], VertexArray[ (j+1)*3 ], VertexArray[ (j+1)*3 + 1 ], VertexArray[ (j+1)*3 + 2 ] ) );
+				else
+					scale = std::max<double>( Math3D::PointToPointDist( VertexArray[ j*3 ], VertexArray[ j*3 + 1 ], VertexArray[ j*3 + 2 ], VertexArray[ (j-2)*3 ], VertexArray[ (j-2)*3 + 1 ], VertexArray[ (j-2)*3 + 2 ] ), Math3D::PointToPointDist( VertexArray[ j*3 ], VertexArray[ j*3 + 1 ], VertexArray[ j*3 + 2 ], VertexArray[ (j-1)*3 ], VertexArray[ (j-1)*3 + 1 ], VertexArray[ (j-1)*3 + 2 ] ) );
+				
+				if( (n_iter == unique.end()) || (n_iter->second < scale) )
+					unique[ n ] = scale;
 			}
 		}
+		
+		Vec3D normal(0,0,0);
+		for( std::map<KeyVec3D,double>::const_iterator n_iter = unique.begin(); n_iter != unique.end(); n_iter ++ )
+			normal += n_iter->first * n_iter->second;
 		normal.ScaleTo( 1. );
+		
 		NormalArray[ i*3     ] = normal.X;
 		NormalArray[ i*3 + 1 ] = normal.Y;
 		NormalArray[ i*3 + 2 ] = normal.Z;
