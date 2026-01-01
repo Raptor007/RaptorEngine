@@ -158,16 +158,16 @@ void GameData::CheckCollisions( double dt )
 		else if( obj_iter->second->IsMoving() )
 		{
 			if( obj_iter->second->CanCollideWithOwnType() )
-				moving_can_hit_own_type[ obj_iter->second->Type() ].push_back( obj_iter->second );
+				moving_can_hit_own_type[ obj_iter->second->CollisionType() ].push_back( obj_iter->second );
 			if( obj_iter->second->CanCollideWithOtherTypes() )
-				moving_can_hit_other_types[ obj_iter->second->Type() ].push_back( obj_iter->second );
+				moving_can_hit_other_types[ obj_iter->second->CollisionType() ].push_back( obj_iter->second );
 		}
 		else
 		{
 			if( obj_iter->second->CanCollideWithOwnType() )
-				stationary_can_hit_own_type[ obj_iter->second->Type() ].push_back( obj_iter->second );
+				stationary_can_hit_own_type[ obj_iter->second->CollisionType() ].push_back( obj_iter->second );
 			if( obj_iter->second->CanCollideWithOtherTypes() )
-				stationary_can_hit_other_types[ obj_iter->second->Type() ].push_back( obj_iter->second );
+				stationary_can_hit_other_types[ obj_iter->second->CollisionType() ].push_back( obj_iter->second );
 		}
 	}
 	
@@ -185,7 +185,7 @@ void GameData::CheckCollisions( double dt )
 				data_sets[ i ]->Objects1.push_back( *obj_iter );
 			}
 			
-			uint32_t type = (*obj_iter)->Type();
+			uint32_t type = (*obj_iter)->CollisionType();
 			
 			int index = 0;
 			

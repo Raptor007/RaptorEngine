@@ -66,6 +66,11 @@ uint32_t GameObject::Type( void ) const
 	return TypeCode;
 }
 
+uint32_t GameObject::CollisionType( void ) const
+{
+	return TypeCode;
+}
+
 Player *GameObject::Owner( void ) const
 {
 	return Data ? Data->GetPlayer( PlayerID ) : NULL;

@@ -207,11 +207,13 @@ Pos3D Math3D::NearestPointOnLine( const Pos3D *pt, const Pos3D *end1, const Pos3
 
 bool Math3D::LineIntersectsPlane( const Pos3D *end1, const Pos3D *end2, const Plane3D *plane )
 {
+	const Vec3D *normal = &(plane->Up);
+	
 	Vec3D difference( plane->X - end1->X, plane->Y - end1->Y, plane->Z - end1->Z );
-	double dist1 = difference.Dot( &(plane->Up) );
+	double dist1 = difference.Dot( normal );
 	
 	difference.Set( plane->X - end2->X, plane->Y - end2->Y, plane->Z - end2->Z );
-	double dist2 = difference.Dot( &(plane->Up) );
+	double dist2 = difference.Dot( normal );
 	
 	return ((dist1 * dist2) < 0.);
 }
@@ -223,11 +225,18 @@ Pos3D Math3D::CollisionPoint( const Pos3D *end1, const Pos3D *end2, const Plane3
 	Vec3D ac( plane->X - end1->X, plane->Y - end1->Y, plane->Z - end1->Z );
 	const Vec3D *normal = &(plane->Up);
 	
-	Pos3D pt;
-	pt.X = end1->X + ab.X * ac.Dot( normal ) / ab.Dot( normal );
-	pt.Y = end1->Y + ab.Y * ac.Dot( normal ) / ab.Dot( normal );
-	pt.Z = end1->Z + ab.Z * ac.Dot( normal ) / ab.Dot( normal );
-	return pt;
+	double ab_dot_n = ab.Dot( normal );
+	if( ab_dot_n )
+	{
+		double ac_dot_n = ac.Dot( normal );
+		Pos3D pt;
+		pt.X = end1->X + ab.X * ac_dot_n / ab_dot_n;
+		pt.Y = end1->Y + ab.Y * ac_dot_n / ab_dot_n;
+		pt.Z = end1->Z + ab.Z * ac_dot_n / ab_dot_n;
+		return pt;
+	}
+	
+	return *end1;  // NOTE: Arbitrary result when line is perpendicular to plane.
 }
 
 

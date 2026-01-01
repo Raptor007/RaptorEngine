@@ -101,7 +101,7 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "s_mic_device" ] = "";
 	Settings[ "s_mic_buffer" ] = "2048";
 	Settings[ "s_mic_volume" ] = "auto";
-	Settings[ "s_volume" ] = "0.3";
+	Settings[ "s_volume" ] = "0.4";
 	Settings[ "s_effect_volume" ] = "0.5";
 	Settings[ "s_music_volume" ] = "0.7";
 	Settings[ "s_voice_volume" ] = "1";

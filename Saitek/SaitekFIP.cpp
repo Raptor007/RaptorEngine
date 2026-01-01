@@ -81,12 +81,12 @@ bool SaitekFIP::SetImage( Framebuffer *fb )
 			}
 		}
 		
-		if( w && h )
+		if( (w > 0) && (h > 0) )
 		{
 			// If the source is 320x240, don't use the intermediate buffer.
 			if( (w == 320) && (h == 240) )
 				glReadPixels( 0, 0, 320, 240, GL_BGR, GL_UNSIGNED_BYTE, Buffer );
-			else if( w && h )
+			else
 			{
 				// Make sure the intermediate buffer exists and is the right size.
 				if( ((size_t) w ) * ((size_t) h ) * 3 != IntermediateSize )

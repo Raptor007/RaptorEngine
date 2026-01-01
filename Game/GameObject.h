@@ -43,6 +43,7 @@ public:
 	virtual void ClientInit( void );
 	
 	virtual uint32_t Type( void ) const;
+	virtual uint32_t CollisionType( void ) const;
 	virtual Player *Owner( void ) const;
 	virtual bool ServerShouldSend( void ) const;
 	virtual bool PlayerShouldUpdateServer( void ) const;

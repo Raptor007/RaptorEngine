@@ -18,6 +18,8 @@
 #include "Math3D.h"
 #include "RaptorGame.h"
 
+#define MODEL_EPSILON (0.001)
+
 
 Model::Model( void )
 {
@@ -311,7 +313,6 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 					if( (mtl != new_mtl) && ! faces.empty() )
 					{
 						// Build the previous object's arrays, since we're changing materials now.
-						// FIXME: Smoothing groups should persist across materials within the same object!
 						if( ! Objects[ obj ] )
 							Objects[ obj ] = new ModelObject( obj );
 						Objects[ obj ]->AddFaces( mtl, faces );
@@ -548,7 +549,7 @@ void Model::ApplySmoothGroups( void )
 					GLdouble *vertices = mtl_iter->second->VertexArray;
 					double x = vertices[ i*3 ], y = vertices[ i*3 + 1 ], z = vertices[ i*3 + 2 ];
 					
-					std::map<KeyVec3D,Vec3D>::const_iterator cached = cached_normals[ smooth_group ].find( KeyVec3D(x,y,z) );
+					std::map<KeyVec3D,Vec3D>::const_iterator cached = cached_normals[ smooth_group ].find( KeyVec3D(x,y,z,MODEL_EPSILON) );
 					if( cached != cached_normals[ smooth_group ].end() )
 					{
 						normals[ i*3     ] = cached->second.X;
@@ -575,13 +576,13 @@ void Model::ApplySmoothGroups( void )
 							const GLfloat *normals2    = arrays2->NormalArray;
 							for( size_t j = 0; j < vertex_count2; j ++ )
 							{
-								if( Num::NearlyEqual( x, vertices2[ j*3     ] )
-								&&  Num::NearlyEqual( y, vertices2[ j*3 + 1 ] )
-								&&  Num::NearlyEqual( z, vertices2[ j*3 + 2 ] )
+								if( Num::NearlyEqual( x, vertices2[ j*3     ], MODEL_EPSILON )
+								&&  Num::NearlyEqual( y, vertices2[ j*3 + 1 ], MODEL_EPSILON )
+								&&  Num::NearlyEqual( z, vertices2[ j*3 + 2 ], MODEL_EPSILON )
 								&&  (smooth_group == arrays2->SmoothGroups[ j ]) )
 								{
 									// Make sure each exact same direction is only added once to the average.
-									KeyVec3D n( normals2[ j*3 ], normals2[ j*3 + 1 ], normals2[ j*3 + 2 ] );
+									KeyVec3D n( normals2[ j*3 ], normals2[ j*3 + 1 ], normals2[ j*3 + 2 ], MODEL_EPSILON );
 									std::map<KeyVec3D,double>::const_iterator n_iter = unique.find( n );
 									double scale = 1.;
 									
@@ -601,7 +602,7 @@ void Model::ApplySmoothGroups( void )
 								}
 							}
 							
-							Vec3D normal(0,0,0);
+							Vec3D normal;
 							for( std::map<KeyVec3D,double>::const_iterator n_iter = unique.begin(); n_iter != unique.end(); n_iter ++ )
 								normal += n_iter->first * n_iter->second;
 							normal.ScaleTo( 1. );
@@ -610,7 +611,7 @@ void Model::ApplySmoothGroups( void )
 							normals[ i*3 + 1 ] = normal.Y;
 							normals[ i*3 + 2 ] = normal.Z;
 							
-							cached_normals[ smooth_group ][ KeyVec3D(x,y,z) ] = normal;
+							cached_normals[ smooth_group ][ KeyVec3D(x,y,z,MODEL_EPSILON) ] = normal;
 						}
 					}
 				}
@@ -2181,12 +2182,12 @@ void ModelArrays::SmoothNormals( size_t start_vertex )
 		std::map<KeyVec3D,double> unique;
 		for( size_t j = start_vertex; j < VertexCount; j ++ )
 		{
-			if( Num::NearlyEqual( VertexArray[ i*3     ], VertexArray[ j*3     ] )
-			&&  Num::NearlyEqual( VertexArray[ i*3 + 1 ], VertexArray[ j*3 + 1 ] )
-			&&  Num::NearlyEqual( VertexArray[ i*3 + 2 ], VertexArray[ j*3 + 2 ] ) )
+			if( Num::NearlyEqual( VertexArray[ i*3     ], VertexArray[ j*3     ], MODEL_EPSILON )
+			&&  Num::NearlyEqual( VertexArray[ i*3 + 1 ], VertexArray[ j*3 + 1 ], MODEL_EPSILON )
+			&&  Num::NearlyEqual( VertexArray[ i*3 + 2 ], VertexArray[ j*3 + 2 ], MODEL_EPSILON ) )
 			{
 				// Make sure each exact same direction is only added once to the average.
-				Vec3D n( NormalArray[ j*3 ], NormalArray[ j*3 + 1 ], NormalArray[ j*3 + 2 ] );
+				KeyVec3D n( NormalArray[ j*3 ], NormalArray[ j*3 + 1 ], NormalArray[ j*3 + 2 ], MODEL_EPSILON );
 				std::map<KeyVec3D,double>::const_iterator n_iter = unique.find( n );
 				double scale = 1.;
 				
@@ -2204,7 +2205,7 @@ void ModelArrays::SmoothNormals( size_t start_vertex )
 			}
 		}
 		
-		Vec3D normal(0,0,0);
+		Vec3D normal;
 		for( std::map<KeyVec3D,double>::const_iterator n_iter = unique.begin(); n_iter != unique.end(); n_iter ++ )
 			normal += n_iter->first * n_iter->second;
 		normal.ScaleTo( 1. );
