@@ -33,6 +33,7 @@ Graphics::Graphics( void )
 	AF = 16;
 	Framebuffers = true;
 	LightQuality = 4;
+	GlowMaps = true;
 	
 	Screen = NULL;
 	DrawTo = NULL;
@@ -357,6 +358,7 @@ void Graphics::SetMode( int x, int y, int bpp, bool fullscreen, int fsaa, int af
 	Raptor::Game->Cfg.Settings[ "g_zfar" ] = Num::ToString(ZFar);
 	Raptor::Game->Cfg.Settings[ "g_vsync" ] = VSync ? "true" : "false";
 	Raptor::Game->Cfg.Settings[ "g_framebuffers" ] = Framebuffers ? "true" : "false";
+	Raptor::Game->Cfg.Settings[ "g_shader_glowmap" ] = GlowMaps ? "true" : "false";
 }
 
 
@@ -383,6 +385,7 @@ void Graphics::Restart( void )
 	ZFar = Raptor::Game->Cfg.SettingAsDouble( "g_zfar", 15000 );
 	VSync = Raptor::Game->Cfg.SettingAsBool( "g_vsync", false );
 	Framebuffers = Raptor::Game->Cfg.SettingAsBool( "g_framebuffers", true );
+	GlowMaps = Raptor::Game->Cfg.SettingAsBool( "g_shader_glowmap", true );
 	
 	SetMode( x, y, bpp, fullscreen, fsaa, af, zbits );
 }

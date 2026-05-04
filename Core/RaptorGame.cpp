@@ -80,11 +80,9 @@ bool Raptor::PreMain( int bits )
 		#endif
 		
 		// Prevent Windows DPI scaling from stupidly stretching things off-screen.
-		#ifndef _MSC_VER
-			FARPROC SetProcessDPIAware = GetProcAddress( LoadLibraryA("user32.dll"), "SetProcessDPIAware" );
-			if( SetProcessDPIAware )
-		#endif
-		SetProcessDPIAware();
+		FARPROC SetProcessDPIAware_func = GetProcAddress( LoadLibraryA("user32.dll"), "SetProcessDPIAware" );
+		if( SetProcessDPIAware_func )
+			SetProcessDPIAware_func();
 	#endif
 	
 	#if defined(__APPLE__) && defined(PROC_PIDPATHINFO_MAXSIZE) && !defined(_DEBUG)

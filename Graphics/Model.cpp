@@ -39,6 +39,12 @@ Model::Model( const Model *other )
 }
 
 
+Model::Model( std::string filename, bool get_textures )
+{
+	LoadOBJ( filename, get_textures );
+}
+
+
 Model::~Model()
 {
 	Clear();
@@ -61,6 +67,7 @@ void Model::Clear( void )
 	Height = 0.;
 	MinFwd = MaxFwd = MinUp = MaxUp = MinRight = MaxRight = 0.;
 	MaxRadius = 0.;
+	ExplosionStagger = 0.;
 }
 
 
@@ -83,13 +90,14 @@ void Model::BecomeInstance( const Model *other )
 	Width = GetWidth();
 	Height = GetHeight();
 	MaxRadius = GetMaxRadius();
+	
+	ExplosionStagger = other->ExplosionStagger;
 }
 
 
 void Model::BecomeCopy( const Model *other )
 {
-	if( other != this )
-		BecomeInstance( other );
+	BecomeInstance( other );
 	
 	for( std::map<std::string,ModelObject*>::iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
 	{
@@ -407,7 +415,7 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 					if( ! Materials[ mtl ] )
 						Materials[ mtl ] = new ModelMaterial();
 				}
-				else if( (elements.at( 0 ) == "map_Kd") || (elements.at( 0 ) == "map_bump") )
+				else if( (elements.at( 0 ) == "map_Kd") || (elements.at( 0 ) == "map_bump") || (elements.at( 0 ) == "map_glow") )
 				{
 					if( get_textures && (elements.size() >= 2) )
 					{
@@ -435,6 +443,12 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 							if( ! Materials[ mtl ]->BumpScale )
 								Materials[ mtl ]->BumpScale = 1.f;
 						}
+						else if( elements.at( 0 ) == "map_glow" )
+						{
+							Materials[ mtl ]->GlowMap.BecomeInstance( Raptor::Game->Res.GetAnimation( tex_filename ) );
+							if( ! Materials[ mtl ]->GlowScale )
+								Materials[ mtl ]->GlowScale = 1.f;
+						}
 						else
 							Materials[ mtl ]->Texture.BecomeInstance( Raptor::Game->Res.GetAnimation( tex_filename ) );
 					}
@@ -446,6 +460,15 @@ bool Model::IncludeOBJ( std::string filename, bool get_textures )
 						if( ! Materials[ mtl ] )
 							Materials[ mtl ] = new ModelMaterial();
 						Materials[ mtl ]->BumpScale = atof( elements.at( 1 ).c_str() );
+					}
+				}
+				else if( elements.at( 0 ) == "glow_scale" )
+				{
+					if( elements.size() >= 2 )
+					{
+						if( ! Materials[ mtl ] )
+							Materials[ mtl ] = new ModelMaterial();
+						Materials[ mtl ]->GlowScale = atof( elements.at( 1 ).c_str() );
 					}
 				}
 				else if( elements.at( 0 ) == "Ka" )
@@ -747,6 +770,7 @@ void Model::Draw( const Pos3D *pos, const std::set<std::string> *object_names, c
 			Raptor::Game->ShaderMgr.Set1f( "Alpha", wireframe->Alpha );
 			Raptor::Game->ShaderMgr.Set1f( "Shininess", 0. );
 			Raptor::Game->ShaderMgr.Set1f( "BumpScale", 0. );
+			Raptor::Game->ShaderMgr.Set1f( "GlowScale", 0. );
 		}
 	}
 	
@@ -791,6 +815,7 @@ void Model::Draw( const Pos3D *pos, const std::set<std::string> *object_names, c
 						
 						Raptor::Game->ShaderMgr.Set1i( "Texture", 0 );
 						Raptor::Game->ShaderMgr.Set1i( "BumpMap", 1 );
+						Raptor::Game->ShaderMgr.Set1i( "GlowMap", 2 );
 						
 						glActiveTexture( GL_TEXTURE0 + 1 ); // BumpMap
 						
@@ -809,6 +834,19 @@ void Model::Draw( const Pos3D *pos, const std::set<std::string> *object_names, c
 							if( bitangent_loc >= 0 )
 								glVertexAttribPointer( bitangent_loc, 3, GL_FLOAT, GL_TRUE, 0, mtl_iter->second->Arrays.NormalArray );
 							Raptor::Game->ShaderMgr.Set1f( "BumpScale", 0. );
+						}
+						
+						glActiveTexture( GL_TEXTURE0 + 2 ); // GlowMap
+						
+						if( Raptor::Game->Gfx.GlowMaps && mtl_iter->second->GlowMap.Frames.size() )
+						{
+							glBindTexture( GL_TEXTURE_2D, mtl_iter->second->GlowMap.CurrentFrame() );
+							Raptor::Game->ShaderMgr.Set1f( "GlowScale", mtl_iter->second->GlowScale );
+						}
+						else
+						{
+							glBindTexture( GL_TEXTURE_2D, 0 );
+							Raptor::Game->ShaderMgr.Set1f( "GlowScale", 0. );
 						}
 						
 						glActiveTexture( GL_TEXTURE0 + 0 ); // Texture
@@ -844,6 +882,8 @@ void Model::Draw( const Pos3D *pos, const std::set<std::string> *object_names, c
 	{
 		// The model is exploding, so draw per-object arrays (slower, but allows multiple positions and rotations).
 		
+		// FIXME: This logic is basically copy-pasted in MarkBlockMap!
+		
 		Pos3D draw_pos;
 		Vec3D x_vec, y_vec, z_vec;
 		Randomizer randomizer(explosion_seed);
@@ -855,10 +895,20 @@ void Model::Draw( const Pos3D *pos, const std::set<std::string> *object_names, c
 			
 			draw_pos.Copy( pos );
 			
-			if( exploded > 0. )
+			double piece_exploded = exploded;
+			if( exploded && ExplosionStagger )
+			{
+				randomizer.Seed( obj_iter->second->ExplosionSeed() );
+				int8_t exploded_sign = Num::Sign( exploded );
+				piece_exploded -= randomizer.Double( 0., ExplosionStagger * exploded_sign );
+				if( exploded_sign != Num::Sign(piece_exploded) )
+					piece_exploded = 0.;
+			}
+			
+			if( piece_exploded )
 			{
 				// Convert explosion vectors to worldspace.
-				Vec3D explosion_motion = obj_iter->second->GetExplosionMotion( explosion_seed, &randomizer ) * exploded;
+				Vec3D explosion_motion = obj_iter->second->GetExplosionMotion( explosion_seed, &randomizer ) * piece_exploded;
 				Vec3D modelspace_rotation_axis = obj_iter->second->GetExplosionRotationAxis( explosion_seed );
 				Vec3D worldspace_rotation_axis = (pos->Fwd * modelspace_rotation_axis.X) + (pos->Up * modelspace_rotation_axis.Y) + (pos->Right * modelspace_rotation_axis.Z);
 				
@@ -867,9 +917,9 @@ void Model::Draw( const Pos3D *pos, const std::set<std::string> *object_names, c
 				draw_pos.MoveAlong( &(pos->Right), explosion_motion.Z * right_scale );
 				
 				double explosion_rotation_rate = obj_iter->second->GetExplosionRotationRate( explosion_seed );
-				draw_pos.Fwd.RotateAround( &worldspace_rotation_axis, exploded * explosion_rotation_rate );
-				draw_pos.Up.RotateAround( &worldspace_rotation_axis, exploded * explosion_rotation_rate );
-				draw_pos.Right.RotateAround( &worldspace_rotation_axis, exploded * explosion_rotation_rate );
+				draw_pos.Fwd.RotateAround( &worldspace_rotation_axis, piece_exploded * explosion_rotation_rate );
+				draw_pos.Up.RotateAround( &worldspace_rotation_axis, piece_exploded * explosion_rotation_rate );
+				draw_pos.Right.RotateAround( &worldspace_rotation_axis, piece_exploded * explosion_rotation_rate );
 			}
 			
 			if( use_shaders )
@@ -911,6 +961,7 @@ void Model::Draw( const Pos3D *pos, const std::set<std::string> *object_names, c
 							
 							Raptor::Game->ShaderMgr.Set1i( "Texture", 0 );
 							Raptor::Game->ShaderMgr.Set1i( "BumpMap", 1 );
+							Raptor::Game->ShaderMgr.Set1i( "GlowMap", 2 );
 							
 							glActiveTexture( GL_TEXTURE0 + 1 ); // BumpMap
 							
@@ -929,6 +980,19 @@ void Model::Draw( const Pos3D *pos, const std::set<std::string> *object_names, c
 								if( bitangent_loc >= 0 )
 									glVertexAttribPointer( bitangent_loc, 3, GL_FLOAT, GL_TRUE, 0, array_iter->second->NormalArray );
 								Raptor::Game->ShaderMgr.Set1f( "BumpScale", 0. );
+							}
+							
+							glActiveTexture( GL_TEXTURE0 + 2 ); // GlowMap
+							
+							if( Raptor::Game->Gfx.GlowMaps && mtl->GlowMap.Frames.size() )
+							{
+								glBindTexture( GL_TEXTURE_2D, mtl->GlowMap.CurrentFrame() );
+								Raptor::Game->ShaderMgr.Set1f( "GlowScale", mtl->GlowScale );
+							}
+							else
+							{
+								glBindTexture( GL_TEXTURE_2D, 0 );
+								Raptor::Game->ShaderMgr.Set1f( "GlowScale", 0. );
 							}
 							
 							glActiveTexture( GL_TEXTURE0 + 0 ); // Texture
@@ -989,6 +1053,7 @@ void Model::Draw( const Pos3D *pos, const std::set<std::string> *object_names, c
 		Raptor::Game->ShaderMgr.Set1f( "Alpha", 1. );
 		Raptor::Game->ShaderMgr.Set1f( "Shininess", 0. );
 		Raptor::Game->ShaderMgr.Set1f( "BumpScale", 0. );
+		Raptor::Game->ShaderMgr.Set1f( "GlowScale", 0. );
 	}
 }
 
@@ -1139,6 +1204,7 @@ bool Model::CollidesWithModel( const Pos3D *pos1, Pos3D *at, const std::set<std:
 	if( ! block_size )
 		block_size = std::max<double>( std::max<double>( GetMaxTriangleEdge(), model2->GetMaxTriangleEdge() ), moved2 ? moved2->Length() : 0. );
 	
+	// NOTE: MarkBlockMap applies explosion motion to obj_pos before calling MakeWorldSpace, so the marked faces should be in their correct exploded positions.
 	MarkBlockMap( &blockmap1, &arrays1, pos1, object_names1, exploded1, explosion_seed1, block_size );
 	model2->MarkBlockMap( &blockmap2, &arrays2, pos2, moved2, object_names2, exploded2, explosion_seed2, block_size );
 	
@@ -1307,6 +1373,8 @@ void Model::MarkBlockMap( std::map< uint64_t, std::set<const GLdouble*> > *block
 	if( ! block_size )
 		block_size = std::max<double>( GetMaxTriangleEdge(), motion ? motion->Length() : 0. );
 	
+	// FIXME: This logic is basically copy-pasted from Draw!
+	
 	Randomizer randomizer(explosion_seed);
 	
 	for( std::map<std::string,ModelObject*>::const_iterator obj_iter = Objects.begin(); obj_iter != Objects.end(); obj_iter ++ )
@@ -1316,10 +1384,20 @@ void Model::MarkBlockMap( std::map< uint64_t, std::set<const GLdouble*> > *block
 		
 		Pos3D obj_pos( pos );
 		
-		if( exploded > 0. )
+		double piece_exploded = exploded;
+		if( exploded && ExplosionStagger )
+		{
+			randomizer.Seed( obj_iter->second->ExplosionSeed() );
+			int8_t exploded_sign = Num::Sign( exploded );
+			piece_exploded -= randomizer.Double( 0., ExplosionStagger * exploded_sign );
+			if( exploded_sign != Num::Sign(piece_exploded) )
+				piece_exploded = 0.;
+		}
+		
+		if( piece_exploded )
 		{
 			// Convert explosion vectors to worldspace.
-			Vec3D explosion_motion = obj_iter->second->GetExplosionMotion( explosion_seed, &randomizer ) * exploded;
+			Vec3D explosion_motion = obj_iter->second->GetExplosionMotion( explosion_seed, &randomizer ) * piece_exploded;
 			Vec3D modelspace_rotation_axis = obj_iter->second->GetExplosionRotationAxis( explosion_seed );
 			Vec3D worldspace_rotation_axis = (pos->Fwd * modelspace_rotation_axis.X) + (pos->Up * modelspace_rotation_axis.Y) + (pos->Right * modelspace_rotation_axis.Z);
 			
@@ -1328,9 +1406,9 @@ void Model::MarkBlockMap( std::map< uint64_t, std::set<const GLdouble*> > *block
 			obj_pos.MoveAlong( &(pos->Right), explosion_motion.Z );
 			
 			double explosion_rotation_rate = obj_iter->second->GetExplosionRotationRate( explosion_seed );
-			obj_pos.Fwd.RotateAround(   &worldspace_rotation_axis, exploded * explosion_rotation_rate );
-			obj_pos.Up.RotateAround(    &worldspace_rotation_axis, exploded * explosion_rotation_rate );
-			obj_pos.Right.RotateAround( &worldspace_rotation_axis, exploded * explosion_rotation_rate );
+			obj_pos.Fwd.RotateAround(   &worldspace_rotation_axis, piece_exploded * explosion_rotation_rate );
+			obj_pos.Up.RotateAround(    &worldspace_rotation_axis, piece_exploded * explosion_rotation_rate );
+			obj_pos.Right.RotateAround( &worldspace_rotation_axis, piece_exploded * explosion_rotation_rate );
 		}
 		
 		for( std::map<std::string,ModelArrays*>::const_iterator array_iter = obj_iter->second->Arrays.begin(); array_iter != obj_iter->second->Arrays.end(); array_iter ++ )
@@ -1471,6 +1549,13 @@ void Model::ScaleBy( double fwd_scale, double up_scale, double right_scale )
 		MaxRadius = 0.;
 		GetMaxRadius();
 	}
+}
+
+
+void Model::ScaleTo( double length, double height, double width )
+{
+	double l = GetLength(), h = GetHeight(), w = GetWidth();
+	ScaleBy( l ? (length / l) : 1., h ? (height / h) : 1., w ? (width / w) : 1. );
 }
 
 
@@ -3088,16 +3173,20 @@ double ModelObject::GetMaxRadius( void )
 }
 
 
-Vec3D ModelObject::GetExplosionMotion( int seed, Randomizer *randomizer ) const
+int ModelObject::ExplosionSeed( int seed ) const
 {
 	// Generate a per-object seed based on the object name.
 	seed *= Name.length();
 	for( size_t i = 0; i < Name.length(); i ++ )
 		seed += (i + 1) * (int)( Name[ i ] );
-	seed = abs(seed);
-	
+	return abs( seed );
+}
+
+
+Vec3D ModelObject::GetExplosionMotion( int seed, Randomizer *randomizer ) const
+{
 	// Generate a predictable motion axis, mostly away from object center, based on seed.
-	randomizer->Seed( seed );
+	randomizer->Seed( ExplosionSeed(seed) );
 	double center_motion_scale = randomizer->Double( 7., 11. );
 	double rx = randomizer->Double( -30., 30. );
 	double ry = randomizer->Double( -30., 30. );
@@ -3117,14 +3206,8 @@ Vec3D ModelObject::GetExplosionRotationAxis( int seed, Randomizer *randomizer ) 
 
 double ModelObject::GetExplosionRotationRate( int seed, Randomizer *randomizer ) const
 {
-	// Generate a per-object seed based on the object name.
-	seed *= Name.length();
-	for( size_t i = 0; i < Name.length(); i ++ )
-		seed += (i + 1) * (int)( Name[ i ] );
-	seed = abs(seed);
-	
 	// Generate a predictable rotation rate based on the seed value.
-	randomizer->Seed( seed );
+	randomizer->Seed( ExplosionSeed(seed) );
 	return randomizer->Double( 360., 720. ) * (randomizer->Bool() ? -1. : 1.);
 }
 
@@ -3139,6 +3222,7 @@ ModelMaterial::ModelMaterial( void )
 	Specular.Set( 0.2f, 0.2f, 0.2f, 1.f );
 	Shininess = 1.f;
 	BumpScale = 0.f;
+	GlowScale = 0.f;
 }
 
 
@@ -3163,11 +3247,13 @@ void ModelMaterial::BecomeInstance( const ModelMaterial *other )
 {
 	Texture.BecomeInstance( &(other->Texture) );
 	BumpMap.BecomeInstance( &(other->BumpMap) );
+	GlowMap.BecomeInstance( &(other->GlowMap) );
 	Ambient = other->Ambient;
 	Diffuse = other->Diffuse;
 	Specular = other->Specular;
 	Shininess = other->Shininess;
 	BumpScale = other->BumpScale;
+	GlowScale = other->GlowScale;
 	Arrays.BecomeInstance( &(other->Arrays) );
 }
 

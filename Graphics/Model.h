@@ -37,10 +37,12 @@ public:
 	std::map<std::string,ModelMaterial*> Materials;
 	std::vector<std::string> MaterialFiles;
 	double Length, Height, Width, MinFwd, MaxFwd, MinUp, MaxUp, MinRight, MaxRight, MaxRadius;
+	double ExplosionStagger;
 	
 	Model( void );
 	Model( const Model &other );
 	Model( const Model *other );
+	Model( std::string filename, bool get_textures = true );
 	virtual ~Model();
 	
 	void Clear( void );
@@ -71,6 +73,7 @@ public:
 	void Move( double fwd, double up, double right );
 	void ScaleBy( double scale );
 	void ScaleBy( double fwd_scale, double up_scale, double right_scale );
+	void ScaleTo( double length, double height, double width );
 	
 	double GetLength( void );
 	double GetHeight( void );
@@ -212,6 +215,7 @@ public:
 	double GetHeight( void );
 	double GetWidth( void );
 	double GetMaxRadius( void );
+	int ExplosionSeed( int seed = 0 ) const;
 	Vec3D GetExplosionMotion( int seed = 0, Randomizer *randomizer = &GlobalRandomizer ) const;
 	Vec3D GetExplosionRotationAxis( int seed = 0, Randomizer *randomizer = &GlobalRandomizer ) const;
 	double GetExplosionRotationRate( int seed = 0, Randomizer *randomizer = &GlobalRandomizer ) const;
@@ -226,9 +230,9 @@ private:
 class ModelMaterial
 {
 public:
-	Animation Texture, BumpMap;
+	Animation Texture, BumpMap, GlowMap;
 	Color Ambient, Diffuse, Specular;
-	float Shininess, BumpScale;
+	float Shininess, BumpScale, GlowScale;
 	ModelArrays Arrays;
 	
 	ModelMaterial( void );

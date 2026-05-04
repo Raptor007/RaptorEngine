@@ -52,6 +52,7 @@ public:
 	void Clear( void );
 	void Clear( PacketType packet_type );
 	void Rewind( void );
+	void Skip( int bytes );
 	int Remaining( void );
 	
 	bool MakeRoom( PacketSize addition_size );

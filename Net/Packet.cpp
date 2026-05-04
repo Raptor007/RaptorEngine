@@ -176,6 +176,14 @@ void Packet::Rewind( void )
 }
 
 
+void Packet::Skip( int bytes )
+{
+	Offset = std::min<PacketSize>( Offset + bytes, Size() );
+	if( Offset < PACKET_HEADER_SIZE )
+		Rewind();
+}
+
+
 int Packet::Remaining( void )
 {
 	return Offset - Size();

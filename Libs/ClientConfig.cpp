@@ -87,6 +87,7 @@ void ClientConfig::SetDefaults( void )
 	Settings[ "g_shader_version" ] = "110";
 	Settings[ "g_shader_light_quality" ] = "4";
 	Settings[ "g_shader_point_lights" ] = "4";
+	Settings[ "g_shader_glowmap" ] = "true";
 	
 	Settings[ "s_channels" ] = "2";
 	Settings[ "s_rate" ] = "44100";
@@ -561,7 +562,9 @@ void ClientConfig::Command( std::string str, bool show_in_console )
 					Raptor::Game->Console.Print( cstr );
 					snprintf( cstr, sizeof(cstr), "Microphone: %s", Raptor::Game->Mic.Device ? "Yes" : "No" );
 					Raptor::Game->Console.Print( cstr );
-					snprintf( cstr, sizeof(cstr), "Camera Facing: %f %f %f", Raptor::Game->Cam.Fwd.X, Raptor::Game->Cam.Fwd.Y, Raptor::Game->Cam.Fwd.Z );
+					snprintf( cstr, sizeof(cstr), "Camera Loc: %f %f %f", Raptor::Game->Cam.X, Raptor::Game->Cam.Y, Raptor::Game->Cam.Z );
+					Raptor::Game->Console.Print( cstr );
+					snprintf( cstr, sizeof(cstr), "Camera Fwd: %f %f %f", Raptor::Game->Cam.Fwd.X, Raptor::Game->Cam.Fwd.Y, Raptor::Game->Cam.Fwd.Z );
 					Raptor::Game->Console.Print( cstr );
 					snprintf( cstr, sizeof(cstr), "FPS: %.0f", 1. / Raptor::Game->FrameTime );
 					Raptor::Game->Console.Print( cstr );

@@ -61,16 +61,13 @@ void SoundOut::Initialize( int channels, int rate, int depth, int buffer, int mi
 	
 	// Determine the audio format; default to 16-bit if an unsupported depth is passed.
 	Uint16 format = AUDIO_S16SYS;
-	if( depth == 8 )
-		format = AUDIO_U8;
-	else if( depth == 16 )
-		format = AUDIO_S16SYS;
 #if SDL_VERSION_ATLEAST(2,0,0)
-	else if( depth == 24 )
-		format = AUDIO_S32SYS;
-	else if( depth == 32 )
-		format = AUDIO_F32SYS;
+	if( depth == 8 )
+		format = AUDIO_U8;  // NOTE: Restricted to SDL2 because it breaks music in SDL1.
+	else if( depth >= 24 )
+		format = AUDIO_S32SYS;  // NOTE: Unfortunately AUDIO_F32SYS breaks Mix_SetPosition panning.
 #else
+	
 	// SDL1 can't handle more than 16-bit stereo.
 	if( channels > 2 )
 		channels = 2;

@@ -36,7 +36,7 @@ public:
 	bool Initialized;
 	int W, H, RealW, RealH, DesktopW, DesktopH, BPP, LightQuality;
 	float AspectRatio;
-	bool Fullscreen, VSync, Framebuffers;
+	bool Fullscreen, VSync, Framebuffers, GlowMaps;
 	int FSAA, AF, ZBits;
 	double ZNear, ZFar;
 	Framebuffer *DrawTo;

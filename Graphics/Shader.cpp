@@ -330,7 +330,11 @@ ShaderComponent::ShaderComponent( ShaderComponentType type, std::string filename
 			SourceCode = std::string("#version ") + Raptor::Game->Cfg.SettingAsString("g_shader_version","110") + std::string("\n");
 			for( std::map<std::string,std::string>::iterator def_iter = defs.begin(); def_iter != defs.end(); def_iter ++ )
 			{
-				if( ! def_iter->second.empty() )
+				if( Str::EqualsInsensitive( def_iter->second, "true" ) )
+					SourceCode += std::string("#define ") + def_iter->first + std::string(" 1\n");
+				else if( Str::EqualsInsensitive( def_iter->second, "false" ) )
+					SourceCode += std::string("#define ") + def_iter->first + std::string(" 0\n");
+				else if( ! def_iter->second.empty() )
 					SourceCode += std::string("#define ") + def_iter->first + std::string(" ") + def_iter->second + std::string("\n");
 			}
 			
