@@ -124,6 +124,22 @@ void CheckBox::Draw( void )
 }
 
 
+void CheckBox::SetChecked( bool checked )
+{
+	Checked = checked;
+	UpdateImage();
+}
+
+
+void CheckBox::UpdateImage( void )
+{
+	if( Checked && ImageNormalChecked )
+		Image.BecomeInstance( ImageNormalChecked );
+	else
+		Image.BecomeInstance( ImageNormal );
+}
+
+
 void CheckBox::MouseEnter( void )
 {
 	if( Checked )

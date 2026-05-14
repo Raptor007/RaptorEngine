@@ -10,6 +10,7 @@
 Notification::Notification( std::string text, Font *font, SDL_Rect *rect, Color *color )
 : WaitScreen( text, font, rect, color )
 {
+	Lifetime.CountUpToSecs = 3.;
 }
 
 
@@ -23,15 +24,16 @@ void Notification::Draw( void )
 	double seconds = Lifetime.ElapsedSeconds();
 	float text_alpha = 1.f;
 	
-	if( seconds >= 3. )
+	if( seconds >= (Lifetime.CountUpToSecs + 1.) )
 	{
 		Remove();
 		return;
 	}
-	else if( seconds >= 2. )
+	else if( seconds >= Lifetime.CountUpToSecs )
 	{
-		Alpha -= Raptor::Game->FrameTime;
-		text_alpha = 1.f - (seconds - 2.f);
+		text_alpha = 1.f - (float)(seconds - Lifetime.CountUpToSecs);
+		if( text_alpha < Alpha )
+			Alpha = text_alpha;
 	}
 	
 	UpdateRects();

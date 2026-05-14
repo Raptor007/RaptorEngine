@@ -24,6 +24,10 @@ public:
 	virtual ~CheckBox();
 	
 	virtual void Draw( void );
+	
+	virtual void SetChecked( bool checked );
+	virtual void UpdateImage( void );
+	
 	virtual void MouseEnter( void );
 	virtual void MouseLeave( void );
 	virtual bool MouseDown( Uint8 button = SDL_BUTTON_LEFT );

@@ -5,6 +5,7 @@
 #include "HeadState.h"
 
 #include "RaptorGame.h"
+#include "Notification.h"
 
 
 HeadState::HeadState( void )
@@ -33,7 +34,7 @@ void HeadState::Initialize( void )
 {
 	StartVR();
 	Recenter();
-	Initialized = true;
+	Initialized = VR;
 }
 
 
@@ -55,6 +56,7 @@ void HeadState::StartVR( void )
 	{
 		m_pHMD = NULL;
 		Raptor::Game->Console.Print( std::string("Unable to init VR runtime: ") + std::string(vr::VR_GetVRInitErrorAsEnglishDescription(eError)), TextConsole::MSG_ERROR );
+		Raptor::Game->Layers.Add( new Notification( std::string("Unable to init VR runtime:\n") + std::string(vr::VR_GetVRInitErrorAsEnglishDescription(eError)) ) );
 		return;
 	}
 	
@@ -64,6 +66,7 @@ void HeadState::StartVR( void )
 		m_pHMD = NULL;
 		vr::VR_Shutdown();
 		Raptor::Game->Console.Print( std::string("Unable to get render model interface: ") + std::string(vr::VR_GetVRInitErrorAsEnglishDescription(eError)), TextConsole::MSG_ERROR );
+		Raptor::Game->Layers.Add( new Notification( std::string("Unable to get render model interface:\n") + std::string(vr::VR_GetVRInitErrorAsEnglishDescription(eError)) ) );
 		return;
 	}
 	
@@ -73,7 +76,7 @@ void HeadState::StartVR( void )
 	EyeL = Raptor::Game->Res.GetFramebuffer( "vr_l", w, h );
 	EyeR = Raptor::Game->Res.GetFramebuffer( "vr_r", w, h );
 	if( !( EyeL && EyeR ) )
-		return;
+		return;  // FIXME: Show error message and call StopVR()?  Or did I expect these framebuffers to become available later for some reason?
 	
 	vr::VRCompositor()->SetTrackingSpace( vr::TrackingUniverseSeated );
 	
@@ -82,6 +85,7 @@ void HeadState::StartVR( void )
 	if( ! m_rTrackedDevicePose[ vr::k_unTrackedDeviceIndex_Hmd ].bDeviceIsConnected )
 	{
 		Raptor::Game->Console.Print( "No VR headset detected.", TextConsole::MSG_ERROR );
+		Raptor::Game->Layers.Add( new Notification( "No VR headset detected." ) );
 		StopVR();
 		return;
 	}
@@ -117,6 +121,8 @@ void HeadState::StopVR( void )
 		Raptor::Game->Cam.Offset.SetFwdVec(1,0,0);
 		Raptor::Game->Cam.Offset.SetUpVec(0,1,0);
 	}
+	
+	Initialized = false;
 }
 
 
